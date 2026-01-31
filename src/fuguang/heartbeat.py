@@ -220,7 +220,19 @@ def _life_cycle():
         
         # === 触发逻辑：AI 主动搭话 ===
         if idle_seconds > IDLE_TRIGGER_SECONDS and not silent_mode:
-            logger.info(f"💓 检测到空闲 {int(idle_seconds)}秒，触发主动对话...")
+            logger.info(f"💓 检测到空闲 {int(idle_seconds)}秒，准备触发主动对话...")
+            
+            # [新增] 物理眼检查：如果用户不在座位上，不发起对话
+            if ConfigManager.CAMERA_ENABLED:
+                try:
+                    from . import camera as fuguang_camera
+                    if not fuguang_camera.is_user_present():
+                        logger.info("🚫 座位无人，跳过主动对话")
+                        # 不重置计时器，用户一回来就会再次检测
+                        time.sleep(10)
+                        continue
+                except Exception as e:
+                    logger.warning(f"摄像头检测失败，跳过: {e}")
             
             # 使用 AI 生成内容
             message = generate_proactive_message()

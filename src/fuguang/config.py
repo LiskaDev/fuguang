@@ -52,5 +52,9 @@ class ConfigManager:
     
     UNITY_IP = "127.0.0.1"
     UNITY_PORT = 5005
+    
+    # 摄像头配置（人脸检测）
+    CAMERA_ENABLED = True  # 是否启用摄像头检测用户是否在座
+    CAMERA_INDEX = 0       # 摄像头索引，0 通常是默认摄像头
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")
