@@ -117,7 +117,17 @@ class Camera:
             print("❌ 无法打开摄像头")
             return
         
-        print(f"📷 摄像头调试窗口已打开，{duration}秒后自动关闭，按 'q' 提前退出")
+        # 尝试使用 GUI 模式
+        gui_available = True
+        try:
+            # 测试是否支持 GUI
+            cv2.namedWindow("test", cv2.WINDOW_NORMAL)
+            cv2.destroyWindow("test")
+        except cv2.error:
+            gui_available = False
+            print("⚠️ 当前 OpenCV 不支持 GUI 窗口，将使用终端输出模式")
+        
+        print(f"📷 摄像头调试开始，{duration}秒后自动结束...")
         start_time = time.time()
         
         try:
@@ -130,25 +140,38 @@ class Camera:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
                 
-                # 在人脸上画绿色框
-                for (x, y, w, h) in faces:
-                    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                
-                # 显示人脸数量
-                status = f"Faces: {len(faces)}"
-                cv2.putText(frame, status, (10, 30), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                
-                cv2.imshow("Fuguang Camera Debug", frame)
-                
-                # 按 'q' 退出
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                if gui_available:
+                    # GUI 模式：显示窗口
+                    for (x, y, w, h) in faces:
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                    
+                    status = f"Faces: {len(faces)}"
+                    cv2.putText(frame, status, (10, 30), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    
+                    cv2.imshow("Fuguang Camera Debug", frame)
+                    
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                else:
+                    # 终端模式：每秒打印一次状态
+                    elapsed = int(time.time() - start_time)
+                    if elapsed % 1 == 0:  # 每秒输出一次
+                        status = "✅ 检测到人脸" if len(faces) > 0 else "❌ 未检测到人脸"
+                        print(f"\r[{elapsed}s] {status} (人脸数: {len(faces)})", end="", flush=True)
+                    time.sleep(0.5)
+        
+        except Exception as e:
+            print(f"\n⚠️ 调试出错: {e}")
         
         finally:
-            cv2.destroyAllWindows()
+            if gui_available:
+                try:
+                    cv2.destroyAllWindows()
+                except:
+                    pass
             self._release_camera()
-            print("📷 摄像头调试窗口已关闭")
+            print("\n📷 摄像头调试结束")
     
     def release(self):
         """释放所有资源"""
