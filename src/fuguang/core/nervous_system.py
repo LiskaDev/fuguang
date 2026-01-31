@@ -115,9 +115,6 @@ class NervousSystem:
         """处理 AI 回复"""
         self.LAST_ACTIVE_TIME = time.time()
         fuguang_heartbeat.update_interaction()
-        
-        # [修复] 新对话开始，清除之前的打断状态
-        self.mouth.clear_interrupt()
 
         # 检索相关记忆
         related_memories = self.brain.memory_system.search_memory(user_input)
@@ -127,7 +124,8 @@ class NervousSystem:
             logger.info(f"🧠 激活记忆: {related_memories}")
 
         system_content = self.brain.get_system_prompt() + memory_text
-
+        logger.info(f"📜 System Prompt (前200字): {system_content[:200]}...")  # 添加这行
+        
         messages = [{"role": "system", "content": system_content}]
         messages.extend(self.brain.chat_history)
         messages.append({"role": "user", "content": user_input})

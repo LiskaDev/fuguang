@@ -36,9 +36,61 @@
 
 ---
 
-## �📝 更新日志 (Changelog)
+## ⚠️ 常见坑点 (Common Pitfalls)
+
+> 以下是开发过程中遇到的典型问题，**AI 助手和开发者必读**！
+
+### 坑点 #1：路径计算层级错误
+
+**问题表现**：`system_prompt.txt` 无法加载，AI 人设丢失，回复变成默认机械风格。
+
+**根本原因**：`core/config.py` 中的 `PROJECT_ROOT` 路径计算错误。
+
+```python
+# ❌ 错误写法（少算了一级）
+self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # 指向 src/
+
+# ✅ 正确写法
+self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # 指向 fuguang/
+```
+
+**路径追踪**：
+```
+__file__ = src/fuguang/core/config.py
+parent   = core/
+parent^2 = fuguang/
+parent^3 = src/         ← 错误！
+parent^4 = fuguang/     ← 正确！（项目根目录）
+```
+
+**预防措施**：修改任何 `Path(__file__)` 路径时，务必在控制台打印验证。
+
+---
+
+## 📋 日志查看 (Logging)
+
+| 日志类型 | 位置 | 说明 |
+| :--- | :--- | :--- |
+| **控制台日志** | 运行时终端窗口 | 实时查看，包含所有 `logger.info()` 输出 |
+| **文件日志** | `logs/fuguang_study.log` | Study 模式的持久化日志 |
+| **文件日志** | `logs/fuguang.log` | IDE 模式的持久化日志（如已配置） |
+
+**关键日志标识**：
+- `📜 System Prompt` - 人设加载状态
+- `🧠 激活记忆` - 长期记忆检索
+- `🔧 AI请求使用工具` - Function Calling 触发
+- `⏰ 触发提醒` - 定时任务执行
+
+---
+
+## 📝 更新日志 (Changelog)
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v1.3.1 - 路径修复 & 情绪标签 (2026-01-31)
+- **[修复]** 修复 `core/config.py` 中 `PROJECT_ROOT` 路径计算错误（`parent^3` → `parent^4`），导致 `system_prompt.txt` 无法加载。
+- **[优化]** 添加 System Prompt 加载日志，方便排查人设丢失问题。
+- **[文档]** README 新增「常见坑点」和「日志查看」章节。
 
 ### v1.3.0 - 语音打断 & 代码生成优化 (2026-01-28)
 - **[新增]** 语音打断功能：按住 **右Ctrl键** 可立即停止扶光说话，方便用户插话。

@@ -12,8 +12,10 @@ class ConfigManager:
     """
 
     def __init__(self):
-        # 项目根目录 (core/ -> fuguang/ -> src/ -> Root)
-        self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+        # 项目根目录 (core/ -> fuguang/ -> src/ -> fuguang项目根)
+        # __file__ = src/fuguang/core/config.py
+        # parent = core/, parent.parent = fuguang/, parent.parent.parent = src/, parent^4 = fuguang项目根
+        self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
         # 核心目录结构
         self.CONFIG_DIR = self.PROJECT_ROOT / "config"

@@ -1,7 +1,6 @@
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
 # =====================================================
 # 🛠️ PathManager (路径管理器)
@@ -9,9 +8,6 @@ from dotenv import load_dotenv
 # 1. 获取项目根目录 (Project Root)
 # Logic: config.py is in src/fuguang/ -> parent is src/ -> parent is Root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-
-# 加载 .env 文件
-load_dotenv(PROJECT_ROOT / ".env")
 
 # 2. 定义标准目录结构
 CONFIG_DIR = PROJECT_ROOT / "config"
@@ -41,23 +37,20 @@ NOTES_FILE = DESKTOP_PATH / "Fuguang_Notes.md"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# 6. Config Manager (从环境变量读取)
+# 5. Config Manager
 class ConfigManager:
-    # DeepSeek API
-    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-    DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    # Hardcoded defaults (Lazy mode)
+    DEEPSEEK_API_KEY = "***REDACTED_DEEPSEEK_KEY***"
+    DEEPSEEK_BASE_URL = "https://api.deepseek.com"
     
-    # 阿里云
-    ALI_ACCESS_KEY_ID = os.getenv("ALI_ACCESS_KEY_ID", "")
-    ALI_ACCESS_KEY_SECRET = os.getenv("ALI_ACCESS_KEY_SECRET", "")
-    ALI_APPKEY = os.getenv("ALI_APPKEY", "")
-    ALI_REGION_ID = os.getenv("ALI_REGION_ID", "cn-shanghai")
+    ALI_ACCESS_KEY_ID = "***REDACTED_ALI_KEY_ID***"
+    ALI_ACCESS_KEY_SECRET = "***REDACTED_ALI_KEY_SECRET***"
+    ALI_APPKEY = "***REDACTED_ALI_APPKEY***"
+    ALI_REGION_ID = "cn-shanghai"
     
-    # Serper
-    SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
+    SERPER_API_KEY = "***REDACTED_SERPER_KEY***"
     
-    # Unity
-    UNITY_IP = os.getenv("UNITY_IP", "127.0.0.1")
-    UNITY_PORT = int(os.getenv("UNITY_PORT", "5005"))
+    UNITY_IP = "127.0.0.1"
+    UNITY_PORT = 5005
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")
