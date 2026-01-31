@@ -56,5 +56,7 @@ class ConfigManager:
     # 摄像头配置（人脸检测）
     CAMERA_ENABLED = True  # 是否启用摄像头检测用户是否在座
     CAMERA_INDEX = 0       # 摄像头索引，0 通常是默认摄像头
+    GAZE_TRACKING_ENABLED = True  # 是否启用注视追踪（角色眼神跟随用户）
+    GAZE_TRACKING_FPS = 10        # 注视追踪刷新率
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")

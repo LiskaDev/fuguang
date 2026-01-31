@@ -7,6 +7,8 @@ import keyboard
 import speech_recognition as sr
 import datetime
 from .. import heartbeat as fuguang_heartbeat
+from ..camera import Camera
+from ..gaze_tracker import GazeTracker
 from .config import ConfigManager
 from .mouth import Mouth
 from .ears import Ears
@@ -30,6 +32,10 @@ class NervousSystem:
         self.brain = Brain(self.config, self.mouth)
         self.ears = Ears()
         self.skills = SkillManager(self.config, self.mouth, self.brain)
+
+        # [新增] 初始化摄像头和注视追踪
+        self.camera = Camera()
+        self.gaze_tracker = GazeTracker(self.camera, self.mouth, fps=10)
 
         # 状态变量
         self.AWAKE_STATE = "sleeping"  # sleeping / voice_wake
@@ -299,6 +305,10 @@ class NervousSystem:
         logger.info("🚀 神经系统启动")
         self.mouth.send_to_unity("Joy")
         fuguang_heartbeat.start_heartbeat()
+        
+        # [新增] 启动注视追踪器
+        self.gaze_tracker.start()
+        logger.info("👀 注视追踪已启动")
         
         # [新增] 启动时挥手致意
         time.sleep(2) # 等Unity准备好
