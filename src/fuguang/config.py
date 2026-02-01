@@ -58,5 +58,15 @@ class ConfigManager:
     CAMERA_INDEX = 0       # 摄像头索引，0 通常是默认摄像头
     GAZE_TRACKING_ENABLED = True  # 是否启用注视追踪（角色眼神跟随用户）
     GAZE_TRACKING_FPS = 10        # 注视追踪刷新率
+    
+    # 情感交互配置
+    WELCOME_BACK_ENABLED = True   # 是否启用"回头杀"功能
+    WELCOME_BACK_TIMEOUT = 300    # 回头杀：离开多久算"久"（秒），默认5分钟
+    SHY_MODE_ENABLED = True       # 是否启用"害羞"功能
+    SHY_STARE_DURATION = 10       # 害羞：盯着看多久触发（秒）
+    SHY_COOLDOWN = 60             # 害羞：冷却时间（秒）
+    
+    # 心跳系统配置
+    HEARTBEAT_IDLE_TIMEOUT = 1200  # 主动对话触发：空闲多久后触发（秒），默认20分钟
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")

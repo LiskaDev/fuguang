@@ -24,8 +24,7 @@ last_interaction_time = time.time()
 is_running = True
 silent_mode = False  # 静默模式：用户正在操作时禁止主动触发
 
-# ⏱️ 主动对话触发时间（秒）
-IDLE_TRIGGER_SECONDS = 1200  # 20分钟无互动后触发
+# ⏱️ 主动对话触发时间从 ConfigManager.HEARTBEAT_IDLE_TIMEOUT 读取
 
 # AI 客户端（延迟初始化）
 _ai_client = None
@@ -219,7 +218,7 @@ def _life_cycle():
         idle_seconds = now - last_interaction_time
         
         # === 触发逻辑：AI 主动搭话 ===
-        if idle_seconds > IDLE_TRIGGER_SECONDS and not silent_mode:
+        if idle_seconds > ConfigManager.HEARTBEAT_IDLE_TIMEOUT and not silent_mode:
             logger.info(f"💓 检测到空闲 {int(idle_seconds)}秒，准备触发主动对话...")
             
             # [新增] 物理眼检查：如果用户不在座位上，不发起对话
