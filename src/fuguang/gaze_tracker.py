@@ -40,6 +40,11 @@ class GazeTracker(threading.Thread):
         self._detect_count = 0
         self._found_count = 0
         
+        # [新增] 状态共享（用于回头杀/害羞机制）
+        self.has_face = False           # 当前是否检测到人脸
+        self.face_enter_time = 0        # 人脸首次出现的时间戳
+        self.last_face_seen_time = 0    # 上次看到人脸的时间戳
+        
         self.daemon = True  # 守护线程，主程序退出时自动结束
     
     @property
@@ -61,18 +66,31 @@ class GazeTracker(threading.Thread):
         
         while self._running:
             try:
+                current_time = time.time()
+                
                 if self._enabled:
                     found, x, y = self.camera.get_face_position()
                     self._detect_count += 1
                     
                     if found:
                         self._found_count += 1
+                        
+                        # [新增] 状态更新：从无人变有人
+                        if not self.has_face:
+                            self.face_enter_time = current_time
+                            logger.info("👀 检测到用户出现")
+                        
+                        self.has_face = True
+                        self.last_face_seen_time = current_time
+                        
                         # 发送注视指令给 Unity
                         msg = f"look:{x:.2f},{y:.2f}"
                         self.mouth.send_to_unity(msg)
-                        
-                        # 调试日志（默认关闭，太吵）
-                        # logger.debug(f"👀 注视: {msg}")
+                    else:
+                        # [新增] 缓冲 2 秒，防止眨眼/光线导致的误判
+                        if self.has_face and (current_time - self.last_face_seen_time > 2.0):
+                            self.has_face = False
+                            logger.info("👀 用户已离开")
                 
                 time.sleep(self.interval)
                 

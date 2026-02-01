@@ -41,6 +41,9 @@ class NervousSystem:
         self.AWAKE_STATE = "sleeping"  # sleeping / voice_wake
         self.IS_PTT_PRESSED = False
         self.LAST_ACTIVE_TIME = 0
+        
+        # [新增] 害羞机制冷却时间
+        self.last_shy_time = 0
 
         # 注册按键监听
         keyboard.hook(self._on_key_event)
@@ -319,6 +322,39 @@ class NervousSystem:
         while True:
             self._check_timeout()
             self.skills.check_reminders()
+            
+            # ================================
+            # [新增] 视觉交互逻辑（回头杀 + 害羞）
+            # ================================
+            now = time.time()
+            if self.gaze_tracker.has_face:
+                stare_duration = now - self.gaze_tracker.face_enter_time
+                
+                # 回头杀：刚回来(<1秒) 且 之前离开很久(>5分钟)
+                if stare_duration < 1.0 and (now - self.LAST_ACTIVE_TIME > 300):
+                    logger.info("💕 检测到用户回归！触发回头杀")
+                    self.mouth.send_to_unity("Surprised")
+                    self.mouth.speak("啊，指挥官你回来啦！")
+                    self.LAST_ACTIVE_TIME = now
+                    fuguang_heartbeat.update_interaction()
+                
+                # 害羞：盯着看超过10秒 且 冷却时间已过(>60秒)
+                elif stare_duration > 10 and (now - self.last_shy_time > 60):
+                    logger.info("😳 被盯得不好意思了...")
+                    self.mouth.send_to_unity("Fun")
+                    
+                    import random
+                    shy_replies = [
+                        "一直盯着我看，我会不好意思的...",
+                        "指挥官，我脸上有代码吗？",
+                        "再看...再看我就要把你吃掉了，开玩笑的。",
+                        "你在观察我？那我也观察你！",
+                    ]
+                    self.mouth.speak(random.choice(shy_replies))
+                    
+                    self.last_shy_time = now
+                    self.LAST_ACTIVE_TIME = now
+                    fuguang_heartbeat.update_interaction()
 
             # 显示状态
             status_icon = "🎤" if self.IS_PTT_PRESSED else "🟢" if self.AWAKE_STATE == "voice_wake" else "💤"
