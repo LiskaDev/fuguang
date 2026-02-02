@@ -60,8 +60,16 @@ class Brain:
         except Exception as e:
             logger.error(f"记忆保存失败: {e}")
 
-    def get_system_prompt(self) -> str:
-        """生成动态 System Prompt"""
+    def get_system_prompt(self, dynamic_context: dict = None) -> str:
+        """
+        生成动态 System Prompt
+        
+        Args:
+            dynamic_context: 实时感知数据，包含:
+                - app: 当前活动窗口标题
+                - clipboard: 剪贴板内容
+                - user_present: 用户是否在座（可选）
+        """
         current_time = datetime.datetime.now().strftime("%H:%M:%S")
         weekday = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][datetime.datetime.now().weekday()]
         current_date = f"{datetime.datetime.now().strftime('%Y-%m-%d')} {weekday}"
@@ -70,6 +78,25 @@ class Brain:
         memory = self.load_memory()
         user_profile = json.dumps(memory.get("user_profile", {}), ensure_ascii=False)
         summary = memory.get("short_term_summary", "暂无")
+
+        # 构建感知信息（如果提供了）
+        perception_section = ""
+        if dynamic_context:
+            app_name = dynamic_context.get("app", "未知")
+            clipboard = dynamic_context.get("clipboard", "无")
+            user_present = dynamic_context.get("user_present", None)
+            visual_status = ""
+            if user_present is not None:
+                visual_status = "指挥官在座位上" if user_present else "座位无人"
+            
+            perception_section = f"""
+
+【实时感知状态】
+- 用户正在操作: {app_name}
+- 剪贴板内容: {clipboard}
+{f'- 视觉状态: {visual_status}' if visual_status else ''}
+（当用户问"这个"、"这段代码"、"帮我看看"时，指的就是剪贴板内容；当用户问"我在干嘛"时请根据当前窗口回答）
+"""
 
         try:
             with open(self.config.SYSTEM_PROMPT_FILE, "r", encoding="utf-8") as f:
@@ -80,9 +107,10 @@ class Brain:
                 mode_status=mode_status,
                 history_summary=f"【用户档案】{user_profile}\n【上次话题摘要】{summary}"
             )
-            return prompt
+            # 追加感知信息
+            return prompt + perception_section
         except Exception:
-            return "你是沈扶光，说话简洁。[Neutral]"
+            return f"你是沈扶光，说话简洁。[Neutral]{perception_section}"
 
     def trim_history(self):
         """修剪对话历史，防止过长"""

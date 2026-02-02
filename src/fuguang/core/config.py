@@ -51,3 +51,19 @@ class ConfigManager:
         # Unity 通信配置
         self.UNITY_IP = GlobalConfig.UNITY_IP
         self.UNITY_PORT = GlobalConfig.UNITY_PORT
+        
+        # 摄像头配置
+        self.CAMERA_ENABLED = GlobalConfig.CAMERA_ENABLED
+        self.CAMERA_INDEX = GlobalConfig.CAMERA_INDEX
+        self.GAZE_TRACKING_ENABLED = GlobalConfig.GAZE_TRACKING_ENABLED
+        self.GAZE_TRACKING_FPS = GlobalConfig.GAZE_TRACKING_FPS
+        
+        # 情感交互配置
+        self.WELCOME_BACK_ENABLED = GlobalConfig.WELCOME_BACK_ENABLED
+        self.WELCOME_BACK_TIMEOUT = GlobalConfig.WELCOME_BACK_TIMEOUT
+        self.SHY_MODE_ENABLED = GlobalConfig.SHY_MODE_ENABLED
+        self.SHY_STARE_DURATION = GlobalConfig.SHY_STARE_DURATION
+        self.SHY_COOLDOWN = GlobalConfig.SHY_COOLDOWN
+        
+        # 心跳系统配置
+        self.HEARTBEAT_IDLE_TIMEOUT = GlobalConfig.HEARTBEAT_IDLE_TIMEOUT

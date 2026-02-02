@@ -14,6 +14,7 @@ from .mouth import Mouth
 from .ears import Ears
 from .brain import Brain
 from .skills import SkillManager
+from .eyes import Eyes
 
 logger = logging.getLogger("Fuguang")
 
@@ -36,6 +37,9 @@ class NervousSystem:
         # [新增] 初始化摄像头和注视追踪
         self.camera = Camera()
         self.gaze_tracker = GazeTracker(self.camera, self.mouth, fps=10)
+        
+        # [新增] 初始化数字眼睛（情境感知）
+        self.eyes = Eyes(self.config)
 
         # 状态变量
         self.AWAKE_STATE = "sleeping"  # sleeping / voice_wake
@@ -132,8 +136,13 @@ class NervousSystem:
             memory_text = "\n【相关长期记忆】\n" + "\n".join(related_memories)
             logger.info(f"🧠 激活记忆: {related_memories}")
 
-        system_content = self.brain.get_system_prompt() + memory_text
-        logger.info(f"📜 System Prompt (前200字): {system_content[:200]}...")  # 添加这行
+        # [新增] 收集实时感知数据
+        perception_data = self.eyes.get_perception_data()
+        perception_data["user_present"] = self.gaze_tracker.has_face if hasattr(self.gaze_tracker, 'has_face') else None
+        
+        system_content = self.brain.get_system_prompt(dynamic_context=perception_data) + memory_text
+        logger.info(f"📜 System Prompt (前200字): {system_content[:200]}...")
+        logger.info(f"👁️ 感知数据: app={perception_data.get('app', 'N/A')[:30]}")
         
         messages = [{"role": "system", "content": system_content}]
         messages.extend(self.brain.chat_history)
