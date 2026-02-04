@@ -34,9 +34,15 @@ class NervousSystem:
         self.ears = Ears()
         self.skills = SkillManager(self.config, self.mouth, self.brain)
 
-        # [新增] 初始化摄像头和注视追踪
-        self.camera = Camera()
-        self.gaze_tracker = GazeTracker(self.camera, self.mouth, fps=10)
+        # [修复] 根据配置决定是否启用摄像头
+        if self.config.CAMERA_ENABLED:
+            self.camera = Camera()
+            self.gaze_tracker = GazeTracker(self.camera, self.mouth, fps=self.config.GAZE_TRACKING_FPS)
+            logger.info("📷 摄像头模块已启用")
+        else:
+            self.camera = None
+            self.gaze_tracker = None
+            logger.info("📷 摄像头模块已禁用 (CAMERA_ENABLED=False)")
         
         # [新增] 初始化数字眼睛（情境感知）
         self.eyes = Eyes(self.config)
@@ -48,6 +54,10 @@ class NervousSystem:
         
         # [新增] 害羞机制冷却时间
         self.last_shy_time = 0
+        
+        # [升级] 安保系统状态
+        self.security_mode_active = False  # True=锁定中，拒绝一切指令
+        self.last_security_warning_time = 0  # 上次警告时间（用于周期性警告）
 
         # 注册按键监听
         keyboard.hook(self._on_key_event)
@@ -318,9 +328,12 @@ class NervousSystem:
         self.mouth.send_to_unity("Joy")
         fuguang_heartbeat.start_heartbeat()
         
-        # [新增] 启动注视追踪器
-        self.gaze_tracker.start()
-        logger.info("👀 注视追踪已启动")
+        # [修复] 根据配置启动注视追踪器
+        if self.gaze_tracker and self.config.GAZE_TRACKING_ENABLED:
+            self.gaze_tracker.start()
+            logger.info("👁️ 注视追踪已启动")
+        elif not self.config.CAMERA_ENABLED:
+            logger.info("👁️ 注视追踪已禁用 (CAMERA_ENABLED=False)")
         
         # [新增] 启动时挥手致意
         time.sleep(2) # 等Unity准备好
@@ -332,48 +345,93 @@ class NervousSystem:
             self._check_timeout()
             self.skills.check_reminders()
             
-            # ================================
-            # [新增] 视觉交互逻辑（回头杀 + 害羞）
-            # ================================
             now = time.time()
-            if self.gaze_tracker.has_face:
-                stare_duration = now - self.gaze_tracker.face_enter_time
+            
+            # ================================
+            # 🛡️ 安保协议（必须在语音处理之前）
+            # ================================
+            if self.camera and self.config.CAMERA_ENABLED:
+                found, face_x, face_y, identity = self.camera.get_face_info()
                 
-                # 回头杀：刚回来(<1秒) 且 之前离开很久
-                if self.config.WELCOME_BACK_ENABLED:
-                    if stare_duration < 1.0 and (now - self.LAST_ACTIVE_TIME > self.config.WELCOME_BACK_TIMEOUT):
-                        logger.info("💕 检测到用户回归！触发回头杀")
-                        self.mouth.send_to_unity("Surprised")
-                        self.mouth.speak("啊，指挥官你回来啦！")
-                        self.LAST_ACTIVE_TIME = now
-                        fuguang_heartbeat.update_interaction()
+                # 更新 GazeTracker 状态
+                if found and self.gaze_tracker:
+                    self.gaze_tracker.has_face = True
+                    self.gaze_tracker.face_enter_time = self.gaze_tracker.face_enter_time or now
                 
-                # 害羞：盯着看超过指定时间 且 冷却时间已过
-                if self.config.SHY_MODE_ENABLED:
-                    if stare_duration > self.config.SHY_STARE_DURATION and (now - self.last_shy_time > self.config.SHY_COOLDOWN):
-                        logger.info("😳 被盯得不好意思了...")
-                        self.mouth.send_to_unity("Fun")
-                        
-                        import random
-                        shy_replies = [
-                            "一直盯着我看，我会不好意思的...",
-                            "指挥官，我脸上有代码吗？",
-                            "再看...再看我就要把你吃掉了，开玩笑的。",
-                            "你在观察我？那我也观察你！",
-                        ]
-                        self.mouth.speak(random.choice(shy_replies))
-                        
-                        self.last_shy_time = now
-                        self.LAST_ACTIVE_TIME = now
-                        fuguang_heartbeat.update_interaction()
+                # --- 情况 A: 发现入侵者 ---
+                if found and identity == "Stranger":
+                    if not self.security_mode_active:
+                        # 首次检测到陌生人，触发警报
+                        logger.warning("🚨 警告：检测到未授权人员！系统锁定。")
+                        self.mouth.send_to_unity("Angry")
+                        self.mouth.speak("警告。无法识别身份。系统已锁定，请立即离开。")
+                        self.security_mode_active = True
+                        self.last_security_warning_time = now
+                    
+                    # 锁定期间，每 10 秒刷新愤怒表情（防止被覆盖）
+                    if now - self.last_security_warning_time > 10:
+                        self.mouth.send_to_unity("Angry")
+                        self.last_security_warning_time = now
+                    
+                    # ⚠️ 关键：跳过后续所有逻辑，不听语音，不思考
+                    time.sleep(0.1)
+                    continue
+                
+                # --- 情况 B: 指挥官回归 ---
+                if found and identity == "Commander" and self.security_mode_active:
+                    logger.info("✅ 身份确认：指挥官。警报解除。")
+                    self.mouth.send_to_unity("Joy")
+                    self.mouth.speak("警报解除。欢迎回来，指挥官！")
+                    self.security_mode_active = False
+                    self.LAST_ACTIVE_TIME = now
+                    fuguang_heartbeat.update_interaction()
+                
+                # --- 情况 C: 正常状态下的情感交互 ---
+                if self.gaze_tracker and self.gaze_tracker.has_face and identity == "Commander":
+                    stare_duration = now - self.gaze_tracker.face_enter_time
+                    
+                    # 回头杀（仅限指挥官）
+                    if self.config.WELCOME_BACK_ENABLED:
+                        if stare_duration < 1.0 and (now - self.LAST_ACTIVE_TIME > self.config.WELCOME_BACK_TIMEOUT):
+                            logger.info("💕 检测到指挥官回归！触发回头杀")
+                            self.mouth.send_to_unity("Surprised")
+                            self.mouth.speak("啊，指挥官你回来啦！")
+                            self.LAST_ACTIVE_TIME = now
+                            fuguang_heartbeat.update_interaction()
+                    
+                    # 害羞机制（仅限指挥官）
+                    if self.config.SHY_MODE_ENABLED:
+                        if stare_duration > self.config.SHY_STARE_DURATION and (now - self.last_shy_time > self.config.SHY_COOLDOWN):
+                            logger.info("😳 被盯得不好意思了...")
+                            self.mouth.send_to_unity("Fun")
+                            
+                            import random
+                            shy_replies = [
+                                "一直盯着我看，我会不好意思的...",
+                                "指挥官，我脸上有代码吗？",
+                                "再看...再看我就要把你吃掉了，开玩笑的。",
+                                "你在观察我？那我也观察你！",
+                            ]
+                            self.mouth.speak(random.choice(shy_replies))
+                            
+                            self.last_shy_time = now
+                            self.LAST_ACTIVE_TIME = now
+                            fuguang_heartbeat.update_interaction()
 
             # 显示状态
-            status_icon = "🎤" if self.IS_PTT_PRESSED else "🟢" if self.AWAKE_STATE == "voice_wake" else "💤"
+            status_icon = "🔒" if self.security_mode_active else ("🎤" if self.IS_PTT_PRESSED else "🟢" if self.AWAKE_STATE == "voice_wake" else "💤")
             print(f"\r{status_icon} [{self._get_status_text()}]", end="", flush=True)
 
             # ========================
             # 模式1: PTT（按住录音）
             # ========================
+            # 🔒 安全检查：锁定状态下不响应语音
+            if self.security_mode_active:
+                if self.IS_PTT_PRESSED:
+                    logger.warning("🔒 系统锁定中，拒绝语音指令")
+                time.sleep(0.1)
+                continue
+            
             if self.IS_PTT_PRESSED:
                 with self.ears.get_microphone() as source:
                     logger.info("🎤 [PTT] 正在录音，松开CTRL结束...")
@@ -411,6 +469,11 @@ class NervousSystem:
             # ========================
             # 模式2: 语音唤醒 / 待机监听
             # ========================
+            # 🔒 安全检查：锁定状态下也不响应语音唤醒
+            if self.security_mode_active:
+                time.sleep(0.1)
+                continue
+            
             with self.ears.get_microphone() as source:
                 self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.3)
 

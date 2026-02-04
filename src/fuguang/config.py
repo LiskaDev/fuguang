@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # =====================================================
 # 🛠️ PathManager (路径管理器)
@@ -8,6 +9,9 @@ from pathlib import Path
 # 1. 获取项目根目录 (Project Root)
 # Logic: config.py is in src/fuguang/ -> parent is src/ -> parent is Root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# 加载 .env 文件
+load_dotenv(PROJECT_ROOT / ".env")
 
 # 2. 定义标准目录结构
 CONFIG_DIR = PROJECT_ROOT / "config"
@@ -37,27 +41,28 @@ NOTES_FILE = DESKTOP_PATH / "Fuguang_Notes.md"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# 5. Config Manager
+# 6. Config Manager (从 .env 读取 API 密钥)
 class ConfigManager:
-    # Hardcoded defaults (Lazy mode)
-    DEEPSEEK_API_KEY = "***REDACTED_DEEPSEEK_KEY***"
-    DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+    # === API 密钥（从 .env 读取）===
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     
-    ALI_ACCESS_KEY_ID = "***REDACTED_ALI_KEY_ID***"
-    ALI_ACCESS_KEY_SECRET = "***REDACTED_ALI_KEY_SECRET***"
-    ALI_APPKEY = "***REDACTED_ALI_APPKEY***"
-    ALI_REGION_ID = "cn-shanghai"
+    ALI_ACCESS_KEY_ID = os.getenv("ALI_ACCESS_KEY_ID", "")
+    ALI_ACCESS_KEY_SECRET = os.getenv("ALI_ACCESS_KEY_SECRET", "")
+    ALI_APPKEY = os.getenv("ALI_APPKEY", "")
+    ALI_REGION_ID = os.getenv("ALI_REGION_ID", "cn-shanghai")
     
-    SERPER_API_KEY = "***REDACTED_SERPER_KEY***"
+    SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
     
-    UNITY_IP = "127.0.0.1"
-    UNITY_PORT = 5005
+    UNITY_IP = os.getenv("UNITY_IP", "127.0.0.1")
+    UNITY_PORT = int(os.getenv("UNITY_PORT", "5005"))
     
     # 摄像头配置（人脸检测）
     CAMERA_ENABLED = True  # 是否启用摄像头检测用户是否在座
     CAMERA_INDEX = 0       # 摄像头索引，0 通常是默认摄像头
     GAZE_TRACKING_ENABLED = True  # 是否启用注视追踪（角色眼神跟随用户）
-    GAZE_TRACKING_FPS = 10        # 注视追踪刷新率
+    GAZE_TRACKING_FPS = 10        # 注视追踪刷新率 (建议 5-30，越高越丝滑但越耗CPU)
+    IDENTITY_CHECK_INTERVAL = 2.0 # 身份识别间隔（秒），建议 2-10，越短响应越快但越耗CPU
     
     # 情感交互配置
     WELCOME_BACK_ENABLED = True   # 是否启用"回头杀"功能

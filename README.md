@@ -20,9 +20,14 @@
 
 ## 📏 开发规范 (Development Rules)
 
-1.  **IDE 模式 (`ide.py`)**：由 AI 辅助维护。核心逻辑复用 `core/` 下的代码。
-2.  **Study 模式 (`fuguang_study.py`)**：用户的试验田。目前为独立单体脚本，未来可选择性继承 `core`。
-3.  **核心修改**：如果修改了 `core/` 下的代码，会同时影响到所有引用它的入口（目前主要是 `ide.py`）。
+1.  **每次编辑后必须测试**：修改任何 `.py` 文件后，运行 `python run.py` 确认无报错再提交。
+2.  **配置文件分工**：
+    - API 密钥 → 编辑 **`.env`** 文件
+    - 功能开关 → 编辑 **`src/fuguang/config.py`**
+    - 新增配置项 → 两个 config.py 都要加（外层定义，内层复制）
+3.  **IDE 模式 (`ide.py`)**：由 AI 辅助维护。核心逻辑复用 `core/` 下的代码。
+4.  **Study 模式 (`fuguang_study.py`)**：用户的试验田。目前为独立单体脚本。
+5.  **核心修改**：如果修改了 `core/` 下的代码，会同时影响到所有引用它的入口。
 
 ---
 
@@ -65,6 +70,58 @@ parent^4 = fuguang/     ← 正确！（项目根目录）
 
 **预防措施**：修改任何 `Path(__file__)` 路径时，务必在控制台打印验证。
 
+### 坑点 #2：两个 config.py 文件
+
+**问题表现**：新增配置项后，运行时读不到值。
+
+**根本原因**：项目有两个 config.py，新增配置时两个都要加。
+
+| 文件 | 作用 |
+| :--- | :--- |
+| `src/fuguang/config.py` | 定义默认值（静态类属性） |
+| `src/fuguang/core/config.py` | 运行时使用（复制外层值 + 额外属性） |
+
+**正确做法**：
+```python
+# 1. 先在 src/fuguang/config.py 添加
+class ConfigManager:
+    MY_NEW_CONFIG = True
+
+# 2. 再在 src/fuguang/core/config.py 的 __init__ 添加
+self.MY_NEW_CONFIG = GlobalConfig.MY_NEW_CONFIG
+```
+
+### 坑点 #3：安全检查遗漏
+
+**问题表现**：锁定状态下，陌生人说话扶光还是会响应。
+
+**根本原因**：只在一处检查了 `security_mode_active`。
+
+**正确做法**：PTT 模式和语音唤醒模式**都要检查**：
+```python
+if self.security_mode_active:
+    time.sleep(0.1)
+    continue  # 跳过语音处理
+```
+
+---
+
+## 🔧 常用命令 (Common Commands)
+
+```powershell
+# 激活虚拟环境
+& c:/Users/ALan/Desktop/fuguang/.venv/Scripts/Activate.ps1
+
+# 运行扶光
+python run.py
+
+# 测试摄像头模块
+python src/fuguang/camera.py
+
+# 注册人脸
+python src/scripts/register_face.py
+```
+
 ---
 
 ## 📋 日志查看 (Logging)
@@ -86,6 +143,16 @@ parent^4 = fuguang/     ← 正确！（项目根目录）
 ## 📝 更新日志 (Changelog)
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v1.5.0 - 身份识别与安保系统 (2026-02-04)
+- **[新增]** 人脸注册脚本（`src/scripts/register_face.py`）：录入指挥官人脸，保存到 `data/face_db/`。
+- **[升级]** 摄像头模块 v4.5：双引擎分离模式（OpenCV 每帧追踪 + face_recognition 每2秒识别）。
+- **[新增]** 安保协议：陌生人触发警报 + 系统锁定，拒绝一切语音指令，指挥官回归后自动解锁。
+- **[新增]** 周期性警告：锁定期间每10秒刷新愤怒表情。
+- **[修复]** `CAMERA_ENABLED = False` 现在正确禁用所有摄像头功能。
+- **[优化]** API 密钥从硬编码迁移到 `.env` 文件，提高安全性。
+- **[新增]** 配置项 `IDENTITY_CHECK_INTERVAL`：可调整身份识别频率。
+- **[新增]** 坐标平滑：防止注视追踪微小抖动。
 
 ### v1.4.0 - 注视追踪 & 情感交互 & 数字感知 (2026-02-02)
 - **[新增]** 数字感知模块（`core/eyes.py`）：获取当前窗口标题和剪贴板内容，注入 AI 上下文。

@@ -21,10 +21,11 @@ class ConfigManager:
         self.CONFIG_DIR = self.PROJECT_ROOT / "config"
         self.DATA_DIR = self.PROJECT_ROOT / "data"
         self.LOG_DIR = self.PROJECT_ROOT / "logs"
-        self.GENERATED_DIR = self.PROJECT_ROOT / "generated" 
+        self.GENERATED_DIR = self.PROJECT_ROOT / "generated"
+        self.FACE_DB_DIR = self.DATA_DIR / "face_db"  # [新增] 人脸数据库目录
 
         # 确保目录存在
-        for _dir in [self.CONFIG_DIR, self.DATA_DIR, self.LOG_DIR, self.GENERATED_DIR]:
+        for _dir in [self.CONFIG_DIR, self.DATA_DIR, self.LOG_DIR, self.GENERATED_DIR, self.FACE_DB_DIR]:
             _dir.mkdir(parents=True, exist_ok=True)
 
         # 桌面路径 (用于笔记)
@@ -57,6 +58,7 @@ class ConfigManager:
         self.CAMERA_INDEX = GlobalConfig.CAMERA_INDEX
         self.GAZE_TRACKING_ENABLED = GlobalConfig.GAZE_TRACKING_ENABLED
         self.GAZE_TRACKING_FPS = GlobalConfig.GAZE_TRACKING_FPS
+        self.IDENTITY_CHECK_INTERVAL = GlobalConfig.IDENTITY_CHECK_INTERVAL
         
         # 情感交互配置
         self.WELCOME_BACK_ENABLED = GlobalConfig.WELCOME_BACK_ENABLED

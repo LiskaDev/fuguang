@@ -1,25 +1,31 @@
 """
-扶光的眼睛 (Camera Module) v2.0 - 人脸检测 + 坐标追踪
+扶光的眼睛 (Camera Module) v4.5 - 双引擎分离模式
 功能：
-  1. 检测用户是否在座位上
-  2. 计算人脸坐标，用于注视追踪
+  1. OpenCV 负责每帧坐标追踪（极速丝滑）
+  2. face_recognition 负责身份识别（每 2 秒一次，不阻塞追踪）
 """
 import cv2
+import face_recognition
 import time
 import threading
 import logging
+from pathlib import Path
 
 logger = logging.getLogger("Fuguang")
+
+# 项目根目录
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class Camera:
     """
-    物理眼睛 - 摄像头人脸检测（单例模式）
+    物理眼睛 - 双引擎分离模式（单例模式）
     
-    特性：
-    - 单例模式：整个程序只有一个实例
-    - 线程安全：使用锁保护摄像头访问
-    - 坐标计算：支持注视追踪
+    引擎分工：
+    - OpenCV Haar: 每帧坐标追踪（快）
+    - face_recognition: 每 2 秒身份识别（准）
+    
+    两个引擎独立运行，互不阻塞。
     """
     
     _instance = None
@@ -41,19 +47,32 @@ class Camera:
         self.camera_index = camera_index
         self.cap = None
         
-        # 加载人脸识别模型
-        face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-        self.face_cascade = cv2.CascadeClassifier(face_cascade_path)
-        
         # 线程安全
         self._lock = threading.Lock()
         
-        # 缓存机制
-        self._cache_cooldown = 0.05  # 50ms
-        self._last_read_time = 0
-        self._cached_found = False
-        self._cached_x = 0.0
-        self._cached_y = 0.0
+        # === 引擎 1：OpenCV（极速坐标追踪）===
+        self.face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        )
+        
+        # === 引擎 2：face_recognition（身份识别）===
+        self.commander_encoding = None
+        self.face_db_path = PROJECT_ROOT / "data" / "face_db" / "commander.jpg"
+        self._load_commander_face()
+        
+        # ===== 身份识别配置（从 config 读取，支持热调整）=====
+        try:
+            from .config import ConfigManager
+            self.identity_check_interval = ConfigManager.IDENTITY_CHECK_INTERVAL
+        except (ImportError, AttributeError):
+            self.identity_check_interval = 2.0  # 默认值
+        self._last_identity_check_time = 0
+        self._cached_identity = "Unknown"
+        
+        # 坐标平滑（防抖动）
+        self._last_x = 0.0
+        self._last_y = 0.0
+        self._smooth_alpha = 0.7
         
         # 用于 is_user_present 的冷却
         self._presence_cooldown = 2.0
@@ -61,7 +80,24 @@ class Camera:
         self._cached_presence = False
         
         self._initialized = True
-        logger.info("📷 摄像头模块初始化完成（单例模式）")
+        logger.info("📷 摄像头模块 v4.5 初始化完成（双引擎分离模式）")
+    
+    def _load_commander_face(self):
+        """加载指挥官的人脸特征底片"""
+        if self.face_db_path.exists():
+            try:
+                image = face_recognition.load_image_file(str(self.face_db_path))
+                encodings = face_recognition.face_encodings(image)
+                
+                if len(encodings) > 0:
+                    self.commander_encoding = encodings[0]
+                    logger.info("👁️ 鹰眼系统就绪：双引擎分离模式 (OpenCV + face_recognition)")
+                else:
+                    logger.warning("⚠️ 指挥官照片中未检测到人脸")
+            except Exception as e:
+                logger.error(f"❌ 加载指挥官档案失败: {e}")
+        else:
+            logger.warning(f"⚠️ 未找到指挥官照片: {self.face_db_path}")
     
     def _open_camera(self) -> bool:
         """打开摄像头（延迟初始化）"""
@@ -72,133 +108,133 @@ class Camera:
                 return False
         return True
     
-    def get_face_position(self) -> tuple:
+    def get_face_info(self) -> tuple:
         """
-        获取人脸的相对坐标（用于注视追踪）
+        获取人脸信息（坐标 + 身份）
+        
+        - 坐标：每帧用 OpenCV 计算（丝滑）
+        - 身份：每 2 秒用 face_recognition 计算（精准）
         
         Returns:
-            (found, x, y):
-            - found: bool - 是否检测到人脸
-            - x: float - -1.0 (左) ~ 1.0 (右)
-            - y: float - -1.0 (下) ~ 1.0 (上)
+            (found, x, y, identity)
         """
         with self._lock:
-            # 缓存机制：防止读取太快
-            current_time = time.time()
-            if current_time - self._last_read_time < self._cache_cooldown:
-                return self._cached_found, self._cached_x, self._cached_y
-            
-            self._last_read_time = current_time
-            
-            # 打开摄像头
             if not self._open_camera():
-                return False, 0.0, 0.0
+                return False, 0.0, 0.0, "Unknown"
             
-            try:
-                ret, frame = self.cap.read()
-                if not ret or frame is None:
-                    self._cached_found = False
-                    return False, 0.0, 0.0
+            ret, frame = self.cap.read()
+            if not ret or frame is None:
+                return False, 0.0, 0.0, "Unknown"
+            
+            height, width = frame.shape[:2]
+            current_time = time.time()
+            
+            # === 引擎 1：OpenCV 快速追踪（每帧执行）===
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+            
+            if len(faces) == 0:
+                return False, 0.0, 0.0, self._cached_identity
+            
+            # 取最大的一张脸
+            (x, y, w, h) = max(faces, key=lambda f: f[2] * f[3])
+            
+            # 计算归一化坐标
+            cx = x + w / 2
+            cy = y + h / 2
+            
+            # 坐标平滑（防抖动）
+            cx = cx * self._smooth_alpha + self._last_x * (1 - self._smooth_alpha)
+            cy = cy * self._smooth_alpha + self._last_y * (1 - self._smooth_alpha)
+            self._last_x, self._last_y = cx, cy
+            
+            # 归一化到 -1 ~ 1（镜像修正）
+            norm_x = -((cx - width / 2) / (width / 2))
+            norm_y = -((cy - height / 2) / (height / 2))
+            
+            # === 引擎 2：face_recognition 身份识别（每 2 秒执行）===
+            if current_time - self._last_identity_check_time >= self.identity_check_interval:
+                self._last_identity_check_time = current_time
                 
-                # 转灰度图加速
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
-                
-                if len(faces) > 0:
-                    # 取第一张脸
-                    (fx, fy, fw, fh) = faces[0]
-                    height, width = frame.shape[:2]
+                if self.commander_encoding is not None:
+                    # 只裁剪人脸区域，加速识别
+                    pad = 30
+                    face_roi = frame[
+                        max(0, y - pad):min(height, y + h + pad),
+                        max(0, x - pad):min(width, x + w + pad)
+                    ]
                     
-                    # 计算人脸中心点
-                    face_center_x = fx + fw / 2
-                    face_center_y = fy + fh / 2
-                    
-                    # 归一化 (-1 ~ 1)
-                    norm_x = (face_center_x - width / 2) / (width / 2)
-                    norm_y = (face_center_y - height / 2) / (height / 2)
-                    
-                    # 镜像修正：
-                    # - X 取反：摄像头里的"右"是你的"左"
-                    # - Y 取反：让抬头为正，低头为负
-                    self._cached_found = True
-                    self._cached_x = -norm_x
-                    self._cached_y = -norm_y
-                    
-                    return True, self._cached_x, self._cached_y
-                
-                self._cached_found = False
-                return False, 0.0, 0.0
-                
-            except Exception as e:
-                logger.error(f"人脸坐标检测异常: {e}")
-                return False, 0.0, 0.0
+                    if face_roi.size > 0:
+                        rgb_face = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
+                        
+                        try:
+                            face_encodings = face_recognition.face_encodings(rgb_face)
+                            
+                            if len(face_encodings) > 0:
+                                # 计算人脸距离（越小越相似）
+                                face_distances = face_recognition.face_distance(
+                                    [self.commander_encoding], face_encodings[0]
+                                )
+                                distance = face_distances[0]
+                                
+                                # tolerance=0.4 更严格（默认0.6太宽松）
+                                # 距离 < 0.4 认为是同一人
+                                tolerance = 0.4
+                                
+                                if distance < tolerance:
+                                    self._cached_identity = "Commander"
+                                    logger.debug(f"✅ 身份匹配: distance={distance:.3f} < {tolerance}")
+                                else:
+                                    self._cached_identity = "Stranger"
+                                    logger.warning(f"🚨 陌生人: distance={distance:.3f} >= {tolerance}")
+                            # 如果没算出特征，保持上次身份不变
+                        except Exception as e:
+                            logger.debug(f"身份识别异常: {e}")
+            
+            return True, norm_x, norm_y, self._cached_identity
+    
+    def get_face_position(self) -> tuple:
+        """获取人脸坐标（兼容旧接口）"""
+        found, x, y, _ = self.get_face_info()
+        return found, x, y
     
     def is_user_present(self) -> bool:
-        """
-        检测用户是否在座位上（用于主动对话触发）
-        
-        Returns:
-            True: 检测到人脸
-            False: 未检测到人脸
-        """
-        # 冷却机制：每 2 秒最多检测一次
+        """检测用户是否在座位上"""
         current_time = time.time()
         if current_time - self._last_presence_time < self._presence_cooldown:
             return self._cached_presence
         
         self._last_presence_time = current_time
-        
-        with self._lock:
-            if not self._open_camera():
-                return False
-            
-            try:
-                ret, frame = self.cap.read()
-                if not ret or frame is None:
-                    self._cached_presence = False
-                    return False
-                
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                faces = self.face_cascade.detectMultiScale(
-                    gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30)
-                )
-                
-                self._cached_presence = len(faces) > 0
-                
-                if self._cached_presence:
-                    logger.info(f"📸 视觉确认：检测到 {len(faces)} 张人脸，指挥官在座")
-                
-                # 检测完释放摄像头（节省资源，避免指示灯常亮）
-                # 注意：如果 GazeTracker 在运行，这里不应该释放
-                # 但单独调用 is_user_present 时可以释放
-                
-                return self._cached_presence
-                
-            except Exception as e:
-                logger.error(f"用户在座检测异常: {e}")
-                self._cached_presence = False
-                return False
+        found, _, _, _ = self.get_face_info()
+        self._cached_presence = found
+        return found
+    
+    def get_identity(self) -> str:
+        """获取当前用户身份（缓存值）"""
+        return self._cached_identity
     
     def show_feed(self, duration: int = 10):
-        """调试功能：显示摄像头检测状态（终端输出模式）"""
+        """调试功能：显示摄像头检测状态"""
         if not self._open_camera():
             print("❌ 无法打开摄像头")
             return
         
         print(f"📷 摄像头调试开始，{duration}秒后自动结束...")
+        print(f"   坐标追踪: OpenCV (每帧)")
+        print(f"   身份识别: face_recognition (每 {self.identity_check_interval}秒)")
         start_time = time.time()
         
         try:
             while time.time() - start_time < duration:
-                found, x, y = self.get_face_position()
+                found, x, y, identity = self.get_face_info()
                 elapsed = int(time.time() - start_time)
                 
                 if found:
-                    print(f"\r[{elapsed}s] ✅ 人脸坐标: X={x:+.2f}, Y={y:+.2f}   ", end="", flush=True)
+                    print(f"\r[{elapsed}s] ✅ X={x:+.2f}, Y={y:+.2f}, ID={identity}   ", end="", flush=True)
                 else:
                     print(f"\r[{elapsed}s] ❌ 未检测到人脸                    ", end="", flush=True)
                 
-                time.sleep(0.2)
+                time.sleep(0.05)  # 20 FPS 输出
         
         except KeyboardInterrupt:
             pass
@@ -228,17 +264,12 @@ def is_user_present() -> bool:
 
 # 测试入口
 if __name__ == "__main__":
-    print("📷 摄像头模块测试")
+    print("📷 摄像头模块 v4.5 测试（双引擎分离模式）")
+    print("=" * 50)
+    print("特点：坐标每帧更新（丝滑），身份每 2 秒更新（精准）")
+    print("=" * 50)
     cam = Camera()
     
-    # 方式1：快速检测
-    print(f"用户在座: {cam.is_user_present()}")
-    
-    # 方式2：坐标检测
-    found, x, y = cam.get_face_position()
-    print(f"人脸检测: found={found}, x={x:.2f}, y={y:.2f}")
-    
-    # 方式3：持续调试
-    cam.show_feed(duration=10)
+    cam.show_feed(duration=15)
     
     cam.release()
