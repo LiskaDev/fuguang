@@ -234,6 +234,10 @@ class NervousSystem:
             current_mem = self.brain.load_memory()
             current_mem["last_interaction"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             self.brain.save_memory(current_mem)
+            
+            # 🧠 潜意识记忆：后台分析对话，自动归档重要信息
+            self.brain.analyze_and_store_memory(user_input, ai_reply)
+
 
         except Exception as e:
             logger.error(f"AI 处理异常: {type(e).__name__}: {e}")

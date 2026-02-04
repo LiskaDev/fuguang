@@ -5,6 +5,7 @@ import time
 import datetime
 import logging
 import httpx
+import threading
 from openai import OpenAI
 from .config import ConfigManager
 from .mouth import Mouth
@@ -168,3 +169,76 @@ class Brain:
         self.mouth.speak("记忆同步完成，晚安。")
         time.sleep(1)
         os._exit(0)
+
+    # ========================
+    # 🧠 潜意识记忆系统 (Subconscious Memory)
+    # ========================
+    def analyze_and_store_memory(self, user_text: str, ai_reply: str):
+        """
+        让 AI 反思刚才的对话，提取有价值的记忆。
+        在后台线程运行，不卡住对话。
+        """
+        def _background_task():
+            # 1. 构造专门用来提取记忆的 Prompt
+            reflection_prompt = f"""请分析以下对话，提取关于用户的【长期事实】或【重要偏好】。
+
+用户说：{user_text}
+AI回复：{ai_reply}
+
+【提取规则】
+- 只提取可以长期记住的事实（如：用户的计划、偏好、厌恶、习惯、人际关系等）
+- 不要提取临时性信息（如：今天天气、正在做的事）
+- 如果没有值得记忆的信息，请直接输出 None
+
+【输出要求】
+如果有值得记忆的信息，严格按照以下 JSON 格式输出（不要Markdown，不要废话）：
+{{"content": "陈述句格式的事实", "importance": 1到5的整数}}
+
+importance 等级说明：
+- 5: 核心身份/永久偏好（如：名字、MBTI、绝对禁忌）
+- 4: 重要计划/关系（如：考驾照、女朋友叫什么）
+- 3: 一般偏好（如：喜欢吃甜食）
+- 2: 临时状态（如：最近在学Python）
+- 1: 琐碎信息
+
+示例输出：
+{{"content": "指挥官打算下个月考驾照", "importance": 4}}
+"""
+            
+            try:
+                # 2. 调用 LLM（非流式，解析 JSON）
+                response = self.client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[{"role": "user", "content": reflection_prompt}],
+                    max_tokens=150,
+                    temperature=0.3  # 低温度，更稳定
+                )
+                result = response.choices[0].message.content.strip()
+                
+                # 3. 检查是否有值得记忆的内容
+                if "None" in result or "none" in result or "{" not in result:
+                    return  # 没什么好记的
+                
+                # 4. 解析 JSON
+                # 清洗可能的 Markdown 包裹
+                clean_json = result.replace("```json", "").replace("```", "").strip()
+                memory_item = json.loads(clean_json)
+                
+                content = memory_item.get("content", "")
+                importance = memory_item.get("importance", 3)
+                
+                if not content:
+                    return
+                
+                # 5. 存入长期记忆
+                self.memory_system.add_memory(content, importance)
+                logger.info(f"🧠 [潜意识] 已自动归档记忆：{content} (重要度: {importance})")
+                
+            except json.JSONDecodeError as e:
+                logger.debug(f"潜意识记忆解析失败: {e}")
+            except Exception as e:
+                logger.warning(f"潜意识记忆提取失败: {e}")
+        
+        # 启动后台线程，不阻塞主对话
+        thread = threading.Thread(target=_background_task, daemon=True)
+        thread.start()
