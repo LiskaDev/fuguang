@@ -135,7 +135,7 @@ class NervousSystem:
                 self.mouth.speak(clean_text)
 
     def _handle_ai_response(self, user_input: str):
-        """处理 AI 回复"""
+        """处理 AI 回复 (简化版 - 逻辑已移至 Brain.chat)"""
         self.LAST_ACTIVE_TIME = time.time()
         fuguang_heartbeat.update_interaction()
 
@@ -146,98 +146,30 @@ class NervousSystem:
             memory_text = "\n【相关长期记忆】\n" + "\n".join(related_memories)
             logger.info(f"🧠 激活记忆: {related_memories}")
 
-        # [新增] 收集实时感知数据
+        # 收集实时感知数据
         perception_data = self.eyes.get_perception_data()
         perception_data["user_present"] = self.gaze_tracker.has_face if hasattr(self.gaze_tracker, 'has_face') else None
         
         system_content = self.brain.get_system_prompt(dynamic_context=perception_data) + memory_text
         logger.info(f"📜 System Prompt (前200字): {system_content[:200]}...")
         logger.info(f"👁️ 感知数据: app={perception_data.get('app', 'N/A')[:30]}")
-        
-        messages = [{"role": "system", "content": system_content}]
-        messages.extend(self.brain.chat_history)
-        messages.append({"role": "user", "content": user_input})
 
         try:
-            max_iterations = 3
-            iteration = 0
-
-            while iteration < max_iterations:
-                iteration += 1
-                logger.info(f"🤖 AI思考轮次: {iteration}")
-
-                self.mouth.start_thinking()  # <--- 让她开始托腮思考
-                # self.mouth.speak("让我想想...") # (可选)
-
-                response = self.brain.client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=messages,
-                    tools=self.skills.get_tools_schema(),  # [修复] 使用动态方法获取工具列表
-                    tool_choice="auto",
-                    stream=False,
-                    temperature=0.8,
-                    max_tokens=4096  # [修复] 增大 token 限制，支持生成复杂代码（如贪吃蛇游戏）
-                )
-
-
-                message = response.choices[0].message
-
-                if message.tool_calls:
-                    logger.info(f"🔧 AI请求使用工具: {len(message.tool_calls)} 个")
-
-                    messages.append({
-                        "role": "assistant",
-                        "content": message.content,
-                        "tool_calls": [
-                            {
-                                "id": tc.id,
-                                "type": "function",
-                                "function": {
-                                    "name": tc.function.name,
-                                    "arguments": tc.function.arguments
-                                }
-                            } for tc in message.tool_calls
-                        ]
-                    })
-
-                    for tool_call in message.tool_calls:
-                        func_name = tool_call.function.name
-                        func_args = json.loads(tool_call.function.arguments)
-
-                        logger.info(f"📞 调用工具: {func_name}")
-                        result = self.skills.execute_tool(func_name, func_args)
-
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": result
-                        })
-
-                    continue
-
-                else:
-                    ai_reply = message.content
-                    break
-
-            else:
-                ai_reply = "指挥官，这个问题有点复杂，我需要更多时间思考..."
-
-            self.brain.chat_history.append({"role": "user", "content": user_input})
-            self.brain.chat_history.append({"role": "assistant", "content": ai_reply})
-            self.brain.trim_history()
-
+            # 🧠 调用大脑进行思考 (工具调用逻辑已封装在 Brain.chat 中)
+            self.mouth.start_thinking()
+            
+            ai_reply = self.brain.chat(
+                user_input=user_input,
+                system_content=system_content,
+                tools_schema=self.skills.get_tools_schema(),
+                tool_executor=self.skills.execute_tool
+            )
+            
+            self.mouth.stop_thinking()
+            
+            # 处理回复（语音播放）
             if ai_reply and not ("<｜DSML｜" in ai_reply or "<tool_code>" in ai_reply):
                 self._process_response(ai_reply)
-
-            self.mouth.stop_thinking()
-
-            current_mem = self.brain.load_memory()
-            current_mem["last_interaction"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.brain.save_memory(current_mem)
-            
-            # 🧠 潜意识记忆：后台分析对话，自动归档重要信息
-            self.brain.analyze_and_store_memory(user_input, ai_reply)
-
 
         except Exception as e:
             logger.error(f"AI 处理异常: {type(e).__name__}: {e}")
@@ -253,6 +185,7 @@ class NervousSystem:
             else:
                 self.mouth.speak("指挥官，连接受到干扰...")
             self.mouth.send_to_unity("Sorrow")
+
 
     def _extract_level(self, text: str) -> int:
         """提取音量级别"""

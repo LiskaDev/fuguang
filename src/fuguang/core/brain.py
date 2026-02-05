@@ -171,6 +171,108 @@ class Brain:
         os._exit(0)
 
     # ========================
+    # 🧠 核心对话方法 (Function Calling)
+    # ========================
+    def chat(self, user_input: str, system_content: str, tools_schema: list, tool_executor) -> str:
+        """
+        核心对话方法：支持 Function Calling (工具调用)
+        
+        Args:
+            user_input: 用户输入
+            system_content: 完整的 System Prompt（包含记忆）
+            tools_schema: 工具定义列表
+            tool_executor: 工具执行函数 (func_name, func_args) -> result
+            
+        Returns:
+            AI 的最终回复文本
+        """
+        messages = [{"role": "system", "content": system_content}]
+        messages.extend(self.chat_history)
+        messages.append({"role": "user", "content": user_input})
+        
+        max_iterations = 3
+        iteration = 0
+        ai_reply = ""
+        
+        while iteration < max_iterations:
+            iteration += 1
+            logger.info(f"🤖 AI思考轮次: {iteration}")
+            
+            # 调用 DeepSeek
+            response = self.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=messages,
+                tools=tools_schema,
+                tool_choice="auto",
+                stream=False,
+                temperature=0.8,
+                max_tokens=4096
+            )
+            
+            message = response.choices[0].message
+            
+            # 检查是否需要调用工具
+            if message.tool_calls:
+                logger.info(f"🔧 AI请求使用工具: {len(message.tool_calls)} 个")
+                
+                # 把 AI 的工具调用意图加入对话历史
+                messages.append({
+                    "role": "assistant",
+                    "content": message.content,
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments
+                            }
+                        } for tc in message.tool_calls
+                    ]
+                })
+                
+                # 执行每个工具调用
+                for tool_call in message.tool_calls:
+                    func_name = tool_call.function.name
+                    func_args = json.loads(tool_call.function.arguments)
+                    
+                    logger.info(f"📞 调用工具: {func_name}")
+                    result = tool_executor(func_name, func_args)
+                    
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result
+                    })
+                
+                # 继续下一轮，让 AI 根据工具结果生成回复
+                continue
+            
+            else:
+                # 没有工具调用，直接获取回复
+                ai_reply = message.content
+                break
+        
+        else:
+            # 超过最大迭代次数
+            ai_reply = "指挥官，这个问题有点复杂，我需要更多时间思考..."
+        
+        # 更新对话历史
+        self.chat_history.append({"role": "user", "content": user_input})
+        self.chat_history.append({"role": "assistant", "content": ai_reply})
+        self.trim_history()
+        
+        # 保存交互时间
+        current_mem = self.load_memory()
+        current_mem["last_interaction"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.save_memory(current_mem)
+        
+        # 潜意识记忆：后台分析对话
+        self.analyze_and_store_memory(user_input, ai_reply)
+        
+        return ai_reply
+
+    # ========================
     # 🧠 潜意识记忆系统 (Subconscious Memory)
     # ========================
     def analyze_and_store_memory(self, user_text: str, ai_reply: str):
