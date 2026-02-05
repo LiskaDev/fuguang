@@ -66,19 +66,36 @@ class MemorySystem:
         """
         检索记忆 (RAG 的雏形)
         原理：看 query_text 里有多少词命中记忆的 keywords
+        升级：加入 importance 权重 + 子串匹配，提高召回率
         """
-        query_words = set(jieba.cut(query_text))
+        query_words = list(jieba.cut(query_text))
         results = []
 
         for mem in self.memories:
-            # 计算匹配度 (简单的交集算法)
-            mem_keywords = set(mem["keywords"])
-            match_count = len(query_words & mem_keywords)
+            mem_keywords = mem.get("keywords", [])
+            if not mem_keywords:
+                continue
             
-            if match_count > 0:
-                results.append((match_count, mem["content"]))
+            # 计算匹配度（两种匹配方式）
+            match_score = 0
+            for query_word in query_words:
+                if len(query_word) < 2:  # 跳过单字词
+                    continue
+                for keyword in mem_keywords:
+                    # 方式1: 精确匹配
+                    if query_word == keyword:
+                        match_score += 2
+                    # 方式2: 子串包含（'驾照' in '考驾照' 或反向）
+                    elif query_word in keyword or keyword in query_word:
+                        match_score += 1
+            
+            if match_score > 0:
+                # 重要度作为权重因子 (1-5 → 1.0-2.0)
+                importance = mem.get("importance", 1)
+                weighted_score = match_score * (1 + importance * 0.2)
+                results.append((weighted_score, mem["content"]))
 
-        # 按匹配度降序排列，取前 3 条
+        # 按加权分数降序排列，取前 3 条
         results.sort(key=lambda x: x[0], reverse=True)
         return [r[1] for r in results[:3]]
 
