@@ -165,6 +165,22 @@ class SkillManager:
                     "required": ["filename"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_web_page",
+                "description": """【网页阅读器】读取并提取指定网页的文字内容。
+                使用场景: 需要深入了解某个链接的详细内容时使用。
+                注意: 只能读取公开网页，不支持需要登录的页面。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string", "description": "要读取的网页 URL"}
+                    },
+                    "required": ["url"]
+                }
+            }
         }
     ]
 
@@ -336,6 +352,66 @@ class SkillManager:
         except Exception as e:
             logger.error(f"搜索异常: {e}")
             return f"搜索失败: {str(e)}"
+
+    # ========================
+    # 📖 网页深度阅读
+    # ========================
+    def read_web_page(self, url: str) -> str:
+        """读取并提取网页的文字内容"""
+        from bs4 import BeautifulSoup
+        
+        logger.info(f"📖 正在阅读网页: {url}")
+        self.mouth.speak("正在阅读网页内容...")
+        
+        try:
+            # 模拟浏览器 User-Agent
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=15)
+            response.encoding = response.apparent_encoding or 'utf-8'
+            
+            if response.status_code != 200:
+                return f"❌ 网页访问失败，状态码: {response.status_code}"
+            
+            # 解析 HTML
+            soup = BeautifulSoup(response.text, 'lxml')
+            
+            # 移除脚本、样式、导航等无关内容
+            for tag in soup(['script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'noscript']):
+                tag.decompose()
+            
+            # 提取正文内容（优先查找主内容区域）
+            main_content = soup.find('main') or soup.find('article') or soup.find('div', class_='content') or soup.body
+            
+            if main_content:
+                text = main_content.get_text(separator='\n', strip=True)
+            else:
+                text = soup.get_text(separator='\n', strip=True)
+            
+            # 清理多余空行
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            clean_text = '\n'.join(lines)
+            
+            # 限制长度（防止 Token 爆炸）
+            max_chars = 3000
+            if len(clean_text) > max_chars:
+                clean_text = clean_text[:max_chars] + f"\n\n... (内容过长，已截取前 {max_chars} 字符)"
+            
+            # 获取页面标题
+            title = soup.title.string if soup.title else "无标题"
+            
+            logger.info(f"✅ 网页读取成功: {title[:50]}")
+            return f"📄 网页标题: {title}\n\n{clean_text}"
+            
+        except requests.Timeout:
+            return "❌ 网页访问超时（15秒），请稍后重试。"
+        except Exception as e:
+            logger.error(f"网页读取失败: {e}")
+            return f"❌ 网页读取失败: {str(e)}"
 
     # ========================
     # 📺 视频搜索
@@ -756,5 +832,7 @@ class SkillManager:
             return f"✅ 已存入长期记忆: {content}"
         elif func_name == "run_code":
             return self.run_code(func_args.get("filename", ""))
+        elif func_name == "read_web_page":
+            return self.read_web_page(func_args.get("url", ""))
         else:
             return f"未知工具: {func_name}"
