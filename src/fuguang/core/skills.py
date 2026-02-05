@@ -149,6 +149,22 @@ class SkillManager:
                     "required": ["tool_name"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "run_code",
+                "description": """【代码执行器】运行 generated/ 目录下的 Python 脚本。
+                使用场景: 写完代码后需要运行查看结果。
+                注意: 执行前会请求指挥官确认，确保安全。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "filename": {"type": "string", "description": "要运行的文件名（如 heart.py）"}
+                    },
+                    "required": ["filename"]
+                }
+            }
         }
     ]
 
@@ -597,6 +613,93 @@ class SkillManager:
             return f"代码生成失败: {str(e)}"
 
     # ========================
+    # 🚀 代码执行器 (带安全锁)
+    # ========================
+    def run_code(self, filename: str) -> str:
+        """
+        运行 generated/ 目录下的 Python 脚本
+        带 Human-in-the-loop 安全确认机制
+        """
+        import sys
+        
+        if not filename.endswith(".py"):
+            filename += ".py"
+            
+        file_path = self.config.GENERATED_DIR / filename
+        
+        # 检查文件是否存在
+        if not file_path.exists():
+            return f"❌ 找不到文件: {filename}，请先使用 write_code 生成代码。"
+        
+        # 🛡️ 安全锁：请求指挥官确认
+        print(f"\n{'='*50}")
+        print(f"🚨 [安全警告] AI 请求运行代码")
+        print(f"{'='*50}")
+        print(f"📂 文件: {file_path}")
+        print(f"\n📄 代码预览:")
+        print("-" * 40)
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                code_content = f.read()
+                # 显示前 500 字符
+                preview = code_content[:500]
+                if len(code_content) > 500:
+                    preview += f"\n... (共 {len(code_content)} 字符)"
+                print(preview)
+        except Exception as e:
+            print(f"(无法预览: {e})")
+        print("-" * 40)
+        
+        # 请求确认
+        print("\n🛑 是否允许运行？")
+        print("   [y] 允许  [n] 拒绝  [v] 用 VSCode 打开查看")
+        user_confirm = input("请输入选择: ").strip().lower()
+        
+        if user_confirm == 'v':
+            try:
+                subprocess.run(["code", str(file_path)], capture_output=True, timeout=5)
+            except:
+                os.startfile(str(file_path))
+            return "📂 已打开代码供您查看，请确认后手动运行。"
+        
+        if user_confirm != 'y':
+            logger.info("❌ 指挥官拒绝了代码执行请求")
+            return "❌ 指挥官拒绝了代码执行请求。"
+        
+        # 执行代码
+        logger.info(f"🚀 正在运行: {file_path}")
+        self.mouth.speak("正在执行代码...")
+        
+        try:
+            result = subprocess.run(
+                [sys.executable, str(file_path)],
+                capture_output=True,
+                text=True,
+                timeout=60,  # 60秒超时保护
+                cwd=str(self.config.GENERATED_DIR)  # 在 generated 目录下运行
+            )
+            
+            output = result.stdout
+            error = result.stderr
+            
+            if result.returncode == 0:
+                logger.info(f"✅ 代码执行成功")
+                response = f"✅ 代码执行成功！"
+                if output:
+                    response += f"\n📤 输出结果:\n{output[:500]}"
+                return response
+            else:
+                logger.error(f"❌ 代码执行出错: {error}")
+                return f"❌ 代码执行出错:\n{error[:500]}"
+                
+        except subprocess.TimeoutExpired:
+            logger.error("⏰ 代码执行超时")
+            return "⏰ 代码执行超时（超过60秒），已强制终止。"
+        except Exception as e:
+            logger.error(f"运行失败: {e}")
+            return f"❌ 运行失败: {str(e)}"
+
+    # ========================
     # 🔧 本地快捷指令
     # ========================
     def get_time(self) -> str:
@@ -651,5 +754,7 @@ class SkillManager:
             importance = func_args.get("importance", 3)
             self.brain.memory_system.add_memory(content, importance)
             return f"✅ 已存入长期记忆: {content}"
+        elif func_name == "run_code":
+            return self.run_code(func_args.get("filename", ""))
         else:
             return f"未知工具: {func_name}"
