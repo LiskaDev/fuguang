@@ -51,6 +51,7 @@ class NervousSystem:
         self.AWAKE_STATE = "sleeping"  # sleeping / voice_wake
         self.IS_PTT_PRESSED = False
         self.LAST_ACTIVE_TIME = 0
+        self.TEXT_INPUT_REQUESTED = False  # [新增] 打字输入模式标志
         
         # [新增] 害羞机制冷却时间
         self.last_shy_time = 0
@@ -63,9 +64,12 @@ class NervousSystem:
         keyboard.hook(self._on_key_event)
 
         logger.info("🧠 神经系统初始化完毕...")
+        logger.info("💡 提示: 按 F1 可切换到打字输入模式")
+
 
     def _on_key_event(self, event):
         """按键事件处理"""
+        # PTT 模式（右 Ctrl）
         if event.name == 'right ctrl':
             if event.event_type == 'down' and not self.IS_PTT_PRESSED:
                 self.IS_PTT_PRESSED = True
@@ -75,6 +79,11 @@ class NervousSystem:
                 self.IS_PTT_PRESSED = False
                 self.LAST_ACTIVE_TIME = time.time()
                 logger.info("🎤 [PTT] 录音结束")
+        
+        # [新增] 打字输入模式（F1）
+        elif event.name == 'f1' and event.event_type == 'down':
+            self.TEXT_INPUT_REQUESTED = True
+            logger.info("⌨️ [打字模式] 已触发，请在终端输入文字")
 
     def _check_timeout(self):
         """检查语音唤醒是否超时"""
@@ -86,14 +95,17 @@ class NervousSystem:
 
     def _get_status_text(self) -> str:
         """获取当前状态文本"""
-        if self.IS_PTT_PRESSED:
+        if self.TEXT_INPUT_REQUESTED:
+            return "⌨️ 打字输入模式"
+        elif self.IS_PTT_PRESSED:
             return "🎤 PTT录音中"
         elif self.AWAKE_STATE == "sleeping":
-            return "💤 待机中（按住CTRL说话或叫我名字）"
+            return "💤 待机中（按住CTRL说话 / F1打字）"
         elif self.AWAKE_STATE == "voice_wake":
             remaining = int(self.VOICE_WAKE_DURATION - (time.time() - self.LAST_ACTIVE_TIME))
             return f"🟢 唤醒中 ({remaining}s)"
         return "❓ 未知"
+
 
     def _process_response(self, ai_text: str):
         """处理 AI 响应，提取标签和命令"""
@@ -356,8 +368,26 @@ class NervousSystem:
                             fuguang_heartbeat.update_interaction()
 
             # 显示状态
-            status_icon = "🔒" if self.security_mode_active else ("🎤" if self.IS_PTT_PRESSED else "🟢" if self.AWAKE_STATE == "voice_wake" else "💤")
+            status_icon = "🔒" if self.security_mode_active else ("⌨️" if self.TEXT_INPUT_REQUESTED else ("🎤" if self.IS_PTT_PRESSED else "🟢" if self.AWAKE_STATE == "voice_wake" else "💤"))
             print(f"\r{status_icon} [{self._get_status_text()}]", end="", flush=True)
+
+            # ========================
+            # 模式0: 打字输入（F1 触发）
+            # ========================
+            if self.TEXT_INPUT_REQUESTED:
+                self.TEXT_INPUT_REQUESTED = False
+                print()  # 换行
+                try:
+                    user_text = input("📝 请输入消息 (回车发送): ").strip()
+                    if user_text:
+                        logger.info(f"⌨️ 收到打字输入: {user_text}")
+                        fuguang_heartbeat.update_interaction()
+                        self._process_command(user_text)
+                    else:
+                        logger.info("⌨️ 取消输入（空消息）")
+                except EOFError:
+                    logger.warning("⌨️ 输入被取消")
+                continue
 
             # ========================
             # 模式1: PTT（按住录音）
