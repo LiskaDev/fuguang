@@ -1,0 +1,24 @@
+============================================================
+Whisper Transcription Test Results
+============================================================
+
+[1] Loading Whisper 'base' model...
+    Model loaded successfully!
+
+[2] Testing: Chinese Audio
+    File: （开心）哈哈哈，是我赢了。不服的话，我也给你个复仇的机会…如何？.wav
+    Transcribing...
+    Language: zh
+    Text (25 chars):
+    哈哈哈哈 是我赢了不服的话我也给你的付丑的机会如何...
+
+[3] Testing: English Song
+    File: 「风骚律师_愚蠢的事」Something_Stupid_-_Lola_Marsh.1597539394.mp4
+    Transcribing...
+    Language: en
+    Text (1624 chars):
+    I know I stand in line until you think you have the time to spend in me with me And if we close some place to dance, I know that there's a chance you won't be leaving with me Then afterwards we drop into a quiet little place and have a dream quite too And then I go and spoil it all by saying something stupid like I love you I can see it in your eyes that you despart the same old lies you heard the night before And though it's just a line to you for me, it's true and never seems so right before I...
+
+============================================================
+Test Complete!
+============================================================

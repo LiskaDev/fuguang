@@ -15,6 +15,11 @@ import sys
 import numpy as np
 from PIL import Image
 import pyautogui
+import pyaudio
+import wave
+import tempfile
+import soundcard as sc
+import soundfile as sf
 from zhipuai import ZhipuAI
 
 from .config import ConfigManager
@@ -46,6 +51,14 @@ try:
 except ImportError:
     YOLOWORLD_AVAILABLE = False
     logger.warning("⚠️ Ultralytics 未安装，YOLO-World 视觉识别功能将受限")
+
+# [听觉] 导入 Whisper（语音转文字）
+try:
+    import whisper
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    logger.warning("⚠️ openai-whisper 未安装，媒体转写功能将受限")
 
 class SkillManager:
     """
@@ -370,6 +383,48 @@ class SkillManager:
                     "required": ["description"]
                 }
             }
+        },
+        
+        # === [新增] 媒体转写工具 ===
+        {
+            "type": "function",
+            "function": {
+                "name": "transcribe_media_file",
+                "description": """使用 Whisper 模型将本地的视频或音频文件转写为文字。
+            适用于：总结视频内容、会议记录、提取视频对白、分析播客内容。
+            支持格式：mp4, mp3, wav, m4a, webm 等常见音视频格式。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "文件的绝对路径（如 C:/Users/.../video.mp4）"
+                        }
+                    },
+                    "required": ["file_path"]
+                }
+            }
+        },
+        
+        # === [新增] 系统内录工具 (Stereo Mix) ===
+        {
+            "type": "function",
+            "function": {
+                "name": "listen_to_system_audio",
+                "description": """监听电脑系统内部发出的声音（如视频会议、网页视频、游戏音效、B站视频）并转写为文字。
+            注意：这会录制一段时间的音频，需要 Windows 启用“立体声混音”(Stereo Mix)。
+            使用场景：用户说“帮我听一下这个视频在说什么”“听一下电脑里的声音”""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "duration": {
+                            "type": "integer",
+                            "description": "监听时长（秒），建议 15-60 秒"
+                        }
+                    },
+                    "required": ["duration"]
+                }
+            }
         }
     ]
 
@@ -453,6 +508,9 @@ class SkillManager:
             except Exception as e:
                 logger.error(f"❌ EasyOCR 加载失败: {e}")
                 self._ocr_reader = None
+        
+        # [听觉] Whisper 模型（懒加载，首次使用时才加载）
+        self.whisper_model = None
     
     def get_tools_schema(self):
         """
@@ -1474,7 +1532,146 @@ class SkillManager:
             return f"❌ Shell 执行失败: {str(e)}"
 
     # ========================
-    # 🔊 音量控制
+    # 👂 媒体转写 (Whisper)
+    # ========================
+    def transcribe_media_file(self, file_path: str) -> str:
+        """
+        使用 Whisper 模型将音视频文件转写为文字
+        
+        Args:
+            file_path: 音视频文件的路径
+            
+        Returns:
+            转写后的文字内容
+        """
+        logger.info(f"👂 [Whisper] 正在转写文件: {file_path}")
+        
+        if not WHISPER_AVAILABLE:
+            return "❌ Whisper 未安装，请先运行: pip install openai-whisper"
+        
+        # 处理路径
+        from pathlib import Path
+        path = Path(file_path)
+        if not path.is_absolute():
+            # 尝试相对于项目根目录
+            path = self.config.PROJECT_ROOT / file_path
+        
+        if not path.exists():
+            return f"❌ 找不到文件: {file_path}"
+        
+        try:
+            # 1. 懒加载模型（首次使用时加载）
+            if self.whisper_model is None:
+                logger.info("⏳ 正在加载 Whisper 'small' 模型 (GPU 加速，首次运行需下载 ~460MB)...")
+                # 可选模型: tiny(~39M), base(~74M), small(~244M), medium(~769M), large(~1.5B)
+                # 'small' 在 RTX 4070 上速度快精度高，是中文识别的最佳选择
+                self.whisper_model = whisper.load_model("small")
+                logger.info("✅ Whisper 'small' 模型加载完成 (GPU 加速已启用)")
+            
+            # 2. 开始转写
+            logger.info("🎧 正在分析音频内容 (GPU 加速中)...")
+            # fp16=True 启用 GPU 半精度加速（需要 CUDA）
+            result = self.whisper_model.transcribe(str(path), fp16=True)
+            
+            text = result["text"].strip()
+            detected_lang = result.get("language", "unknown")
+            
+            # 3. 结果处理
+            logger.info(f"✅ 转写完成 ({len(text)}字，检测语言: {detected_lang})")
+            
+            if len(text) == 0:
+                return "⚠️ 文件中没有检测到语音内容"
+            
+            if len(text) > 3000:
+                # 如果太长，截取一部分，避免撑爆大脑
+                return f"【文件转写内容】(语言: {detected_lang})\n{text[:3000]}...\n\n(内容太长已截断，共 {len(text)} 字)"
+            else:
+                return f"【文件转写内容】(语言: {detected_lang})\n{text}"
+
+        except Exception as e:
+            logger.error(f"❌ Whisper 转写失败: {e}")
+            return f"❌ 转写失败: {str(e)}"
+
+    # ========================
+    # 👂 系统内录 (WASAPI Loopback)
+    # ========================
+    def listen_to_system_audio(self, duration: int = 30) -> str:
+        """
+        通过 WASAPI Loopback 直接从扬声器输出流捕获音频
+        
+        这个方法不需要"立体声混音"设备，直接"劫持"声卡输出
+        适用于 Senary Audio 等屏蔽了 Stereo Mix 的声卡
+        
+        Args:
+            duration: 录制时长（秒）
+            
+        Returns:
+            转写后的文字内容
+        """
+        logger.info(f"👂 [系统听觉] 正在通过 WASAPI 监听扬声器 {duration} 秒...")
+        
+        try:
+            # 1. 获取默认扬声器 (就是当前正在播放声音的设备)
+            default_speaker = sc.default_speaker()
+            logger.info(f"   🎧 锁定输出设备: {default_speaker.name}")
+            
+            # 2. 获取扬声器的 loopback 录音设备
+            # 通过 include_loopback=True 从扬声器输出流捕获音频
+            loopback_mic = sc.get_microphone(id=str(default_speaker.id), include_loopback=True)
+            logger.info(f"   🎤 Loopback 设备就绪: {loopback_mic.name}")
+            
+            # 3. 开始录制
+            SAMPLE_RATE = 44100
+            logger.info(f"   ⏺️ 开始录制 (共 {duration} 秒)...")
+            
+            with loopback_mic.recorder(samplerate=SAMPLE_RATE) as mic:
+                # record(numframes) - numframes = 采样率 * 秒数
+                data = mic.record(numframes=SAMPLE_RATE * duration)
+            
+            logger.info("✅ 录制结束，正在转写...")
+            
+            # 3. 保存为临时 WAV 文件
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+                temp_path = tmp_file.name
+            
+            # soundcard 录出来的是 numpy 数组，用 soundfile 存成 wav
+            sf.write(temp_path, data, SAMPLE_RATE)
+            
+            # 4. 使用 Whisper 转写
+            if not WHISPER_AVAILABLE:
+                os.remove(temp_path)
+                return "❌ Whisper 未安装，无法转写音频"
+            
+            if self.whisper_model is None:
+                logger.info("⏳ 正在加载 Whisper 'small' 模型 (GPU 加速)...")
+                self.whisper_model = whisper.load_model("small")
+                logger.info("✅ Whisper 模型加载完成")
+            
+            # GPU 加速转写，自动检测语言
+            result = self.whisper_model.transcribe(temp_path, fp16=True)
+            
+            # 清理临时文件
+            os.remove(temp_path)
+            
+            text = result["text"].strip()
+            detected_lang = result.get("language", "unknown")
+            
+            logger.info(f"✅ 系统音频转写完成 ({len(text)}字，语言: {detected_lang})")
+            
+            if len(text) == 0:
+                return "⚠️ 系统音频中没有检测到语音内容（可能是纯音乐或静音）"
+            
+            if len(text) > 3000:
+                return f"【系统音频监听结果】(语言: {detected_lang})\n{text[:3000]}...\n\n(内容太长已截断，共 {len(text)} 字)"
+            else:
+                return f"【系统音频监听结果】(语言: {detected_lang})\n{text}"
+
+        except Exception as e:
+            logger.error(f"❌ WASAPI Loopback 失败: {e}")
+            return f"❌ 系统内录失败: {str(e)}\n\n请确保电脑正在播放声音，并且扬声器正常工作。"
+
+    # ========================
+    # �🔊 音量控制
     # ========================
     def control_volume(self, action: str, level: int = None) -> str:
         logger.info(f"🔊 音量控制: {action}, 级别: {level}")
@@ -1898,6 +2095,14 @@ class SkillManager:
             return self.click_by_description(
                 func_args.get("description", ""),
                 func_args.get("double_click", False)
+            )
+        elif func_name == "transcribe_media_file":
+            return self.transcribe_media_file(
+                func_args.get("file_path", "")
+            )
+        elif func_name == "listen_to_system_audio":
+            return self.listen_to_system_audio(
+                func_args.get("duration", 30)
             )
         else:
             return f"未知工具: {func_name}"

@@ -274,6 +274,33 @@ python src/scripts/register_face.py
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
 
+### v2.3.0 - 顺风耳 系统内录 (2026-02-08) 👂
+- **[新增]** 🔊 **系统内录 (WASAPI Loopback)**：直接从扬声器输出流捕获音频，无需"立体声混音"。
+- **[新增]** `listen_to_system_audio` 工具：录制系统音频并用 Whisper 转写。
+- **[兼容]** **Senary Audio 支持**：绕过驱动层屏蔽，适用于华硕/联想高端笔记本。
+- **[依赖]** 安装 `soundcard`、`soundfile` 库。
+- **[修复]** **numpy 兼容性**：需使用 numpy < 2.0（soundcard 0.4.5 不兼容 numpy 2.x）。
+- **[修复]** **API 调用**：使用 `sc.get_microphone(id=speaker.id, include_loopback=True)` 而非 `speaker.recorder()`。
+- **[测试]** `test_loopback_final.py`：验证 WASAPI 录制 + Whisper 转写。
+
+**故障排除**：
+| 问题 | 解决方案 |
+|:---|:---|
+| `No module named 'soundcard'` | `.venv\Scripts\pip install soundcard soundfile` |
+| `fromstring is removed` | `.venv\Scripts\pip install "numpy<2.0"` |
+| `'_Speaker' has no attribute 'recorder'` | 使用 `sc.get_microphone(include_loopback=True)` |
+| 没有"立体声混音" | 无需担心，WASAPI Loopback 不需要它 |
+
+### v2.2.0 - 听觉觉醒 Whisper 集成 (2026-02-08) 🎧
+- **[新增]** 👂 **Whisper 语音转写**：集成 OpenAI Whisper 模型，可将本地音视频文件转写为文字。
+- **[新增]** `transcribe_media_file` 工具：支持 mp4, mp3, wav, m4a 等常见格式。
+- **[升级]** **CUDA 加速**：使用 PyTorch CUDA 2.6.0+cu124，在 RTX 4070 上实现 GPU 加速。
+- **[升级]** **Small 模型**：从 `base` 升级到 `small` (~460MB)，中文识别精度大幅提升。
+- **[特性]** **懒加载**：Whisper 模型首次使用时才加载，节省内存。
+- **[特性]** **语言检测**：自动检测音频语言（中文、英文等）。
+- **[依赖]** 安装 FFmpeg、openai-whisper、PyTorch CUDA。
+- **[测试]** `test_whisper_cuda.py`：验证 GPU 加速和中英文转写。
+
 ### v2.1.0 - 视觉三剑客 & 超级终端 (2026-02-07) 🚀
 - **[新增]** 👁️ **视觉三剑客 (Vision Trinity)**：集成了 EasyOCR (认字)、YOLO-World (识物)、GLM-4V (理解) 三大视觉引擎。
 - **[新增]** 🐚 **超级终端 (Super Shell)**：AI 可直接执行 PowerShell 复杂指令，管理文件、进程、网络。
