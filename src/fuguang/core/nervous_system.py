@@ -60,6 +60,10 @@ class NervousSystem:
         self.security_mode_active = False  # True=锁定中，拒绝一切指令
         self.last_security_warning_time = 0  # 上次警告时间（用于周期性警告）
 
+        # === [新增] 主动性状态锁 (晨间协议) ===
+        self.last_greet_date = None       # 上次打招呼的日期，防止重复
+        self.is_processing_greet = False  # 防止多线程冲突
+
         # 注册按键监听
         keyboard.hook(self._on_key_event)
 
@@ -198,6 +202,96 @@ class NervousSystem:
                 self.mouth.speak("指挥官，连接受到干扰...")
             self.mouth.send_to_unity("Sorrow")
 
+
+    # ========================
+    # 🌅 晨间协议 (The Morning Protocol)
+    # ========================
+    def _check_and_trigger_morning_greet(self, found, identity):
+        """
+        判断是否满足"晨间问候"的条件。
+        条件：看到指挥官 + 今天没打过招呼 + 没有正在处理的问候。
+        """
+        if self.is_processing_greet:
+            return
+
+        current_date = datetime.date.today()
+        current_hour = datetime.datetime.now().hour
+
+        # 触发条件：
+        # 1. 看到了人脸 (found)
+        # 2. 确认是指挥官 (identity == "Commander")
+        # 3. 今天还没打过招呼
+        # 4. 时间范围（测试阶段放宽为全天）
+        if (found and identity == "Commander" and
+                self.last_greet_date != current_date and
+                6 <= current_hour < 12):  # 正式上线改为 6 <= current_hour < 12
+
+            logger.info("🌅 检测到指挥官上线，触发晨间协议...")
+            self.is_processing_greet = True  # 上锁
+
+            # 启动后台线程执行，不卡住主循环的眼球追踪
+            import threading
+            threading.Thread(
+                target=self._execute_morning_routine,
+                args=(current_date,),
+                daemon=True
+            ).start()
+
+    def _execute_morning_routine(self, current_date):
+        """
+        后台执行晨间协议：构造 Prompt → 调用大脑（含工具调用）→ 播报。
+        """
+        try:
+            # 1. 构造系统级触发 Prompt
+            morning_trigger = (
+                "【系统指令】指挥官刚刚坐到电脑前，现在是早晨。"
+                "请执行【晨间汇报任务】：\n"
+                "1. 简短问候（不要太啰嗦，符合你的性格）。\n"
+                "2. 必须调用 search_web 工具查询今日天气。\n"
+                "3. 查询 1 条最新的科技或AI界大新闻。\n"
+                "4. 结合以上信息，生成一段温馨的早报。\n"
+                "注意：请直接生成最终的语音播报内容，口语化一点，不要太长。"
+            )
+
+            logger.info("🤖 AI 正在后台搜集情报...")
+
+            # 2. 收集实时感知数据，构建完整的 System Prompt
+            perception_data = self.eyes.get_perception_data()
+            perception_data["user_present"] = True  # 已确认指挥官在座
+
+            system_content = self.brain.get_system_prompt(dynamic_context=perception_data)
+            logger.info("📜 晨间协议 System Prompt 已构建")
+
+            # 3. 调用大脑（复用完整的工具调用链）
+            self.mouth.start_thinking()
+
+            ai_reply = self.brain.chat(
+                user_input=morning_trigger,
+                system_content=system_content,
+                tools_schema=self.skills.get_tools_schema(),
+                tool_executor=self.skills.execute_tool
+            )
+
+            self.mouth.stop_thinking()
+
+            # 4. 播报结果
+            if ai_reply:
+                logger.info(f"🗣️ 晨间播报: {ai_reply[:80]}...")
+                self.mouth.send_to_unity("Joy")  # 开心表情
+                self._process_response(ai_reply)
+
+            # 5. 记录日期，今天不再重复
+            self.last_greet_date = current_date
+            logger.info("✅ 晨间协议执行完毕")
+
+        except Exception as e:
+            logger.error(f"❌ 晨间协议执行失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self.mouth.stop_thinking()
+
+        finally:
+            self.is_processing_greet = False  # 解锁
 
     def _extract_level(self, text: str) -> int:
         """提取音量级别"""
@@ -366,6 +460,12 @@ class NervousSystem:
                             self.last_shy_time = now
                             self.LAST_ACTIVE_TIME = now
                             fuguang_heartbeat.update_interaction()
+
+            # ================================
+            # 🌅 晨间协议触发器 (The Morning Protocol)
+            # ================================
+            if self.camera and self.config.CAMERA_ENABLED:
+                self._check_and_trigger_morning_greet(found, identity)
 
             # 显示状态
             status_icon = "🔒" if self.security_mode_active else ("⌨️" if self.TEXT_INPUT_REQUESTED else ("🎤" if self.IS_PTT_PRESSED else "🟢" if self.AWAKE_STATE == "voice_wake" else "💤"))

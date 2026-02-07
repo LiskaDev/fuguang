@@ -54,6 +54,14 @@ class ConfigManager:
     
     SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
     
+    # === [新增] 智谱 API Key ===
+    ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "***REDACTED_ZHIPU_KEY***")
+    
+    # 视觉识别配置
+    VISION_USE_FLASH = False  # True=极速模式(glm-4v-flash, 2秒), False=标准模式(glm-4v, 4秒)
+    VISION_QUALITY = 85       # 图片压缩质量 (60-95，越高越清晰但越慢)
+    VISION_MAX_SIZE = 1280    # 图片最大边长 (768-2048，越大越清晰但越慢)
+
     UNITY_IP = os.getenv("UNITY_IP", "127.0.0.1")
     UNITY_PORT = int(os.getenv("UNITY_PORT", "5005"))
     
@@ -70,6 +78,11 @@ class ConfigManager:
     SHY_MODE_ENABLED = True       # 是否启用"害羞"功能
     SHY_STARE_DURATION = 30       # 害羞：盯着看多久触发（秒）
     SHY_COOLDOWN = 60             # 害羞：冷却时间（秒）
+    
+    # GUI 控制功能（智能鼠标点击）
+    ENABLE_GUI_CONTROL = True     # 是否启用 GUI 自动化功能（点击屏幕文字、输入文本）
+    GUI_CLICK_DELAY = 0.5         # 鼠标移动延迟（秒，模拟人类行为）
+    GUI_USE_GLM_FALLBACK = True   # 当 OCR 找不到文字时，是否使用 GLM-4V 辅助定位
     
     # 心跳系统配置
     HEARTBEAT_IDLE_TIMEOUT = 1200  # 主动对话触发：空闲多久后触发（秒），默认20分钟

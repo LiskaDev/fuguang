@@ -48,6 +48,12 @@ class ConfigManager:
         self.DEEPSEEK_API_KEY = GlobalConfig.DEEPSEEK_API_KEY
         self.DEEPSEEK_BASE_URL = GlobalConfig.DEEPSEEK_BASE_URL
         self.SERPER_API_KEY = GlobalConfig.SERPER_API_KEY
+        self.ZHIPU_API_KEY = GlobalConfig.ZHIPU_API_KEY
+        
+        # 视觉识别配置
+        self.VISION_USE_FLASH = GlobalConfig.VISION_USE_FLASH
+        self.VISION_QUALITY = GlobalConfig.VISION_QUALITY
+        self.VISION_MAX_SIZE = GlobalConfig.VISION_MAX_SIZE
 
         # Unity 通信配置
         self.UNITY_IP = GlobalConfig.UNITY_IP
@@ -66,6 +72,11 @@ class ConfigManager:
         self.SHY_MODE_ENABLED = GlobalConfig.SHY_MODE_ENABLED
         self.SHY_STARE_DURATION = GlobalConfig.SHY_STARE_DURATION
         self.SHY_COOLDOWN = GlobalConfig.SHY_COOLDOWN
+        
+        # GUI 控制配置
+        self.ENABLE_GUI_CONTROL = GlobalConfig.ENABLE_GUI_CONTROL
+        self.GUI_CLICK_DELAY = GlobalConfig.GUI_CLICK_DELAY
+        self.GUI_USE_GLM_FALLBACK = GlobalConfig.GUI_USE_GLM_FALLBACK
         
         # 心跳系统配置
         self.HEARTBEAT_IDLE_TIMEOUT = GlobalConfig.HEARTBEAT_IDLE_TIMEOUT

@@ -190,7 +190,8 @@ class Brain:
         messages.extend(self.chat_history)
         messages.append({"role": "user", "content": user_input})
         
-        max_iterations = 3
+        # [调整] 增加思考轮次上限，以支持复杂的连续任务 (如: 打开网页 -> 截图 -> 分析 -> 总结)
+        max_iterations = 6
         iteration = 0
         ai_reply = ""
         
