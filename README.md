@@ -27,8 +27,7 @@
     - 功能开关 → 编辑 **`src/fuguang/config.py`**
     - 新增配置项 → 两个 config.py 都要加（外层定义，内层复制）
 3.  **IDE 模式 (`ide.py`)**：由 AI 辅助维护。核心逻辑复用 `core/` 下的代码。
-4.  **Study 模式 (`fuguang_study.py`)**：用户的试验田。目前为独立单体脚本。
-5.  **核心修改**：如果修改了 `core/` 下的代码，会同时影响到所有引用它的入口。
+4.  **核心修改**：如果修改了 `core/` 下的代码，会同时影响到所有引用它的入口。
 
 ---
 
@@ -259,8 +258,7 @@ python src/scripts/register_face.py
 | 日志类型 | 位置 | 说明 |
 | :--- | :--- | :--- |
 | **控制台日志** | 运行时终端窗口 | 实时查看，包含所有 `logger.info()` 输出 |
-| **文件日志** | `logs/fuguang_study.log` | Study 模式的持久化日志 |
-| **文件日志** | `logs/fuguang.log` | IDE 模式的持久化日志（如已配置） |
+| **文件日志** | `logs/fuguang.log` | 持久化日志 |
 
 **关键日志标识**：
 - `📜 System Prompt` - 人设加载状态
