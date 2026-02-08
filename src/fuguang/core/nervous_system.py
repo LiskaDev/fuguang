@@ -335,9 +335,15 @@ class NervousSystem:
                 return
 
         # 软件启动 - 本地快捷
+        # [修复] 如果包含连接词("并"、"然后"、"写"、"输入"等)，说明是复合任务，交给 AI 处理
+        multi_step_indicators = ["并", "然后", "写", "输入", "搜索", "点击", "发送", "保存"]
+        is_multi_step = any(ind in text for ind in multi_step_indicators)
+        
         if any(t in text for t in ["打开", "启动", "运行", "想听", "想玩", "想看"]):
-            if self.skills.open_app(text):
-                return
+            if not is_multi_step:  # 只有简单的"打开XXX"才走快捷通道
+                if self.skills.open_app(text):
+                    return
+            # 复合任务交给 AI 处理，它会自己决定先 Shell 打开再 GUI 操作
 
         # 本地查询 - 快速响应
         if "几点" in text or "时间" in text:

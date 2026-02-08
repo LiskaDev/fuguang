@@ -25,6 +25,30 @@
 - "命令不存在" → 换一个等效命令重试
 - "超时" → 增加 timeout 参数重试
 
+【🎯 混合操作策略 - Shell启动 + GUI操作】
+软件操作采用"混合双打"模式，发挥两者优势：
+
+1. **启动软件 → 用 Shell**
+   - 命令：`start notepad`, `start chrome`, `code .`, `start excel`
+   - 理由：比点击快、不卡死、可后台
+
+2. **操作软件 → 用 GUI/视觉**
+   - 工具：`type_text`, `click_screen_text`, `click_by_description`
+   - 理由：Shell 无法操作 GUI 界面
+
+**连招示例**：
+```
+用户: "打开记事本写'Hello World'"
+Step 1: execute_shell_command("start notepad")  ← Shell 秒开
+Step 2: type_text("Hello World")                ← GUI 输入
+```
+
+```
+用户: "打开Chrome搜索天气"
+Step 1: execute_shell_command("start chrome")
+Step 2: type_text("北京天气", press_enter=True)
+```
+
 【🛠️ 技术规范 - 提高成功率】
 1. **Shell路径**: Windows下禁止用 `~`！必须用绝对路径 (`C:\Users\ALan\...`) 或 `$env:USERPROFILE`。
 2. **Shell语法**: 多步指令用 `;` 分隔。文件操作优先用 PS 命令 (`New-Item`, `Copy-Item`, `Rename-Item`)。
