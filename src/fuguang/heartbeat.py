@@ -1,6 +1,7 @@
 """
-扶光的心跳系统 (Subconscious System) v2.0
-功能：管理生物钟、情绪状态、AI 主动搭话
+扶光的心跳系统 (Subconscious System) v3.0
+功能：管理生物钟、情绪状态、AI 主动搭话、定时任务调度
+新增：schedule 定时任务、健康监控、喝水提醒、久坐提醒
 """
 import re
 import time
@@ -11,11 +12,14 @@ import datetime
 import logging
 
 import httpx
+import schedule
+import psutil
 from openai import OpenAI
 
 from .config import ConfigManager, DATA_DIR
 
 logger = logging.getLogger("Fuguang")
+
 
 # ===========================
 # 🧠 潜意识配置
@@ -189,11 +193,84 @@ def parse_and_speak(text: str):
         _send_to_unity("talk_end")
 
 
+# ===========================
+# ⏰ 生物钟定时任务 (BioClock)
+# ===========================
+
+def _remind_drink_water():
+    """喝水提醒"""
+    from . import voice as fuguang_voice
+    if not silent_mode:
+        logger.info("⏰ [生物钟] 触发喝水提醒")
+        _send_to_unity("Joy")
+        fuguang_voice.speak("指挥官，工作辛苦了，记得喝口水哦~")
+
+def _remind_take_rest():
+    """久坐提醒"""
+    from . import voice as fuguang_voice
+    if not silent_mode:
+        logger.info("⏰ [生物钟] 触发久坐提醒")
+        _send_to_unity("Sorrow")
+        fuguang_voice.speak("指挥官，坐了好一会儿了，起来活动活动吧？眼睛也要休息一下~")
+
+def _check_system_health():
+    """系统健康检查"""
+    from . import voice as fuguang_voice
+    if silent_mode:
+        return
+        
+    try:
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        
+        # CPU 过高报警
+        if cpu_usage > ConfigManager.BIOCLOCK_CPU_WARNING_THRESHOLD:
+            logger.warning(f"⚠️ [生物钟] CPU 使用率过高: {cpu_usage}%")
+            _send_to_unity("Surprise")
+            fuguang_voice.speak(f"指挥官，注意！CPU 占用率高达 {int(cpu_usage)} 个百分点，建议检查一下后台程序。")
+        
+        # 内存不足报警 (< 15%)
+        if memory.percent > 85:
+            logger.warning(f"⚠️ [生物钟] 内存使用率过高: {memory.percent}%")
+            _send_to_unity("Sorrow")
+            fuguang_voice.speak(f"指挥官，内存快溢出了，剩余只有 {100 - int(memory.percent)} 个百分点，要不关掉几个程序？")
+            
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+
+
+def _register_scheduled_tasks():
+    """注册所有定时任务"""
+    logger.info("⏰ [生物钟] 正在注册定时任务...")
+    
+    # 喝水提醒
+    if ConfigManager.BIOCLOCK_DRINK_REMINDER:
+        schedule.every(ConfigManager.BIOCLOCK_DRINK_INTERVAL).minutes.do(_remind_drink_water)
+        logger.info(f"   📋 喝水提醒: 每 {ConfigManager.BIOCLOCK_DRINK_INTERVAL} 分钟")
+    
+    # 久坐提醒
+    if ConfigManager.BIOCLOCK_REST_REMINDER:
+        schedule.every(ConfigManager.BIOCLOCK_REST_INTERVAL).minutes.do(_remind_take_rest)
+        logger.info(f"   📋 久坐提醒: 每 {ConfigManager.BIOCLOCK_REST_INTERVAL} 分钟")
+    
+    # 系统健康检查
+    if ConfigManager.BIOCLOCK_HEALTH_CHECK:
+        schedule.every(ConfigManager.BIOCLOCK_HEALTH_INTERVAL).minutes.do(_check_system_health)
+        logger.info(f"   📋 健康检查: 每 {ConfigManager.BIOCLOCK_HEALTH_INTERVAL} 分钟")
+    
+    logger.info("✅ [生物钟] 定时任务注册完成")
+
+
 def start_heartbeat():
     """启动心跳线程"""
+    # 注册定时任务
+    _register_scheduled_tasks()
+    
+    # 启动后台线程
     thread = threading.Thread(target=_life_cycle, daemon=True)
     thread.start()
-    print("💓 [系统] 灵魂心跳已激活")
+    print("💓 [系统] 灵魂心跳已激活 (BioClock v3.0)")
+
 
 
 def _life_cycle():
@@ -248,6 +325,9 @@ def _life_cycle():
                 _send_to_unity("Sorrow")
                 fuguang_voice.speak("指挥官，都一点了。强制休息指令... 开玩笑的，但真的该睡了。")
                 time.sleep(60)
+
+        # === [新增] 执行定时任务 (BioClock) ===
+        schedule.run_pending()
 
         # 每 10 秒检查一次状态
         time.sleep(10)
