@@ -92,7 +92,7 @@ class ConfigManager:
     BIOCLOCK_DRINK_INTERVAL = 45         # 喝水提醒间隔（分钟）
     BIOCLOCK_REST_REMINDER = True        # 是否启用久坐提醒
     BIOCLOCK_REST_INTERVAL = 60          # 久坐提醒间隔（分钟）
-    BIOCLOCK_HEALTH_CHECK = True         # 是否启用系统健康监控
+    BIOCLOCK_HEALTH_CHECK = False         # 是否启用系统健康监控
     BIOCLOCK_HEALTH_INTERVAL = 10        # 健康检查间隔（分钟）
     BIOCLOCK_CPU_WARNING_THRESHOLD = 80  # CPU 报警阈值（百分比）
 

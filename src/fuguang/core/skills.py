@@ -26,6 +26,7 @@ from .config import ConfigManager
 from .mouth import Mouth
 from .brain import Brain
 from .memory import MemoryBank
+from .ingest import KnowledgeEater
 
 logger = logging.getLogger("Fuguang")
 
@@ -480,6 +481,28 @@ class SkillManager:
                     "required": ["content"]
                 }
             }
+        },
+        
+        # === [新增] 知识吞噬工具 ===
+        {
+            "type": "function",
+            "function": {
+                "name": "ingest_knowledge_file",
+                "description": """【知识库】读取本地文件并学习其内容，存入向量数据库。
+            支持格式：PDF, Word(.docx), TXT, Markdown, Python, JSON等。
+            使用场景：用户说"帮我学习这个PDF"/"读一下这个文档"/"分析这个代码"。
+            文件内容会被切分并存储，之后可以回答相关问题。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "文件的绝对路径，必须用 Windows 路径格式"
+                        }
+                    },
+                    "required": ["file_path"]
+                }
+            }
         }
     ]
 
@@ -574,6 +597,13 @@ class SkillManager:
         except Exception as e:
             self.memory = None
             logger.error(f"❌ 长期记忆系统加载失败: {e}")
+        
+        # [知识库] 初始化知识吞噬器
+        if self.memory:
+            self.eater = KnowledgeEater(self.memory)
+            logger.info("✅ 知识吞噬系统已就绪")
+        else:
+            self.eater = None
     
     def get_tools_schema(self):
         """
@@ -2308,5 +2338,38 @@ class SkillManager:
                 func_args.get("content", ""),
                 func_args.get("category", "general")
             )
+        elif func_name == "ingest_knowledge_file":
+            return self.ingest_knowledge_file(
+                func_args.get("file_path", "")
+            )
         else:
             return f"未知工具: {func_name}"
+
+    # ========================
+    # 📚 知识库：文件吞噬
+    # ========================
+    def ingest_knowledge_file(self, file_path: str) -> str:
+        """
+        吞噬本地文件，将内容存入向量数据库
+        
+        Args:
+            file_path: 文件的绝对路径
+            
+        Returns:
+            操作结果
+        """
+        if not self.eater:
+            logger.warning("⚠️ 知识吞噬系统未初始化")
+            return "❌ 知识吞噬系统未初始化"
+            
+        logger.info(f"📚 [知识库] AI 请求吞噬文件: {file_path}")
+        self.mouth.speak("好的，让我来学习这个文件...")
+        
+        try:
+            result = self.eater.ingest_file(file_path)
+            if result.startswith("✅"):
+                self.mouth.speak("学习完成，我已经记住了文件内容")
+            return result
+        except Exception as e:
+            logger.error(f"❌ 吞噬失败: {e}")
+            return f"❌ 吞噬失败: {str(e)}"
