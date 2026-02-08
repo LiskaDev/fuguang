@@ -272,7 +272,14 @@ python src/scripts/register_face.py
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
 
+### v2.7.1 - 记忆双集合分离 (2026-02-09) 🗂️
+- **[架构]** 🗂️ **双集合系统**：对话记忆 vs 知识库独立存储。
+- **[特性]** 可单独清空知识库而不影响对话记忆。
+- **[特性]** RAG 检索时同时搜索两个集合，结果按相似度排序。
+- **[工具]** `manage_memory.py` 新增 `list-knowledge`、`clear-memories`、`clear-knowledge` 命令。
+
 ### v2.7.0 - 知识吞噬系统 (2026-02-09) 📚
+
 - **[新增]** 📚 **Knowledge Eater**：将本地文件（PDF/Word/TXT/代码）导入向量数据库。
 - **[特性]** 🔪 **智能分块**：按段落/句子边界切分，保持上下文完整。
 - **[格式]** 支持 PDF, DOCX, TXT, MD, PY, JS, JSON, CSV, HTML, XML 等。
