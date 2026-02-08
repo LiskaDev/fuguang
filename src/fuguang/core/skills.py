@@ -425,6 +425,32 @@ class SkillManager:
                     "required": ["duration"]
                 }
             }
+        },
+        
+        # === [新增] 上帝模式：Shell 命令执行 ===
+        {
+            "type": "function",
+            "function": {
+                "name": "execute_shell_command",
+                "description": """【高危权限】在系统终端执行 Shell 命令。
+            适用于：安装库(pip)、文件管理(dir/ls)、网络诊断(ipconfig/netstat)、系统监控、运行脚本。
+            特性：带黑名单保护、超时机制、自我纠错能力（可根据报错修正命令）。
+            注意：危险命令（如格式化、删除系统文件）会被自动拦截。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "要执行的命令 (Windows PowerShell/CMD)"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "超时时间(秒)，默认60秒，长时间任务可设更大"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
         }
     ]
 
@@ -1712,6 +1738,109 @@ class SkillManager:
             return f"❌ 控制失败: {str(e)}"
 
     # ========================
+    # ⚡ 上帝模式：Shell 命令执行
+    # ========================
+    def execute_shell_command(self, command: str, timeout: int = 60) -> str:
+        """
+        在系统终端执行 Shell 命令
+        
+        特性：
+        - 黑名单熔断机制（防止危险操作）
+        - 超时保护（防止卡死）
+        - 错误捕获（支持 AI 自我修复）
+        
+        Args:
+            command: 要执行的命令
+            timeout: 超时时间（秒）
+            
+        Returns:
+            执行结果（包含 stdout/stderr）
+        """
+        logger.info(f"⚡ [Shell] AI 申请执行: {command}")
+        
+        # === 🛡️ 1. 黑名单熔断机制 ===
+        # 绝对禁止的危险命令
+        forbidden_patterns = [
+            # 文件系统破坏
+            "rm -rf", "rm -r /", "rmdir /s /q c:", 
+            "del /s /q c:", "rd /s /q c:", "format ",
+            "mkfs", "dd if=", "> /dev/sda",
+            # 系统关机/重启
+            "shutdown", "restart", "reboot", "poweroff",
+            # 注册表破坏
+            "reg delete hklm", "reg delete hkcr",
+            # Fork 炸弹
+            ":(){ :|:& };:", "%0|%0",
+            # 危险的 PowerShell
+            "remove-item -recurse -force c:",
+            "clear-disk", "format-volume",
+        ]
+        
+        command_lower = command.lower()
+        for pattern in forbidden_patterns:
+            if pattern.lower() in command_lower:
+                logger.warning(f"🛡️ [安全拦截] 已阻止危险命令: {command}")
+                return f"❌ [安全拦截] 命令包含高危操作 '{pattern}'，已拒绝执行。\n\n如果确实需要执行此操作，请手动在终端执行。"
+        
+        try:
+            # === 2. 执行命令 ===
+            logger.info(f"   ⏳ 执行中 (超时: {timeout}秒)...")
+            
+            # 使用 PowerShell 并设置 UTF-8 编码
+            result = subprocess.run(
+                ["powershell", "-Command", command],
+                capture_output=True,
+                timeout=timeout,
+                cwd=os.path.expanduser("~")  # 从用户目录开始
+            )
+            
+            # === 3. 处理输出 ===
+            # 优先尝试 UTF-8，失败则用 GBK
+            try:
+                stdout = result.stdout.decode('utf-8', errors='ignore').strip()
+                stderr = result.stderr.decode('utf-8', errors='ignore').strip()
+            except:
+                stdout = result.stdout.decode('gbk', errors='ignore').strip()
+                stderr = result.stderr.decode('gbk', errors='ignore').strip()
+            
+            # 构建输出消息
+            output_parts = []
+            
+            if stdout:
+                # 截断过长输出，防止 Token 爆炸
+                stdout_preview = stdout[:2000] + "...(已截断)" if len(stdout) > 2000 else stdout
+                output_parts.append(f"【标准输出】:\n{stdout_preview}")
+            
+            if stderr:
+                stderr_preview = stderr[:1000] + "...(已截断)" if len(stderr) > 1000 else stderr
+                output_parts.append(f"【错误信息】:\n{stderr_preview}")
+            
+            output_msg = "\n\n".join(output_parts) if output_parts else ""
+            
+            # === 4. 返回结果 ===
+            if result.returncode == 0:
+                logger.info(f"   ✅ 命令执行成功 (返回码: 0)")
+                if not output_msg:
+                    return "✅ 命令执行成功，无文本输出。"
+                return f"✅ 命令执行成功 (返回码: 0)\n\n{output_msg}"
+            else:
+                # 返回非0，说明出错了，返回错误信息供 AI 分析
+                logger.warning(f"   ⚠️ 命令执行失败 (返回码: {result.returncode})")
+                error_msg = f"❌ 命令执行失败 (返回码: {result.returncode})\n\n"
+                if output_msg:
+                    error_msg += output_msg
+                error_msg += "\n\n👉 请分析报错信息，尝试修正命令或使用其他方法。"
+                return error_msg
+                
+        except subprocess.TimeoutExpired:
+            logger.error(f"   ⏰ 命令执行超时 ({timeout}秒)")
+            return f"❌ 命令执行超时 ({timeout}秒)，已强制终止。\n\n可能原因：\n1. 命令需要更长时间，请增加 timeout 参数\n2. 命令在等待用户输入\n3. 命令陷入死循环"
+            
+        except Exception as e:
+            logger.error(f"   💥 Shell 严重错误: {e}")
+            return f"❌ Shell 执行错误: {str(e)}"
+
+    # ========================
     # 🚀 软件启动
     # ========================
     def find_app_by_alias(self, text: str) -> tuple:
@@ -2103,6 +2232,11 @@ class SkillManager:
         elif func_name == "listen_to_system_audio":
             return self.listen_to_system_audio(
                 func_args.get("duration", 30)
+            )
+        elif func_name == "execute_shell_command":
+            return self.execute_shell_command(
+                func_args.get("command", ""),
+                func_args.get("timeout", 60)
             )
         else:
             return f"未知工具: {func_name}"
