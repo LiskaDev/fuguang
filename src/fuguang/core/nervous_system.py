@@ -155,12 +155,21 @@ class NervousSystem:
         self.LAST_ACTIVE_TIME = time.time()
         fuguang_heartbeat.update_interaction()
 
-        # 检索相关记忆
-        related_memories = self.brain.memory_system.search_memory(user_input)
+        # 检索相关记忆 (使用 ChromaDB 向量数据库)
         memory_text = ""
-        if related_memories:
-            memory_text = "\n【相关长期记忆】\n" + "\n".join(related_memories)
-            logger.info(f"🧠 激活记忆: {related_memories}")
+        if hasattr(self.skills, 'memory') and self.skills.memory:
+            # 使用新的向量数据库进行语义检索
+            memory_context = self.skills.memory.get_memory_context(user_input, n_results=3)
+            if memory_context:
+                memory_text = memory_context
+                logger.info(f"📖 [RAG] 已注入长期记忆上下文")
+        else:
+            # 备用：使用旧的记忆系统
+            related_memories = self.brain.memory_system.search_memory(user_input)
+            if related_memories:
+                memory_text = "\n【相关长期记忆】\n" + "\n".join(related_memories)
+                logger.info(f"🧠 激活记忆: {related_memories}")
+
 
         # 收集实时感知数据
         perception_data = self.eyes.get_perception_data()

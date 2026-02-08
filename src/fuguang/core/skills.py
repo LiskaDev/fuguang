@@ -25,6 +25,7 @@ from zhipuai import ZhipuAI
 from .config import ConfigManager
 from .mouth import Mouth
 from .brain import Brain
+from .memory import MemoryBank
 
 logger = logging.getLogger("Fuguang")
 
@@ -451,6 +452,34 @@ class SkillManager:
                     "required": ["command"]
                 }
             }
+        },
+        
+        # === [新增] 长期记忆工具 ===
+        {
+            "type": "function",
+            "function": {
+                "name": "save_to_long_term_memory",
+                "description": """【长期记忆】将重要信息永久保存到向量数据库。
+            使用场景：用户分享个人偏好(喜好的编程语言/名字/习惯)、重要任务、长期指令、API配置等。
+            你应该主动判断何时调用此工具，当发现用户说的话很重要时，请保存。
+            示例：用户说"我叫指挥官" → 调用 save_to_long_term_memory("用户的名字叫指挥官")
+            示例：用户说"我喜欢用Rust" → 调用 save_to_long_term_memory("用户最喜欢的编程语言是Rust")""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "content": {
+                            "type": "string",
+                            "description": "要记住的内容，尽量用陈述句描述事实"
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "分类: preference(偏好)/fact(事实)/task(任务)/event(事件)/general(通用)",
+                            "enum": ["preference", "fact", "task", "event", "general"]
+                        }
+                    },
+                    "required": ["content"]
+                }
+            }
         }
     ]
 
@@ -537,6 +566,14 @@ class SkillManager:
         
         # [听觉] Whisper 模型（懒加载，首次使用时才加载）
         self.whisper_model = None
+        
+        # [记忆] 向量数据库长期记忆 (海马体)
+        try:
+            self.memory = MemoryBank(persist_dir=str(self.config.PROJECT_ROOT / "data" / "memory_db"))
+            logger.info("✅ 长期记忆系统已就绪")
+        except Exception as e:
+            self.memory = None
+            logger.error(f"❌ 长期记忆系统加载失败: {e}")
     
     def get_tools_schema(self):
         """
@@ -1841,6 +1878,34 @@ class SkillManager:
             return f"❌ Shell 执行错误: {str(e)}"
 
     # ========================
+    # 🧠 长期记忆：向量数据库
+    # ========================
+    def save_to_long_term_memory(self, content: str, category: str = "general") -> str:
+        """
+        将重要信息保存到向量数据库 (ChromaDB)
+        
+        Args:
+            content: 要记住的内容
+            category: 分类 (preference/fact/task/event/general)
+            
+        Returns:
+            确认消息
+        """
+        if not self.memory:
+            logger.warning("⚠️ 长期记忆系统未初始化")
+            return "❌ 长期记忆系统未初始化，无法保存"
+            
+        logger.info(f"🧠 [记忆] AI 请求保存: '{content[:50]}...' (分类: {category})")
+        
+        try:
+            result = self.memory.add_memory(content, category=category)
+            self.mouth.speak("好的，我记住了")
+            return result
+        except Exception as e:
+            logger.error(f"❌ 保存记忆失败: {e}")
+            return f"❌ 保存失败: {str(e)}"
+
+    # ========================
     # 🚀 软件启动
     # ========================
     def find_app_by_alias(self, text: str) -> tuple:
@@ -2237,6 +2302,11 @@ class SkillManager:
             return self.execute_shell_command(
                 func_args.get("command", ""),
                 func_args.get("timeout", 60)
+            )
+        elif func_name == "save_to_long_term_memory":
+            return self.save_to_long_term_memory(
+                func_args.get("content", ""),
+                func_args.get("category", "general")
             )
         else:
             return f"未知工具: {func_name}"
