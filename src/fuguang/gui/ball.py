@@ -143,12 +143,13 @@ class FloatingBall(QWidget):
         # 获取当前颜色
         base_color = self.state_colors.get(self.current_state, (0, 0, 0))
         r, g, b = base_color
+        alpha = int(self.opacity)  # QColor 需要整数
         
         # 径向渐变（立体感）
         gradient = QRadialGradient(50, 50, 50)
         gradient.setColorAt(0, QColor(r, g, b, 255))
-        gradient.setColorAt(0.7, QColor(r, g, b, self.opacity))
-        gradient.setColorAt(1, QColor(r, g, b, self.opacity // 3))
+        gradient.setColorAt(0.7, QColor(r, g, b, alpha))
+        gradient.setColorAt(1, QColor(r, g, b, alpha // 3))
         
         painter.setBrush(QBrush(gradient))
         painter.setPen(Qt.PenStyle.NoPen)
