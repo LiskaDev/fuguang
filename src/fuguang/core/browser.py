@@ -56,7 +56,8 @@ class CyberGhost:
         logger.info(f"🌐 [CyberGhost] 初始化完成 (headless={headless})")
 
     def browse_and_extract(self, url: str, wait_for_js: bool = True, 
-                           take_screenshot: bool = False) -> str:
+                           take_screenshot: bool = False,
+                           full_page_screenshot: bool = True) -> str:
         """
         深度访问网页，渲染 JS，提取主要内容
         
@@ -64,6 +65,7 @@ class CyberGhost:
             url: 目标网址
             wait_for_js: 是否等待 JS 加载完成
             take_screenshot: 是否保存截图
+            full_page_screenshot: 是否截取整页（长截图）
             
         Returns:
             网页标题和正文内容
@@ -108,7 +110,7 @@ class CyberGhost:
                         self.screenshot_dir, 
                         f"web_{int(time.time())}.png"
                     )
-                    page.screenshot(path=screenshot_path, full_page=False)
+                    page.screenshot(path=screenshot_path, full_page=full_page_screenshot)
                     logger.info(f"📸 [幽灵] 截图已保存: {screenshot_path}")
                 
                 # 提取正文（使用 innerText 自动去除 HTML 标签）
