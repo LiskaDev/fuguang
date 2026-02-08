@@ -258,16 +258,21 @@ class FuguangWorker(QThread):
                         
                 except Exception as e:
                     error_msg = str(e)
-                    if "timeout" in error_msg.lower() or "没有检测到语音" in error_msg:
+                    if "timeout" in error_msg.lower() or "没有检测到语音" in error_msg or "waiting for phrase" in error_msg:
                         # 正常超时，安静继续
                         pass
                     else:
                         raise e
                     
         except Exception as e:
-            logger.warning(f"监听错误: {e}")
-            self.subtitle_update.emit(f"⚠️ 监听问题")
-            self.msleep(1000)
+            error_msg = str(e)
+            if "timeout" in error_msg.lower() or "waiting for phrase" in error_msg:
+                # 正常超时，安静继续
+                pass
+            else:
+                logger.warning(f"监听错误: {e}")
+                self.subtitle_update.emit(f"⚠️ 监听问题")
+                self.msleep(1000)
 
     def _execute_screenshot_analysis(self):
         """执行截图分析"""
