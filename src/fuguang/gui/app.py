@@ -26,7 +26,7 @@ from PyQt6.QtCore import QThread, pyqtSignal, QObject, Qt, QTimer, QMimeData
 from PyQt6.QtGui import QFont, QColor
 
 from fuguang.gui.ball import FloatingBall, FuguangSignals, BallState
-from fuguang.core.nervous_system import NervousSystem
+# NervousSystem 延迟导入，避免 pygame/torch 初始化冲突
 
 logger = logging.getLogger("Fuguang")
 
@@ -108,6 +108,9 @@ class FuguangWorker(QThread):
     def run(self):
         """工作线程主循环"""
         try:
+            # 延迟导入 NervousSystem（避免 pygame/torch 初始化冲突）
+            from fuguang.core.nervous_system import NervousSystem
+            
             # 初始化神经系统
             self.subtitle_update.emit("正在初始化大脑...")
             self.nervous_system = NervousSystem()
