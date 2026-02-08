@@ -1,16 +1,19 @@
 #!/usr/bin/env python
-# manage_memory.py - 记忆管理工具 v2.0
+# manage_memory.py - 记忆管理工具 v2.1
 """
 用法:
     python manage_memory.py stats              # 查看统计
     python manage_memory.py list               # 列出对话记忆
     python manage_memory.py list-knowledge     # 列出知识库
+    python manage_memory.py list-sources       # 列出知识库来源文件
     python manage_memory.py delete <id>        # 删除对话记忆
     python manage_memory.py delete-knowledge <id>  # 删除知识库条目
+    python manage_memory.py delete-source <文件名>  # 删除某文件的所有知识
     python manage_memory.py clear-memories     # 清空对话记忆
     python manage_memory.py clear-knowledge    # 清空知识库
     python manage_memory.py clear-all          # 清空所有 ⚠️危险
 """
+
 
 import sys
 import os
@@ -102,9 +105,33 @@ def main():
         else:
             print("❌ 已取消")
     
+    elif cmd == "list-sources":
+        sources = memory.list_knowledge_sources()
+        if not sources:
+            print("📚 知识库是空的")
+            return
+        print(f"\n📚 知识库来源文件 ({len(sources)} 个):\n")
+        for s in sources:
+            print(f"  • {s['source']} ({s['chunk_count']} 个碎片)")
+    
+    elif cmd == "delete-source":
+        if len(sys.argv) < 3:
+            print("❌ 用法: python manage_memory.py delete-source <文件名>")
+            print("   示例: python manage_memory.py delete-source 张鑫5稿")
+            return
+        source_name = sys.argv[2]
+        print(f"⚠️ 即将删除来自 '{source_name}' 的所有知识...")
+        confirm = input("输入 YES 确认: ")
+        if confirm == "YES":
+            result = memory.delete_knowledge_by_source(source_name)
+            print(result)
+        else:
+            print("❌ 已取消")
+    
     else:
         print(f"❌ 未知命令: {cmd}")
         print(__doc__)
 
 if __name__ == "__main__":
     main()
+

@@ -503,6 +503,58 @@ class SkillManager:
                     "required": ["file_path"]
                 }
             }
+        },
+        
+        # === [新增] AI 记忆自我管理工具 ===
+        {
+            "type": "function",
+            "function": {
+                "name": "forget_knowledge",
+                "description": """【删除知识】从知识库中删除来自特定文件的所有内容。
+            使用场景：用户说"忘掉那个PDF"/"删除我论文的知识"/"清除那个文档"。
+            只删除匹配的文件，不影响其他知识和对话记忆。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source_name": {
+                            "type": "string",
+                            "description": "要删除的文件名（支持部分匹配），如 '张鑫5稿' 或 'manual.pdf'"
+                        }
+                    },
+                    "required": ["source_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "forget_memory",
+                "description": """【遗忘记忆】从对话记忆中删除包含特定关键词的记忆。
+            使用场景：用户说"忘掉关于XX的事"/"不要记住我喜欢XX"/"删除那条记忆"。
+            只删除匹配的记忆，不影响知识库。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "keyword": {
+                            "type": "string",
+                            "description": "要匹配的关键词，包含此关键词的记忆会被删除"
+                        }
+                    },
+                    "required": ["keyword"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_learned_files",
+                "description": """【查看知识库】列出已学习的所有文件及其碎片数量。
+            使用场景：用户说"你学了哪些文件"/"知识库里有什么"/"看看你的知识"。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
         }
     ]
 
@@ -2342,8 +2394,19 @@ class SkillManager:
             return self.ingest_knowledge_file(
                 func_args.get("file_path", "")
             )
+        elif func_name == "forget_knowledge":
+            return self.forget_knowledge(
+                func_args.get("source_name", "")
+            )
+        elif func_name == "forget_memory":
+            return self.forget_memory(
+                func_args.get("keyword", "")
+            )
+        elif func_name == "list_learned_files":
+            return self.list_learned_files()
         else:
             return f"未知工具: {func_name}"
+
 
     # ========================
     # 📚 知识库：文件吞噬
@@ -2373,3 +2436,47 @@ class SkillManager:
         except Exception as e:
             logger.error(f"❌ 吞噬失败: {e}")
             return f"❌ 吞噬失败: {str(e)}"
+
+    # ========================
+    # 🧠 记忆自我管理
+    # ========================
+    def forget_knowledge(self, source_name: str) -> str:
+        """删除来自特定文件的知识"""
+        if not self.memory:
+            return "❌ 记忆系统未初始化"
+            
+        logger.info(f"🗑️ [知识库] AI 请求删除来自 '{source_name}' 的知识")
+        self.mouth.speak(f"好的，让我忘掉{source_name}的内容...")
+        
+        result = self.memory.delete_knowledge_by_source(source_name)
+        return result
+    
+    def forget_memory(self, keyword: str) -> str:
+        """遗忘包含关键词的对话记忆"""
+        if not self.memory:
+            return "❌ 记忆系统未初始化"
+            
+        logger.info(f"🗑️ [对话记忆] AI 请求遗忘包含 '{keyword}' 的记忆")
+        self.mouth.speak(f"好的，让我忘掉关于{keyword}的事情...")
+        
+        result = self.memory.forget_memory_by_content(keyword)
+        return result
+    
+    def list_learned_files(self) -> str:
+        """列出已学习的所有文件"""
+        if not self.memory:
+            return "❌ 记忆系统未初始化"
+            
+        sources = self.memory.list_knowledge_sources()
+        
+        if not sources:
+            return "📚 知识库是空的，我还没有学习过任何文件"
+        
+        lines = ["📚 我已学习的文件："]
+        for s in sources:
+            lines.append(f"  • {s['source']} ({s['chunk_count']} 个碎片)")
+        
+        stats = self.memory.get_stats()
+        lines.append(f"\n📊 统计：知识库 {stats['knowledge_count']} 条 | 对话记忆 {stats['memories_count']} 条")
+        
+        return "\n".join(lines)

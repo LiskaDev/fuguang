@@ -314,3 +314,85 @@ class MemoryBank:
         mem_result = self.clear_memories()
         know_result = self.clear_knowledge()
         return f"{mem_result}\n{know_result}"
+
+    # ========================
+    # 按来源管理知识库
+    # ========================
+    
+    def list_knowledge_sources(self) -> list:
+        """列出知识库中所有的来源文件"""
+        if self.knowledge.count() == 0:
+            return []
+        
+        results = self.knowledge.get()
+        sources = {}
+        
+        for i in range(len(results['ids'])):
+            source = results['metadatas'][i].get('source', 'unknown')
+            if source not in sources:
+                sources[source] = 0
+            sources[source] += 1
+        
+        return [{"source": s, "chunk_count": c} for s, c in sorted(sources.items())]
+    
+    def delete_knowledge_by_source(self, source_name: str) -> str:
+        """
+        删除来自特定文件的所有知识
+        
+        Args:
+            source_name: 文件名（如 "张鑫5稿.docx"）
+            
+        Returns:
+            删除结果
+        """
+        if self.knowledge.count() == 0:
+            return "❌ 知识库是空的"
+        
+        # 获取所有条目
+        results = self.knowledge.get()
+        
+        # 找到匹配的 ID
+        ids_to_delete = []
+        for i in range(len(results['ids'])):
+            source = results['metadatas'][i].get('source', '')
+            # 支持部分匹配
+            if source_name.lower() in source.lower():
+                ids_to_delete.append(results['ids'][i])
+        
+        if not ids_to_delete:
+            return f"❌ 未找到来自 '{source_name}' 的知识"
+        
+        # 删除
+        self.knowledge.delete(ids=ids_to_delete)
+        logger.info(f"🗑️ [知识库] 已删除来自 '{source_name}' 的 {len(ids_to_delete)} 条记录")
+        
+        return f"✅ 已删除来自 '{source_name}' 的 {len(ids_to_delete)} 条知识碎片"
+    
+    def forget_memory_by_content(self, keyword: str) -> str:
+        """
+        删除包含特定关键词的对话记忆
+        
+        Args:
+            keyword: 要匹配的关键词
+            
+        Returns:
+            删除结果
+        """
+        if self.memories.count() == 0:
+            return "❌ 对话记忆是空的"
+        
+        results = self.memories.get()
+        
+        ids_to_delete = []
+        for i in range(len(results['ids'])):
+            content = results['documents'][i]
+            if keyword.lower() in content.lower():
+                ids_to_delete.append(results['ids'][i])
+        
+        if not ids_to_delete:
+            return f"❌ 未找到包含 '{keyword}' 的记忆"
+        
+        self.memories.delete(ids=ids_to_delete)
+        logger.info(f"🗑️ [对话记忆] 已删除包含 '{keyword}' 的 {len(ids_to_delete)} 条记录")
+        
+        return f"✅ 已遗忘 {len(ids_to_delete)} 条包含 '{keyword}' 的记忆"
