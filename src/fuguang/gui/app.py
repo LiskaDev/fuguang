@@ -112,7 +112,8 @@ class FuguangWorker(QThread):
     
     # 发送给 UI 的信号
     state_changed = pyqtSignal(str)      # 状态变更
-    subtitle_update = pyqtSignal(str)    # 字幕更新
+    subtitle_update = pyqtSignal(str)    # 字幕更新 (自动 8 秒隐藏)
+    subtitle_long = pyqtSignal(str)      # 持久字幕 (不自动隐藏)
     file_ingested = pyqtSignal(str)      # 文件吞噬完成
     
     def __init__(self, signals: FuguangSignals):
@@ -209,15 +210,16 @@ class FuguangWorker(QThread):
         # 包装 mouth.speak - 字幕跟随 TTS
         def wrapped_speak(text, *args, **kwargs):
             self.state_changed.emit(BallState.SPEAKING)
-            # 显示完整文本，不自动隐藏（TTS 完成后手动隐藏）
-            display_text = text if len(text) <= 150 else text[:150] + "..."
-            self.subtitle_update.emit(display_text)
+            # 显示完整文本（不自动隐藏，等 TTS 完成）
+            display_text = text if len(text) <= 200 else text[:200] + "..."
+            # 使用 -1 表示不自动隐藏
+            self.subtitle_long.emit(display_text)
             
-            # 执行 TTS
+            # 执行 TTS（同步阻塞，等说完才返回）
             result = original_mouth_speak(text, *args, **kwargs)
             
-            # TTS 完成后，字幕再显示2秒让用户看完
-            self.msleep(2000)
+            # TTS 完成后，再显示 3 秒让用户看完
+            self.msleep(3000)
             
             # 恢复状态
             if self.is_awake:
@@ -225,6 +227,7 @@ class FuguangWorker(QThread):
                 self.subtitle_update.emit("指挥官，请说~")
             else:
                 self.state_changed.emit(BallState.IDLE)
+                self.subtitle_update.emit("")  # 清空字幕
             return result
         
         ns._handle_ai_response = wrapped_handle_ai
@@ -346,6 +349,7 @@ class FuguangApp:
         # 连接工作线程信号到 UI
         self.worker.state_changed.connect(self.ball.set_state)
         self.worker.subtitle_update.connect(self._on_subtitle_update)
+        self.worker.subtitle_long.connect(self._on_subtitle_long)  # 持久字幕
         self.worker.file_ingested.connect(self._on_file_ingested)
         
         # 启用拖拽
@@ -359,8 +363,16 @@ class FuguangApp:
         self.position_timer.start(100)
 
     def _on_subtitle_update(self, text: str):
-        """更新字幕"""
-        self.subtitle.show_message(text)
+        """更新字幕 (自动隐藏)"""
+        if text:
+            self.subtitle.show_message(text)
+            self._update_subtitle_position()
+        else:
+            self.subtitle.hide()
+
+    def _on_subtitle_long(self, text: str):
+        """持久字幕 (不自动隐藏，用于 TTS 期间)"""
+        self.subtitle.show_message(text, duration=-1)  # -1 = 不自动隐藏
         self._update_subtitle_position()
 
     def _on_file_ingested(self, result: str):
