@@ -238,27 +238,36 @@ class FuguangWorker(QThread):
         self.state_changed.emit(BallState.LISTENING)
         
         try:
-            # 监听语音 (5秒超时)
-            text = ns.ears.listen_once(timeout=5)
-            
-            if text:
-                # 识别到语音
-                self.subtitle_update.emit(f"👂 {text}")
-                self.msleep(500)  # 短暂显示识别结果
-                ns._handle_ai_response(text)
-            else:
-                # 没听到，继续监听（不显示提示，安静等待）
-                pass
+            # 使用麦克风监听语音
+            with ns.ears.get_microphone() as source:
+                ns.ears.recognizer.adjust_for_ambient_noise(source, duration=0.2)
                 
+                try:
+                    # 监听语音 (最长10秒)
+                    audio = ns.ears.recognizer.listen(source, timeout=3, phrase_time_limit=10)
+                    
+                    # 转换为音频数据并识别
+                    audio_data = audio.get_raw_data(convert_rate=16000, convert_width=2)
+                    text = ns.ears.listen_ali(audio_data)
+                    
+                    if text:
+                        # 识别到语音
+                        self.subtitle_update.emit(f"👂 {text}")
+                        self.msleep(800)  # 短暂显示识别结果
+                        ns._handle_ai_response(text)
+                        
+                except Exception as e:
+                    error_msg = str(e)
+                    if "timeout" in error_msg.lower() or "没有检测到语音" in error_msg:
+                        # 正常超时，安静继续
+                        pass
+                    else:
+                        raise e
+                    
         except Exception as e:
-            error_msg = str(e)
-            if "timeout" in error_msg.lower() or "没有检测到语音" in error_msg:
-                # 正常超时，安静继续
-                pass
-            else:
-                logger.warning(f"监听错误: {e}")
-                self.subtitle_update.emit(f"⚠️ 监听问题: {error_msg[:50]}")
-                self.msleep(1000)
+            logger.warning(f"监听错误: {e}")
+            self.subtitle_update.emit(f"⚠️ 监听问题")
+            self.msleep(1000)
 
     def _execute_screenshot_analysis(self):
         """执行截图分析"""
