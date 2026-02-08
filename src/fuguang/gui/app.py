@@ -13,6 +13,22 @@
 
 import sys
 import os
+
+# ===================================================
+# 🛡️ DLL 冲突护身符 (必须在所有导入之前)
+# ===================================================
+# 1. 防止 OpenMP 冲突报错
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# 2. 优先加载 Torch (解决 DLL 初始化顺序问题)
+try:
+    import torch
+    print(f"✅ Torch 已加载: {torch.__version__}")
+except ImportError:
+    print("⚠️ Torch 未安装 (仅 UI 模式)")
+
+# ===================================================
+
 import logging
 import threading
 from pathlib import Path
@@ -21,6 +37,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
+# 3. 最后加载 PyQt6
 from PyQt6.QtWidgets import QApplication, QLabel
 from PyQt6.QtCore import QThread, pyqtSignal, QObject, Qt, QTimer, QMimeData
 from PyQt6.QtGui import QFont, QColor
