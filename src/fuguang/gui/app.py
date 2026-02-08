@@ -107,38 +107,64 @@ class FuguangWorker(QThread):
 
     def run(self):
         """工作线程主循环"""
+        demo_mode = False
+        
         try:
             # 延迟导入 NervousSystem（避免 pygame/torch 初始化冲突）
+            self.subtitle_update.emit("正在初始化大脑...")
             from fuguang.core.nervous_system import NervousSystem
             
             # 初始化神经系统
-            self.subtitle_update.emit("正在初始化大脑...")
             self.nervous_system = NervousSystem()
             self.subtitle_update.emit("扶光已就绪，点击唤醒我~")
             
             # 修改 nervous_system 的状态回调
             self._patch_nervous_system()
             
-            # 进入主循环
-            while self.is_running:
-                if self.is_awake:
+        except Exception as e:
+            logger.error(f"❌ 大脑初始化失败: {e}")
+            self.subtitle_update.emit(f"⚠️ 演示模式 (大脑离线)")
+            demo_mode = True
+            
+        # 进入主循环
+        while self.is_running:
+            try:
+                if demo_mode:
+                    # 演示模式：只响应基本交互
+                    self._run_demo_cycle()
+                elif self.is_awake:
                     self._run_awake_cycle()
                 else:
-                    # 休眠状态，低功耗等待
                     self.msleep(100)
                     
                 # 检查待处理的任务
                 if self.pending_screenshot:
-                    self._execute_screenshot_analysis()
+                    if demo_mode:
+                        self.subtitle_update.emit("📸 (演示) 截图功能需要完整大脑")
+                    else:
+                        self._execute_screenshot_analysis()
                     self.pending_screenshot = False
                     
                 if self.pending_file:
-                    self._execute_file_ingestion(self.pending_file)
+                    if demo_mode:
+                        self.subtitle_update.emit(f"📁 (演示) 收到文件: {os.path.basename(self.pending_file)}")
+                    else:
+                        self._execute_file_ingestion(self.pending_file)
                     self.pending_file = None
                     
-        except Exception as e:
-            logger.error(f"❌ 工作线程错误: {e}")
-            self.subtitle_update.emit(f"错误: {e}")
+            except Exception as e:
+                logger.error(f"❌ 循环错误: {e}")
+                self.msleep(1000)
+
+    def _run_demo_cycle(self):
+        """演示模式主循环"""
+        if self.is_awake:
+            self.state_changed.emit(BallState.LISTENING)
+            self.msleep(2000)
+            self.subtitle_update.emit("👋 演示模式：我在听（但无法处理）")
+            self.msleep(3000)
+        else:
+            self.msleep(100)
 
     def _patch_nervous_system(self):
         """给 NervousSystem 打补丁，接入状态回调"""
