@@ -27,6 +27,7 @@ from .mouth import Mouth
 from .brain import Brain
 from .memory import MemoryBank
 from .ingest import KnowledgeEater
+from .browser import CyberGhost
 
 logger = logging.getLogger("Fuguang")
 
@@ -555,6 +556,31 @@ class SkillManager:
                     "properties": {}
                 }
             }
+        },
+        
+        # === [新增] 深度浏览工具 (Playwright) ===
+        {
+            "type": "function",
+            "function": {
+                "name": "browse_website",
+                "description": """【深度浏览】使用全功能浏览器访问网页，支持 JavaScript 动态加载。
+            比 read_web_page 更强大，适用于：动态加载的网站（如 B站、知乎）、单页应用、需要等待JS渲染的页面。
+            使用场景：用户说"帮我看看B站热门"/"打开这个网页看看"/"抓取这个动态网站"。""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "目标网页 URL"
+                        },
+                        "take_screenshot": {
+                            "type": "boolean",
+                            "description": "是否保存网页截图（用于视觉分析）"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            }
         }
     ]
 
@@ -656,6 +682,17 @@ class SkillManager:
             logger.info("✅ 知识吞噬系统已就绪")
         else:
             self.eater = None
+        
+        # [浏览器] 赛博幽灵 - Playwright 深度浏览
+        try:
+            self.ghost = CyberGhost(
+                headless=True, 
+                screenshot_dir=str(self.config.PROJECT_ROOT / "data" / "screenshots")
+            )
+            logger.info("✅ 赛博幽灵已就绪")
+        except Exception as e:
+            logger.warning(f"⚠️ CyberGhost 初始化失败: {e}")
+            self.ghost = None
     
     def get_tools_schema(self):
         """
@@ -2404,6 +2441,11 @@ class SkillManager:
             )
         elif func_name == "list_learned_files":
             return self.list_learned_files()
+        elif func_name == "browse_website":
+            return self.browse_website(
+                func_args.get("url", ""),
+                func_args.get("take_screenshot", False)
+            )
         else:
             return f"未知工具: {func_name}"
 
@@ -2480,3 +2522,34 @@ class SkillManager:
         lines.append(f"\n📊 统计：知识库 {stats['knowledge_count']} 条 | 对话记忆 {stats['memories_count']} 条")
         
         return "\n".join(lines)
+
+    # ========================
+    # 🌐 赛博幽灵：深度浏览
+    # ========================
+    def browse_website(self, url: str, take_screenshot: bool = False) -> str:
+        """
+        使用 Playwright 深度浏览网页（支持 JS 动态加载）
+        
+        Args:
+            url: 目标网址
+            take_screenshot: 是否保存截图
+            
+        Returns:
+            网页内容或错误信息
+        """
+        if not self.ghost:
+            logger.warning("⚠️ 赛博幽灵未初始化")
+            # 降级到普通网页读取
+            return self.read_web_page(url)
+        
+        logger.info(f"🌐 [深度浏览] AI 请求访问: {url}")
+        self.mouth.speak("正在深度访问网页...")
+        
+        try:
+            result = self.ghost.browse_and_extract(url, take_screenshot=take_screenshot)
+            return result
+        except Exception as e:
+            logger.error(f"❌ 深度浏览失败: {e}")
+            # 降级到普通读取
+            logger.info("⚠️ 降级到普通网页读取...")
+            return self.read_web_page(url)
