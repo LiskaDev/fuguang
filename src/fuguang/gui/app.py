@@ -81,12 +81,20 @@ class SubtitleBubble(QLabel):
         
         self.hide()
 
-    def show_message(self, text: str, duration: int = 5000):
-        """显示消息"""
+    def show_message(self, text: str, duration: int = 8000):
+        """显示消息
+        
+        Args:
+            text: 要显示的文本
+            duration: 显示时长(毫秒)，默认 8 秒，-1 表示不自动隐藏
+        """
         self.setText(text)
         self.adjustSize()
         self.show()
-        self.hide_timer.start(duration)
+        if duration > 0:
+            self.hide_timer.start(duration)
+        else:
+            self.hide_timer.stop()  # 不自动隐藏
 
     def fade_out(self):
         """淡出隐藏"""
@@ -198,14 +206,23 @@ class FuguangWorker(QThread):
             result = original_handle_ai(user_input)
             return result
         
-        # 包装 mouth.speak
+        # 包装 mouth.speak - 字幕跟随 TTS
         def wrapped_speak(text, *args, **kwargs):
             self.state_changed.emit(BallState.SPEAKING)
-            self.subtitle_update.emit(text[:100] + "..." if len(text) > 100 else text)
+            # 显示完整文本，不自动隐藏（TTS 完成后手动隐藏）
+            display_text = text if len(text) <= 150 else text[:150] + "..."
+            self.subtitle_update.emit(display_text)
+            
+            # 执行 TTS
             result = original_mouth_speak(text, *args, **kwargs)
-            # 说完后恢复
+            
+            # TTS 完成后，字幕再显示2秒让用户看完
+            self.msleep(2000)
+            
+            # 恢复状态
             if self.is_awake:
                 self.state_changed.emit(BallState.LISTENING)
+                self.subtitle_update.emit("指挥官，请说~")
             else:
                 self.state_changed.emit(BallState.IDLE)
             return result
@@ -214,27 +231,34 @@ class FuguangWorker(QThread):
         ns.mouth.speak = wrapped_speak
 
     def _run_awake_cycle(self):
-        """唤醒状态下的主循环（简化版）"""
+        """唤醒状态下的主循环"""
         ns = self.nervous_system
         
-        # 使用 PTT 模式监听
+        # 显示聆听状态
         self.state_changed.emit(BallState.LISTENING)
-        self.subtitle_update.emit("我在听...")
         
         try:
-            # 监听语音
+            # 监听语音 (5秒超时)
             text = ns.ears.listen_once(timeout=5)
             
             if text:
-                self.subtitle_update.emit(f"你说: {text}")
+                # 识别到语音
+                self.subtitle_update.emit(f"👂 {text}")
+                self.msleep(500)  # 短暂显示识别结果
                 ns._handle_ai_response(text)
             else:
-                # 超时，回到待命
-                self.msleep(100)
+                # 没听到，继续监听（不显示提示，安静等待）
+                pass
                 
         except Exception as e:
-            logger.warning(f"监听错误: {e}")
-            self.msleep(500)
+            error_msg = str(e)
+            if "timeout" in error_msg.lower() or "没有检测到语音" in error_msg:
+                # 正常超时，安静继续
+                pass
+            else:
+                logger.warning(f"监听错误: {e}")
+                self.subtitle_update.emit(f"⚠️ 监听问题: {error_msg[:50]}")
+                self.msleep(1000)
 
     def _execute_screenshot_analysis(self):
         """执行截图分析"""
@@ -269,8 +293,8 @@ class FuguangWorker(QThread):
         """唤醒"""
         self.is_awake = True
         self.state_changed.emit(BallState.LISTENING)
-        if self.nervous_system:
-            self.nervous_system.mouth.speak("我在")
+        self.subtitle_update.emit("指挥官，请说~")
+        # 不说话，只显示字幕，避免打断用户
 
     def _on_sleep(self):
         """休眠"""

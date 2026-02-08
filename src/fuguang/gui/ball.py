@@ -86,8 +86,8 @@ class FloatingBall(QWidget):
         
         # 呼吸灯效果
         self.opacity = 200
-        self.direction = -5
-        self.pulse_speed = 50  # 毫秒
+        self.direction = -3  # 更慢的呼吸
+        self.pulse_speed = 100  # 毫秒 (原50ms太快)
         
         # 动画定时器
         self.timer = QTimer(self)
@@ -183,19 +183,25 @@ class FloatingBall(QWidget):
     def _animate(self):
         """动画更新"""
         if self.current_state == BallState.IDLE:
-            # 呼吸效果
+            # 缓慢呼吸效果
             self.opacity += self.direction
-            if self.opacity >= 220 or self.opacity <= 80:
+            if self.opacity >= 220 or self.opacity <= 100:
                 self.direction *= -1
         elif self.current_state == BallState.THINKING:
-            # 快速闪烁
-            self.opacity = 255 if self.opacity < 200 else 150
+            # 中速脉动 (思考中)
+            self.opacity += self.direction * 2
+            if self.opacity >= 255 or self.opacity <= 150:
+                self.direction *= -1
         elif self.current_state == BallState.LISTENING:
-            # 稳定高亮
-            self.opacity = 255
+            # 柔和脉动 (聆听中)，比思考慢
+            self.opacity += self.direction
+            if self.opacity >= 255 or self.opacity <= 180:
+                self.direction *= -1
         elif self.current_state == BallState.SPEAKING:
-            # 说话时闪烁
-            self.opacity = 255 if self.opacity < 200 else 180
+            # 律动效果 (说话中)
+            self.opacity += self.direction * 1.5
+            if self.opacity >= 255 or self.opacity <= 160:
+                self.direction *= -1
         
         self.update()
 
