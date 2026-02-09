@@ -272,6 +272,20 @@ python src/scripts/register_face.py
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
 
+### v3.1.0 - 完整灵魂融合 Full Soul Integration (2026-02-09) 🧬
+- **[重构]** 🧬 **GUI 完整复用 NervousSystem.run()**：不再是简化版循环！
+- **[架构]** 添加回调钩子机制：`on_state_change`、`on_subtitle`、`on_speech_start/end`。
+- **[修复]** DLL 冲突问题：Torch 优先加载 + `KMP_DUPLICATE_LIB_OK=TRUE`。
+- **[改进]** 动画效果：所有状态改为平滑脉动，频率从 50ms → 100ms。
+- **[改进]** 字幕持久化：TTS 期间字幕不自动消失，说完后再显示 3 秒。
+- **[功能]** GUI 模式现拥有 run.py 的全部功能：
+  - ✅ PTT 录音 (右Ctrl)
+  - ✅ 语音唤醒 ("扶光"/"阿光")
+  - ✅ 安保模式
+  - ✅ 晨间问候
+  - ✅ 唤醒超时 (30秒自动休眠)
+- **[文件]** 修改 `nervous_system.py`、`mouth.py`、`app.py`。
+
 ### v3.0.0 - 灵魂附体 Soul Injection (2026-02-09) 🔮✨
 - **[架构]** 🧠 **FuguangWorker**：QThread 工作线程，AI 逻辑与 GUI 分离。
 - **[特性]** 状态实时反馈：听(红)、想(绿)、说(紫)。
