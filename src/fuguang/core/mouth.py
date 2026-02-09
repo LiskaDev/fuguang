@@ -18,6 +18,10 @@ class Mouth:
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.unity_ip = config.UNITY_IP
         self.unity_port = config.UNITY_PORT
+        
+        # [新增] GUI 回调钩子 (由 NervousSystem 注入)
+        self.on_speech_start = None   # (text: str) -> None
+        self.on_speech_end = None     # () -> None
 
     def send_to_unity(self, message: str):
         """发送消息到 Unity"""
@@ -31,6 +35,13 @@ class Mouth:
         """说话 - 语音合成 + Unity 同步"""
         fuguang_heartbeat.update_interaction()
         self.send_to_unity(f"say:{text}")
+        
+        # [GUI] 通知界面开始说话
+        if self.on_speech_start:
+            try:
+                self.on_speech_start(text)
+            except Exception as e:
+                logger.warning(f"GUI 语音开始回调异常: {e}")
 
         try:
             self.send_to_unity("talk_start")
@@ -39,6 +50,13 @@ class Mouth:
         except Exception as e:
             logger.error(f"语音播放失败: {e}")
             self.send_to_unity("talk_end")
+        finally:
+            # [GUI] 通知界面说话结束
+            if self.on_speech_end:
+                try:
+                    self.on_speech_end()
+                except Exception as e:
+                    logger.warning(f"GUI 语音结束回调异常: {e}")
 
     def start_thinking(self):
         """发送开始思考指令"""

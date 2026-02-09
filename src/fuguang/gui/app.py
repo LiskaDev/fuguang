@@ -132,7 +132,7 @@ class FuguangWorker(QThread):
         self.signals.quit_request.connect(self._on_quit)
 
     def run(self):
-        """工作线程主循环"""
+        """工作线程主循环 - 完全复用 NervousSystem.run()"""
         demo_mode = False
         
         try:
@@ -142,45 +142,26 @@ class FuguangWorker(QThread):
             
             # 初始化神经系统
             self.nervous_system = NervousSystem()
-            self.subtitle_update.emit("扶光已就绪，点击唤醒我~")
+            self.subtitle_update.emit("扶光已就绪！")
             
-            # 修改 nervous_system 的状态回调
-            self._patch_nervous_system()
+            # 注入 GUI 回调（使用原生回调机制）
+            self._inject_gui_callbacks()
             
         except Exception as e:
             logger.error(f"❌ 大脑初始化失败: {e}")
+            import traceback
+            traceback.print_exc()
             self.subtitle_update.emit(f"⚠️ 演示模式 (大脑离线)")
             demo_mode = True
             
-        # 进入主循环
-        while self.is_running:
-            try:
-                if demo_mode:
-                    # 演示模式：只响应基本交互
-                    self._run_demo_cycle()
-                elif self.is_awake:
-                    self._run_awake_cycle()
-                else:
-                    self.msleep(100)
-                    
-                # 检查待处理的任务
-                if self.pending_screenshot:
-                    if demo_mode:
-                        self.subtitle_update.emit("📸 (演示) 截图功能需要完整大脑")
-                    else:
-                        self._execute_screenshot_analysis()
-                    self.pending_screenshot = False
-                    
-                if self.pending_file:
-                    if demo_mode:
-                        self.subtitle_update.emit(f"📁 (演示) 收到文件: {os.path.basename(self.pending_file)}")
-                    else:
-                        self._execute_file_ingestion(self.pending_file)
-                    self.pending_file = None
-                    
-            except Exception as e:
-                logger.error(f"❌ 循环错误: {e}")
-                self.msleep(1000)
+        if demo_mode:
+            # 演示模式：只响应基本交互
+            while self.is_running:
+                self._run_demo_cycle()
+        else:
+            # 🚀 完整模式：直接调用 NervousSystem.run()
+            # 这里使用 run_in_gui_mode() 因为 run() 内部有阻塞循环
+            self._run_with_nervous_system()
 
     def _run_demo_cycle(self):
         """演示模式主循环"""
@@ -192,90 +173,48 @@ class FuguangWorker(QThread):
         else:
             self.msleep(100)
 
-    def _patch_nervous_system(self):
-        """给 NervousSystem 打补丁，接入状态回调"""
-        ns = self.nervous_system
-        
-        # 保存原始方法
-        original_handle_ai = ns._handle_ai_response
-        original_mouth_speak = ns.mouth.speak
-        
-        # 包装 _handle_ai_response
-        def wrapped_handle_ai(user_input):
-            self.state_changed.emit(BallState.THINKING)
-            self.subtitle_update.emit("正在思考...")
-            result = original_handle_ai(user_input)
-            return result
-        
-        # 包装 mouth.speak - 字幕跟随 TTS
-        def wrapped_speak(text, *args, **kwargs):
-            self.state_changed.emit(BallState.SPEAKING)
-            # 显示完整文本（不自动隐藏，等 TTS 完成）
-            display_text = text if len(text) <= 200 else text[:200] + "..."
-            # 使用 -1 表示不自动隐藏
-            self.subtitle_long.emit(display_text)
-            
-            # 执行 TTS（同步阻塞，等说完才返回）
-            result = original_mouth_speak(text, *args, **kwargs)
-            
-            # TTS 完成后，再显示 3 秒让用户看完
-            self.msleep(3000)
-            
-            # 恢复状态
-            if self.is_awake:
-                self.state_changed.emit(BallState.LISTENING)
-                self.subtitle_update.emit("指挥官，请说~")
-            else:
-                self.state_changed.emit(BallState.IDLE)
-                self.subtitle_update.emit("")  # 清空字幕
-            return result
-        
-        ns._handle_ai_response = wrapped_handle_ai
-        ns.mouth.speak = wrapped_speak
-
-    def _run_awake_cycle(self):
-        """唤醒状态下的主循环"""
-        ns = self.nervous_system
-        
-        # 显示聆听状态
-        self.state_changed.emit(BallState.LISTENING)
-        
+    def _run_with_nervous_system(self):
+        """完整模式：直接运行 NervousSystem.run()"""
         try:
-            # 使用麦克风监听语音
-            with ns.ears.get_microphone() as source:
-                ns.ears.recognizer.adjust_for_ambient_noise(source, duration=0.2)
-                
-                try:
-                    # 监听语音 (最长10秒)
-                    audio = ns.ears.recognizer.listen(source, timeout=3, phrase_time_limit=10)
-                    
-                    # 转换为音频数据并识别
-                    audio_data = audio.get_raw_data(convert_rate=16000, convert_width=2)
-                    text = ns.ears.listen_ali(audio_data)
-                    
-                    if text:
-                        # 识别到语音
-                        self.subtitle_update.emit(f"👂 {text}")
-                        self.msleep(800)  # 短暂显示识别结果
-                        ns._handle_ai_response(text)
-                        
-                except Exception as e:
-                    error_msg = str(e)
-                    if "timeout" in error_msg.lower() or "没有检测到语音" in error_msg or "waiting for phrase" in error_msg:
-                        # 正常超时，安静继续
-                        pass
-                    else:
-                        raise e
-                    
+            logger.info("🚀 完整模式启动：调用 NervousSystem.run()")
+            self.nervous_system.run()
         except Exception as e:
-            error_msg = str(e)
-            if "timeout" in error_msg.lower() or "waiting for phrase" in error_msg:
-                # 正常超时，安静继续
-                pass
+            logger.error(f"❌ NervousSystem 崩溃: {e}")
+            import traceback
+            traceback.print_exc()
+            self.subtitle_update.emit(f"⚠️ 系统崩溃: {str(e)[:30]}")
+
+    def _inject_gui_callbacks(self):
+        """注入 GUI 回调到 NervousSystem（使用原生回调机制）"""
+        ns = self.nervous_system
+        
+        # 1. 状态变化回调
+        def on_state_change(state: str):
+            self.state_changed.emit(state)
+        ns.on_state_change = on_state_change
+        
+        # 2. 字幕显示回调
+        def on_subtitle(text: str, persistent: bool = False):
+            if persistent:
+                self.subtitle_long.emit(text)
             else:
-                logger.warning(f"监听错误: {e}")
-                self.subtitle_update.emit(f"⚠️ 监听问题")
-                self.msleep(1000)
+                self.subtitle_update.emit(text)
+        ns.on_subtitle = on_subtitle
+        
+        # 3. TTS 开始说话回调
+        def on_speech_start(text: str):
+            self.state_changed.emit(BallState.SPEAKING)
+            display_text = text if len(text) <= 200 else text[:200] + "..."
+            self.subtitle_long.emit(display_text)
+        ns.mouth.on_speech_start = on_speech_start
+        
+        # 4. TTS 结束回调
+        def on_speech_end():
+            # TTS 结束后恢复为 IDLE
+            self.state_changed.emit(BallState.IDLE)
+        ns.mouth.on_speech_end = on_speech_end
+        
+        logger.info("🔌 GUI 回调已注入到 NervousSystem")
 
     def _execute_screenshot_analysis(self):
         """执行截图分析"""

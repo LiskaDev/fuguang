@@ -47,6 +47,14 @@ class NervousSystem:
         # [新增] 初始化数字眼睛（情境感知）
         self.eyes = Eyes(self.config)
 
+        # ========================================
+        # [新增] GUI 回调钩子 (可选，不影响终端模式)
+        # ========================================
+        self.on_state_change = None   # (state: str) -> None, state: "IDLE"/"LISTENING"/"THINKING"/"SPEAKING"
+        self.on_subtitle = None       # (text: str, persistent: bool) -> None
+        self.on_speech_start = None   # (text: str) -> None
+        self.on_speech_end = None     # () -> None
+        
         # 状态变量
         self.AWAKE_STATE = "sleeping"  # sleeping / voice_wake
         self.IS_PTT_PRESSED = False
@@ -88,6 +96,25 @@ class NervousSystem:
         elif event.name == 'f1' and event.event_type == 'down':
             self.TEXT_INPUT_REQUESTED = True
             logger.info("⌨️ [打字模式] 已触发，请在终端输入文字")
+
+    # ========================================
+    # [新增] GUI 回调触发器
+    # ========================================
+    def _emit_state(self, state: str):
+        """触发状态变化回调 (IDLE/LISTENING/THINKING/SPEAKING)"""
+        if self.on_state_change:
+            try:
+                self.on_state_change(state)
+            except Exception as e:
+                logger.warning(f"GUI 回调异常: {e}")
+    
+    def _emit_subtitle(self, text: str, persistent: bool = False):
+        """触发字幕显示回调"""
+        if self.on_subtitle:
+            try:
+                self.on_subtitle(text, persistent)
+            except Exception as e:
+                logger.warning(f"GUI 字幕回调异常: {e}")
 
     def _check_timeout(self):
         """检查语音唤醒是否超时"""
@@ -154,6 +181,10 @@ class NervousSystem:
         """处理 AI 回复 (简化版 - 逻辑已移至 Brain.chat)"""
         self.LAST_ACTIVE_TIME = time.time()
         fuguang_heartbeat.update_interaction()
+        
+        # [GUI] 通知界面：开始思考
+        self._emit_state("THINKING")
+        self._emit_subtitle(f"👂 {user_input[:50]}..." if len(user_input) > 50 else f"👂 {user_input}")
 
         # 检索相关记忆 (使用 ChromaDB 向量数据库)
         memory_text = ""
@@ -517,6 +548,7 @@ class NervousSystem:
             if self.IS_PTT_PRESSED:
                 with self.ears.get_microphone() as source:
                     logger.info("🎤 [PTT] 正在录音，松开CTRL结束...")
+                    self._emit_state("LISTENING")  # [GUI] 通知界面状态
                     self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.2)
 
                     try:
