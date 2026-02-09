@@ -272,6 +272,24 @@ python src/scripts/register_face.py
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
 
+### v3.1.2 - 架构优化与资源管理 Architecture Enhancement (2026-02-09) 🏗️
+- **[优化]** 🔊 **音频资源管理**：改进 pygame 混音器资源释放逻辑，添加 finally 块确保资源清理。
+- **[优化]** 📂 **路径计算方法**：使用标记文件搜索法（搜索 README.md/.git），不再依赖固定层级 parent^4。
+- **[新增]** ✅ **路径验证机制**：启动时自动检测关键文件是否存在，提前发现配置问题。
+- **[新增]** 🧪 **配置验证脚本**：`verify_config.py` 用于测试路径计算和配置加载。
+- **[文档]** 📚 **DLL 冲突分析**：新增 `docs/DLL_CONFLICT_SOLUTION.md` 详细分析冲突原因和解决方案。
+- **[改进]** 临时音频文件清理机制：超过 10 个文件时自动清理旧文件，防止磁盘占用。
+- **[改进]** 更详细的错误日志：音频资源释放失败时记录具体错误信息。
+- **[文件]** 修改 `voice.py`、`config.py`、`core/config.py`，新增 `verify_config.py`、`docs/DLL_CONFLICT_SOLUTION.md`。
+
+### v3.1.1 - 代码质量优化 Code Quality Enhancement (2026-02-09) 🛠️
+- **[新增]** 📦 **requirements.txt**：完整依赖清单，支持一键安装所有依赖包。
+- **[修复]** ⚠️ **裸 except: 语句**：修复 5 处裸异常捕获，改为 `except Exception as e:` 避免吞掉 KeyboardInterrupt。
+- **[安全]** 🔐 **移除硬编码 API Key**：智谱 API Key 不再硬编码，强制从 `.env` 读取。
+- **[完善]** 📝 **.env.example**：添加 ZHIPU_API_KEY 配置项说明。
+- **[改进]** 增强异常捕获的可读性，添加注释说明为何忽略特定异常。
+- **[文件]** 修改 `voice.py`、`memory.py`、`skills.py`、`ali_ear.py`、`config.py`、`.env.example`。
+
 ### v3.1.0 - 完整灵魂融合 Full Soul Integration (2026-02-09) 🧬
 - **[重构]** 🧬 **GUI 完整复用 NervousSystem.run()**：不再是简化版循环！
 - **[架构]** 添加回调钩子机制：`on_state_change`、`on_subtitle`、`on_speech_start/end`。

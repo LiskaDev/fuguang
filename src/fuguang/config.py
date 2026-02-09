@@ -6,9 +6,31 @@ from dotenv import load_dotenv
 # =====================================================
 # 🛠️ PathManager (路径管理器)
 # =====================================================
+
+def _find_project_root() -> Path:
+    """
+    使用标记文件搜索项目根目录（更健壮的方法）
+    搜索包含 README.md 或 .git 的目录
+    """
+    current = Path(__file__).resolve()
+    # 最多向上搜索 10 层
+    for _ in range(10):
+        # 检查标记文件
+        if (current / "README.md").exists() or (current / ".git").exists():
+            return current
+        
+        # 向上一层
+        parent = current.parent
+        if parent == current:  # 已到达文件系统根目录
+            break
+        current = parent
+    
+    # 备用方案：使用传统 parent^3 方法
+    print("⚠️ 未找到项目根目录标记文件，使用备用路径计算")
+    return Path(__file__).resolve().parent.parent.parent
+
 # 1. 获取项目根目录 (Project Root)
-# Logic: config.py is in src/fuguang/ -> parent is src/ -> parent is Root
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = _find_project_root()
 
 # 加载 .env 文件
 load_dotenv(PROJECT_ROOT / ".env")
@@ -55,7 +77,7 @@ class ConfigManager:
     SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
     
     # === [新增] 智谱 API Key ===
-    ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "***REDACTED_ZHIPU_KEY***")
+    ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
     
     # 视觉识别配置
     VISION_USE_FLASH = False  # True=极速模式(glm-4v-flash, 2秒), False=标准模式(glm-4v, 4秒)

@@ -82,7 +82,8 @@ def on_sentence_end(message, *args):
         result = msg_dict.get('payload', {}).get('result', '')
         if result:
             result_holder.text += result
-    except:
+    except Exception as e:
+        # 消息格式错误或网络中断，忽略
         pass
 
 def on_completed(message, *args):

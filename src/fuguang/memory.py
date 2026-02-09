@@ -25,7 +25,8 @@ class MemorySystem:
         try:
             with open(LONG_TERM_MEMORY_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception as e:
+            logger.warning(f"记忆文件读取失败: {e}")
             return []
 
     def _save_db(self):

@@ -12,10 +12,14 @@ class ConfigManager:
     """
 
     def __init__(self):
-        # 项目根目录 (core/ -> fuguang/ -> src/ -> fuguang项目根)
-        # __file__ = src/fuguang/core/config.py
-        # parent = core/, parent.parent = fuguang/, parent.parent.parent = src/, parent^4 = fuguang项目根
-        self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+        # 🔍 项目根目录（使用标记文件搜索法，更健壮）
+        # 从当前文件向上搜索，直到找到包含 README.md 的目录
+        self.PROJECT_ROOT = self._find_project_root()
+        
+        # 如果搜索失败，使用备用方法（parent^4）
+        if self.PROJECT_ROOT is None:
+            logger.warning("⚠️ 未找到项目根目录标记文件，使用备用路径计算")
+            self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
         # 核心目录结构
         self.CONFIG_DIR = self.PROJECT_ROOT / "config"
@@ -80,3 +84,37 @@ class ConfigManager:
         
         # 心跳系统配置
         self.HEARTBEAT_IDLE_TIMEOUT = GlobalConfig.HEARTBEAT_IDLE_TIMEOUT
+        
+        # 🔍 验证关键文件是否存在
+        self._validate_paths()
+    
+    def _find_project_root(self) -> Path:
+        """
+        使用标记文件搜索项目根目录
+        搜索 README.md 或 .git 目录，更健壮且不依赖目录层级
+        """
+        current = Path(__file__).resolve()
+        # 最多向上搜索 10 层
+        for _ in range(10):
+            # 检查标记文件
+            if (current / "README.md").exists() or (current / ".git").exists():
+                logger.debug(f"✅ 找到项目根目录: {current}")
+                return current
+            
+            # 向上一层
+            parent = current.parent
+            if parent == current:  # 已到达文件系统根目录
+                break
+            current = parent
+        
+        logger.warning("⚠️ 未找到项目根目录 (README.md 或 .git)")
+        return None
+    
+    def _validate_paths(self):
+        """验证关键文件/目录是否存在"""
+        if not self.SYSTEM_PROMPT_FILE.exists():
+            logger.warning(f"⚠️ System Prompt 文件不存在: {self.SYSTEM_PROMPT_FILE}")
+        if not self.CONFIG_DIR.exists():
+            logger.warning(f"⚠️ 配置目录不存在: {self.CONFIG_DIR}")
+        
+        logger.info(f"✅ 项目根目录: {self.PROJECT_ROOT}")

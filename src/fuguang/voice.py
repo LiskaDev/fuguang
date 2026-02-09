@@ -71,7 +71,8 @@ def stop_speaking():
     _interrupted = True
     try:
         pygame.mixer.music.stop()
-    except:
+    except Exception as e:
+        # 已经停止或未初始化，忽略
         pass
 
 def speak(text, voice="zh-CN-XiaoyiNeural"):
@@ -113,9 +114,12 @@ def speak(text, voice="zh-CN-XiaoyiNeural"):
                 time.sleep(0.05)  # 缩短检测间隔，提高响应速度
             
             # 🔥 关键修复:彻底释放文件占用
-            pygame.mixer.music.stop()
-            pygame.mixer.music.unload()
-            time.sleep(0.2)  # 给系统一点时间释放文件
+            try:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                time.sleep(0.2)  # 给系统一点时间释放文件
+            except Exception as e:
+                print(f"⚠️ 音频资源释放失败: {e}")
             
             # 🔥 改进：清理临时文件，失败时记录日志
             try:
@@ -136,6 +140,12 @@ def speak(text, voice="zh-CN-XiaoyiNeural"):
                 
         except Exception as e:
             print(f"❌ 播放失败: {e}")
+        finally:
+            # 🛡️ 确保资源被释放（无论是否发生异常）
+            try:
+                pygame.mixer.music.unload()
+            except Exception:
+                pass
 
 # 测试代码
 if __name__ == "__main__":

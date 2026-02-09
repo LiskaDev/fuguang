@@ -1955,7 +1955,8 @@ class SkillManager:
             try:
                 stdout = result.stdout.decode('utf-8', errors='ignore').strip()
                 stderr = result.stderr.decode('utf-8', errors='ignore').strip()
-            except:
+            except Exception:
+                # UTF-8 失败，尝试 GBK（Windows 中文环境）
                 stdout = result.stdout.decode('gbk', errors='ignore').strip()
                 stderr = result.stderr.decode('gbk', errors='ignore').strip()
             
@@ -2274,7 +2275,8 @@ class SkillManager:
         if user_confirm == 'v':
             try:
                 subprocess.run(["code", str(file_path)], capture_output=True, timeout=5)
-            except:
+            except Exception:
+                # VSCode 未安装或不在 PATH，使用系统默认应用打开
                 os.startfile(str(file_path))
             return "📂 已打开代码供您查看，请确认后手动运行。"
         
