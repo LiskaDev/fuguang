@@ -23,6 +23,14 @@ class Mouth:
         self.on_speech_start = None   # (text: str) -> None
         self.on_speech_end = None     # () -> None
 
+    def close(self):
+        """[修复H-2] 关闭 UDP socket 释放资源"""
+        try:
+            self.udp_socket.close()
+            logger.info("🔌 UDP socket 已关闭")
+        except Exception as e:
+            logger.warning(f"UDP socket 关闭异常: {e}")
+
     def send_to_unity(self, message: str):
         """发送消息到 Unity"""
         try:

@@ -1,6 +1,7 @@
 
 import json
 import os
+import sys
 import time
 import datetime
 import logging
@@ -119,7 +120,8 @@ class Brain:
             return
 
         target_len = self.MAX_HISTORY * 2 - 10
-        for i in range(len(self.chat_history) - target_len, len(self.chat_history)):
+        start_idx = max(0, len(self.chat_history) - target_len)  # [修复L-5] 防止负索引
+        for i in range(start_idx, len(self.chat_history)):
             if i >= 0 and self.chat_history[i]["role"] == "user":
                 self.chat_history = self.chat_history[i:]
                 return
@@ -137,7 +139,7 @@ class Brain:
 
         if len(self.chat_history) < 2:
             self.mouth.speak("晚安。")
-            os._exit(0)
+            sys.exit(0)  # [修复H-1] 使用 sys.exit 替代 os._exit，允许 finally/atexit 清理
 
         conversation_text = ""
         for msg in self.chat_history:
@@ -168,7 +170,7 @@ class Brain:
 
         self.mouth.speak("记忆同步完成，晚安。")
         time.sleep(1)
-        os._exit(0)
+        sys.exit(0)  # [修复H-1] 使用 sys.exit 替代 os._exit
 
     # ========================
     # 🧠 核心对话方法 (Function Calling)
@@ -235,7 +237,18 @@ class Brain:
                 # 执行每个工具调用
                 for tool_call in message.tool_calls:
                     func_name = tool_call.function.name
-                    func_args = json.loads(tool_call.function.arguments)
+                    
+                    # [修复C-2] 防止 API 返回畸形 JSON 导致崩溃
+                    try:
+                        func_args = json.loads(tool_call.function.arguments)
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.error(f"工具参数解析失败: {func_name}, 原始参数: {tool_call.function.arguments}, 错误: {e}")
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": f"参数解析错误: {e}"
+                        })
+                        continue
                     
                     logger.info(f"📞 调用工具: {func_name}")
                     result = tool_executor(func_name, func_args)

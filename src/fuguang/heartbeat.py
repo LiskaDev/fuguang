@@ -286,8 +286,8 @@ def _life_cycle():
         fuguang_voice.speak("早安指挥官！新的一天开始了，今天要加油哦。")
     elif seg == "深夜":
         fuguang_voice.speak("指挥官，这么晚了还在唤醒我？要注意身体啊。")
-    else:
-        fuguang_voice.speak("系统上线成功。指挥官，随时待命。")
+    # 其他时段不说话，由 NervousSystem.run() 里的 "指挥官，我上线了" 统一问候
+    # 避免重复说两句话
 
     # 2. 循环监测
     while is_running:

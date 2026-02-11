@@ -51,6 +51,8 @@ class FuguangSignals(QObject):
     sleep = pyqtSignal()             # 休眠
     screenshot_request = pyqtSignal() # 截图分析请求
     quit_request = pyqtSignal()      # 退出请求
+    ball_moved = pyqtSignal()        # 悬浮球被拖动（通知 HUD 跟随）
+    ptt_toggle = pyqtSignal(bool)    # PTT 切换 (True=开始录音, False=停止录音)
 
 
 class FloatingBall(QWidget):
@@ -83,6 +85,7 @@ class FloatingBall(QWidget):
         
         self.current_state = BallState.IDLE
         self.is_awake = False  # 是否处于唤醒状态
+        self.is_recording = False  # 是否正在 PTT 录音
         
         # 呼吸灯效果
         self.opacity = 200
@@ -170,7 +173,7 @@ class FloatingBall(QWidget):
             painter.setFont(QFont("微软雅黑", 8))
             state_text = {
                 BallState.IDLE: "待命",
-                BallState.LISTENING: "聆听中",
+                BallState.LISTENING: "录音中" if self.is_recording else "倒听中",
                 BallState.THINKING: "思考中",
                 BallState.SPEAKING: "说话中",
                 BallState.ERROR: "错误",
@@ -224,13 +227,24 @@ class FloatingBall(QWidget):
             delta = event.globalPosition().toPoint() - self.old_pos
             self.move(self.x() + delta.x(), self.y() + delta.y())
             self.old_pos = event.globalPosition().toPoint()
+            # 通知 HUD 跟随移动
+            self.signals.ball_moved.emit()
 
     def mouseReleaseEvent(self, event):
         """鼠标释放"""
         self.old_pos = None
 
     def _handle_click(self):
-        """处理点击（区分单击/双击）"""
+        """处理点击（区分单击/双击）
+        
+        单击行为（点击式 PTT）：
+            - 休眠中 → 唤醒 + 开始录音
+            - 录音中 → 停止录音（AI 处理语音）
+            - 已唤醒未录音 → 开始录音
+            - 说话中 → 打断 + 开始新录音
+            - 思考中 → 等待（不打断）
+        双击：截图分析（不变）
+        """
         self.click_timer.stop()
         
         if self.click_count >= 2:
@@ -238,17 +252,31 @@ class FloatingBall(QWidget):
             logger.info("🔮 [GUI] 双击 - 触发截图分析")
             self.signals.screenshot_request.emit()
         else:
-            # 单击 -> 唤醒/休眠
-            if self.is_awake:
-                logger.info("🔮 [GUI] 单击 - 休眠")
-                self.is_awake = False
-                self.set_state(BallState.IDLE)
-                self.signals.sleep.emit()
+            # 单击 -> 点击式 PTT 录音
+            if self.is_recording:
+                # 正在录音 → 停止录音
+                logger.info("🔮 [GUI] 单击 - 停止录音")
+                self.is_recording = False
+                self.signals.ptt_toggle.emit(False)
+            elif self.current_state == BallState.THINKING:
+                # AI 思考中 → 耐心等待
+                logger.info("🔮 [GUI] 单击 - AI 思考中，请稍候")
+            elif self.current_state == BallState.SPEAKING:
+                # AI 说话中 → 打断 + 开始新录音
+                logger.info("🔮 [GUI] 单击 - 打断说话 + 开始录音")
+                self.is_recording = True
+                self.signals.ptt_toggle.emit(True)  # app.py 会先打断语音再录音
             else:
-                logger.info("🔮 [GUI] 单击 - 唤醒")
-                self.is_awake = True
+                # 休眠 / 已唤醒未录音 → 开始录音
+                if not self.is_awake:
+                    logger.info("🔮 [GUI] 单击 - 唤醒 + 开始录音")
+                    self.is_awake = True
+                    self.signals.wake_up.emit()
+                else:
+                    logger.info("🔮 [GUI] 单击 - 开始录音")
+                self.is_recording = True
                 self.set_state(BallState.LISTENING)
-                self.signals.wake_up.emit()
+                self.signals.ptt_toggle.emit(True)
         
         self.click_count = 0
 
@@ -269,9 +297,7 @@ class FloatingBall(QWidget):
         
         # 唤醒/休眠
         toggle_action = QAction("休眠" if self.is_awake else "唤醒", self)
-        toggle_action.triggered.connect(
-            lambda: self._handle_click() or setattr(self, 'click_count', 1)
-        )
+        toggle_action.triggered.connect(self._toggle_wake_sleep)
         menu.addAction(toggle_action)
         
         # 截图分析
@@ -292,6 +318,36 @@ class FloatingBall(QWidget):
         """退出"""
         self.signals.quit_request.emit()
         QApplication.instance().quit()
+
+    def _toggle_wake_sleep(self):
+        """切换唤醒/休眠状态（右键菜单用）"""
+        if self.is_awake:
+            # 如果正在录音，先停止
+            if self.is_recording:
+                self.is_recording = False
+                self.signals.ptt_toggle.emit(False)
+            self.is_awake = False
+            self.set_state(BallState.IDLE)
+            self.signals.sleep.emit()
+        else:
+            self.is_awake = True
+            self.set_state(BallState.LISTENING)
+            self.signals.wake_up.emit()
+
+    # [修复H-6] 正式重载拖拽事件（替代 monkey-patch）
+    def dragEnterEvent(self, event):
+        """拖拽进入"""
+        if hasattr(self, 'drag_enter_handler') and self.drag_enter_handler:
+            self.drag_enter_handler(event)
+        else:
+            super().dragEnterEvent(event)
+
+    def dropEvent(self, event):
+        """文件投放"""
+        if hasattr(self, 'drop_handler') and self.drop_handler:
+            self.drop_handler(event)
+        else:
+            super().dropEvent(event)
 
 
 # ========================
@@ -329,7 +385,7 @@ def main():
     
     ball.show()
     print("悬浮球已启动！")
-    print("- 单击: 唤醒/休眠")
+    print("- 单击: 开始/停止录音")
     print("- 双击: 截图分析")
     print("- 拖拽: 移动位置")
     print("- 右键: 菜单")

@@ -1,7 +1,9 @@
 ﻿from .ball import FloatingBall, FuguangSignals, BallState, PYQT_AVAILABLE
-from .app import FuguangApp, FuguangWorker, SubtitleBubble
+from .hud import HolographicHUD
+from .app import FuguangApp, FuguangWorker
 
 __all__ = [
     'FloatingBall', 'FuguangSignals', 'BallState', 'PYQT_AVAILABLE',
-    'FuguangApp', 'FuguangWorker', 'SubtitleBubble'
+    'HolographicHUD',
+    'FuguangApp', 'FuguangWorker'
 ]

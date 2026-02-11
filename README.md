@@ -232,23 +232,79 @@ if self.security_mode_active:
 
 ---
 
+## 🔧 环境搭建指南 (Environment Setup)
+
+> **⚠️ 本项目使用 Conda 管理环境。首次搭建后，日常启动只需双击 `启动扶光.bat`。**
+
+### Conda 环境信息
+
+| 项目 | 值 |
+|:---|:---|
+| **Conda 安装位置** | `D:\conda` |
+| **扶光环境** | `fuguang` (`D:\conda\envs\fuguang`) |
+| **Python** | 3.11 |
+| **PyTorch** | 2.5.1 + CUDA 12.4 |
+
+### 🚀 首次搭建（只做一次）
+
+```powershell
+# 1. 安装 Miniconda → https://docs.conda.io/en/latest/miniconda.html（建议装 D 盘）
+# 2. 初始化 Conda（只需一次，然后重启终端）
+& "D:\conda\condabin\conda.bat" init powershell
+
+# 3. 创建环境 + 安装 PyTorch（必须用 conda 装，解决 DLL 冲突）
+conda create -n fuguang python=3.11 -y
+conda activate fuguang
+conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
+
+# 4. 安装其他依赖
+pip install -r requirements.txt
+playwright install chromium
+```
+
+### ⚡ 日常启动
+
+**方法 1（推荐）**：双击项目根目录的 **`启动扶光.bat`** 或 **`启动扶光GUI.bat`**
+
+**方法 2（终端）**：
+```powershell
+conda activate fuguang
+cd C:\Users\ALan\Desktop\fuguang
+python run.py
+```
+
+> VS Code 用户：按 `Ctrl+Shift+P` → `Python: Select Interpreter` → 选 `D:\conda\envs\fuguang\python.exe`，之后终端会自动激活环境。
+
+### ❓ 常见问题
+
+| 问题 | 解决方法 |
+|:---|:---|
+| `conda 不是内部命令` | 执行 `& "D:\conda\condabin\conda.bat" init powershell`，重启终端 |
+| `No module named 'xxx'` | 先 `conda activate fuguang`，或直接双击 `启动扶光.bat` |
+| `CUDA out of memory` | 关闭其他 GPU 程序（游戏等） |
+
+> **💡 给朋友分享时的注意事项：**
+> 
+> 运行 `run.py` 报 `No module named 'schedule'`（或其他库缺失）？这不是代码问题，是 **Python 解释器没选对**。
+> 本项目的依赖装在 Conda 环境 `fuguang` 里，而不是系统自带的 Python。
+> 
+> **快速解决**：双击 `启动扶光.bat` 即可（它会自动激活正确的 Conda 环境）。
+> 
+> **IDE 用户**：在你的编程软件中把 Python 解释器切换到 `D:\conda\envs\fuguang\python.exe`，之后直接运行就不会报错了。
+
+---
+
 ## 🔧 常用命令 (Common Commands)
 
 ```powershell
-# 激活虚拟环境
-& c:/Users/ALan/Desktop/fuguang/.venv/Scripts/Activate.ps1
-
-# 运行扶光
+# 运行扶光（需先 conda activate fuguang）
 python run.py
-
-# 测试视觉功能 (GLM-4V)
-python test_vision.py
-
-# 测试摄像头模块
-python src/fuguang/camera.py
 
 # 注册人脸
 python src/scripts/register_face.py
+
+# 验证配置
+python verify_config.py
 ```
 
 ---
@@ -272,6 +328,89 @@ python src/scripts/register_face.py
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
 
+### v4.0.0 - 全息 HUD + 自主执行模式 Holographic HUD & Auto-Execute (2025-07-16) 🖥️🤖
+
+> **背景**：Day 49 升级——用全息 HUD 替换旧的字幕气泡，支持 Markdown/代码高亮渲染；
+> 同时新增"自主执行模式"，AI 可自主运行代码无需人工确认。
+
+**新增功能：**
+- **[特性]** 🖥️ **全息 HUD**：全新 `HolographicHUD` 替换旧 `SubtitleBubble`，赛博朋克风格浮动面板。
+  - Markdown 渲染：支持代码块（Pygments Monokai 高亮）、表格、列表、行内代码。
+  - 赛博 CSS 主题：青色边框、半透明黑底、等宽字体、圆角毛玻璃效果。
+  - 智能定位：优先显示在悬浮球左侧，空间不足自动翻转到右侧。
+  - 右键点击 HUD 可手动清除内容。
+  - 短消息（字幕）8 秒自动消失，长回复（Markdown）持久显示。
+- **[特性]** 🤖 **自主执行模式**：`toggle_auto_execute` 注册为 AI Function Calling 工具。
+  - 双重触发机制：本地关键词快速匹配 + AI 语义理解（任意措辞如"全交给你了"均可识别）。
+  - 开启后 AI 执行代码/Shell 命令跳过人工确认，系统提示词注入"自主执行模式已开启"。
+  - 支持随时关闭："我要自己来"、"关闭自动执行"等。
+
+**架构改进：**
+- **[重构]** 🔗 **ball_moved 信号**：`ball.py` 新增 `ball_moved` 信号，拖拽时实时通知 HUD 跟随移动。
+- **[重构]** 🧹 **SubtitleBubble 移除**：`app.py` 清除旧字幕气泡代码（~50 行），HUD 接管所有显示。
+- **[依赖]** 📦 `markdown>=3.4.0`、`Pygments>=2.16.0` 加入 requirements.txt。
+
+**测试：**
+- ✅ 25/25 测试全部通过（修复类名映射：`MemoryBank`/`KnowledgeEater`/`CyberGhost`/`HolographicHUD`）。
+- ✅ 修复 Windows GBK 终端 Unicode 编码崩溃（UTF-8 wrapper）。
+
+**文件变更：**
+- 新增 `gui/hud.py`（~310 行）
+- 修改 `gui/app.py`、`gui/ball.py`、`gui/__init__.py`
+- 修改 `core/skills.py`、`core/nervous_system.py`
+- 修改 `tests/test_all.py`、`requirements.txt`
+
+### v3.4.0 - 深度代码审计修复 Deep Audit Fix (2025-07-15) 🔒🛡️
+
+> **背景**：对全代码库进行深度审计，发现 29 个问题（5 Critical, 9 High, 9 Medium, 6 Low）。
+> 本次更新修复了所有 Critical 和大部分 High 级别问题。
+
+**Critical（致命）修复：**
+- **[C-1]** 🔥 **演示模式崩溃**：`FuguangWorker._run_demo_cycle()` 引用不存在的 `self.is_awake`，大脑初始化失败时 `AttributeError` 崩溃。
+- **[C-2]** 🔥 **工具调用崩溃**：`brain.py` 中 `json.loads(tool_call.function.arguments)` 无异常捕获，API 返回畸形 JSON 导致整个对话崩溃。
+- **[C-3]** 🔥 **记忆系统崩溃**：`memory.py` 缺失 `import logging` 和 `logger` 定义，记忆文件损坏时 `NameError`。
+- **[C-4]** 🔥 **注视追踪竞态**：`GazeTracker` 的 `has_face`/`face_enter_time`/`last_face_seen_time` 同时被后台线程和主循环读写，添加 `threading.Lock` + property 访问器。
+- **[C-5]** 🔥 **键盘钩子竞态**：`_on_key_event` 运行在独立线程，修改 `IS_PTT_PRESSED`/`LAST_ACTIVE_TIME`/`TEXT_INPUT_REQUESTED` 无锁保护，添加 `_input_state_lock`。
+
+**High（高危）修复：**
+- **[H-1]** ⚠️ **暴力退出**：`brain.py` 中 `os._exit(0)` 改为 `sys.exit(0)`，允许 finally/atexit 清理资源。
+- **[H-2]** ⚠️ **Socket 泄漏**：`Mouth` 类新增 `close()` 方法释放 UDP socket。
+- **[H-4]** ⚠️ **事件循环线程安全**：`voice.py` 全局事件循环改为线程局部创建（`_run_async()` 每次 new_event_loop + close）。
+- **[H-6]** ⚠️ **拖拽 Monkey-Patch**：`app.py` 不再直接覆盖 `ball.dragEnterEvent`，改为 `ball.py` 中正式重载 + handler 委托。
+- **[H-7]** ⚠️ **唤醒词位置错误**：`ears.py` `check_wake_word_pinyin` 使用拼音匹配位 `i` 定位唤醒词，而非固定 `text[len(word):]`。
+- **[H-8]** ⚠️ **死代码**：`skills.py` `_click_with_ocr` 中 `return None` 之后的 ~20 行重复死代码已删除。
+- **[H-9]** ⚠️ **GUI 模式阻塞**：F1 打字模式检测 `sys.stdin.isatty()`，GUI 模式下跳过 `input()` 避免死锁。
+
+**Medium/Low 修复：**
+- **[M-6]** PowerShell 注入：`_show_toast` 参数转义单引号和反引号。
+- **[L-5]** `trim_history` 范围防负索引：`max(0, ...)` 保护。
+
+### v3.3.0 - 灵魂注入修复 Soul Injection Fix (2026-02-09) 🔧🧬
+
+> **背景**：v3.0 建立了 GUI 多线程架构，但"灵魂"和"身体"之间的通信管道是断开的。
+> 本次更新修复了这个核心问题，使悬浮球的交互真正能指挥 AI 大脑。
+
+- **[修复]** 🔗 **GUI↔AI 通信断路**：`NervousSystem.run()` 是阻塞式 while 循环，导致 QThread 事件循环永远无法处理信号。
+  - 新增 `queue.Queue` 线程安全操作队列，GUI 操作通过队列传递给主循环。
+  - 主循环每轮迭代开头调用 `_process_gui_actions()`，确保及时响应 GUI 事件。
+- **[修复]** 🖱️ **单击唤醒/双击截图**：之前信号发出后无人接收，现在通过操作队列正确路由到 NervousSystem。
+- **[修复]** 📁 **拖拽投喂**：之前文件路径仅存入无人读取的变量，现在通过操作队列触发 `ingest_knowledge_file`。
+- **[修复]** 🔘 **右键菜单切换**：修复唤醒/休眠按钮逻辑错误（旧代码用 lambda hack 导致状态混乱）。
+- **[改进]** 👁️ **状态通知补全**：语音唤醒成功时也会通知 GUI 变为红色（之前漏了）。
+- **[环境]** 🐍 **补充遗漏依赖**：requirements.txt 新增 `pypinyin`、`jieba`、`alibabacloud_nls_python_sdk`。
+- **[环境]** 放宽 `numpy` 限制：Conda 环境下 numpy 2.x 与所有依赖兼容，移除 `<2.0.0` 上限。
+- **[环境]** 🛡️ **移除 DLL 补丁**：移除 `app.py` 中 `KMP_DUPLICATE_LIB_OK=TRUE`，Conda 已彻底解决 OpenMP 冲突。
+- **[文件]** 修改 `nervous_system.py`、`app.py`、`ball.py`、`requirements.txt`。
+
+### v3.2.0 - Conda 环境迁移 Environment Migration (2026-02-09) 🐍
+- **[环境]** 🐍 **迁移至 Conda**：从 .venv 迁移到 Conda 环境管理，彻底解决 DLL 冲突问题。
+- **[环境]** 🔥 **PyTorch CUDA 12.4**：通过 Conda 安装 PyTorch 2.5.1 + CUDA 12.4，支持 RTX 4070 GPU 加速。
+- **[文档]** 📚 **环境搭建指南**：README 新增完整的 Conda 环境搭建教程、常见问题解答。
+- **[文档]** 说明 Conda 安装位置（`D:\conda`）、为什么 VS Code 找不到、如何配置。
+- **[文档]** 说明 PyTorch 是什么、为什么需要、显存占用情况。
+- **[改进]** 常用命令章节更新为 Conda 激活方式，替换旧的 .venv 激活命令。
+- **[配置]** Conda 环境名：`fuguang`，路径：`D:\conda\envs\fuguang`。
+
 ### v3.1.2 - 架构优化与资源管理 Architecture Enhancement (2026-02-09) 🏗️
 - **[优化]** 🔊 **音频资源管理**：改进 pygame 混音器资源释放逻辑，添加 finally 块确保资源清理。
 - **[优化]** 📂 **路径计算方法**：使用标记文件搜索法（搜索 README.md/.git），不再依赖固定层级 parent^4。
@@ -293,7 +432,7 @@ python src/scripts/register_face.py
 ### v3.1.0 - 完整灵魂融合 Full Soul Integration (2026-02-09) 🧬
 - **[重构]** 🧬 **GUI 完整复用 NervousSystem.run()**：不再是简化版循环！
 - **[架构]** 添加回调钩子机制：`on_state_change`、`on_subtitle`、`on_speech_start/end`。
-- **[修复]** DLL 冲突问题：Torch 优先加载 + `KMP_DUPLICATE_LIB_OK=TRUE`。
+- **[修复]** DLL 冲突问题：Torch 优先加载 ~~+ `KMP_DUPLICATE_LIB_OK=TRUE`~~（v3.3.0 已移除，Conda 彻底解决）。
 - **[改进]** 动画效果：所有状态改为平滑脉动，频率从 50ms → 100ms。
 - **[改进]** 字幕持久化：TTS 期间字幕不自动消失，说完后再显示 3 秒。
 - **[功能]** GUI 模式现拥有 run.py 的全部功能：

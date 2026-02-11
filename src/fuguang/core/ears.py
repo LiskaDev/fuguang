@@ -28,7 +28,8 @@ class Ears:
             n = len(word_pinyin)
             for i in range(len(user_pinyin) - n + 1):
                 if user_pinyin[i:i + n] == word_pinyin:
-                    clean_text = text[len(word):].strip()
+                    # [修复H-7] 使用拼音匹配位置 i 而非固定取 len(word) 字符
+                    clean_text = (text[:i] + text[i + n:]).strip()
                     clean_text = clean_text.lstrip("，。！？、")
                     return True, word, clean_text
         return False, "", text

@@ -60,3 +60,6 @@ memory.json
 
 # System Prompt (私人文件)
 System Prompt*.txt
+
+# Claude Code临时文件
+tmpclaude-*-cwd

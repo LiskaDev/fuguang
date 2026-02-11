@@ -1,9 +1,9 @@
-# app.py - 扶光 GUI 应用主入口 (Soul Injection v3.0)
+# app.py - 扶光 GUI 应用主入口 (Soul Injection v4.0)
 """
 将大脑(NervousSystem)与身体(FloatingBall)融合的入口
 
 架构:
-- 主线程: PyQt6 GUI (FloatingBall)
+- 主线程: PyQt6 GUI (FloatingBall + HolographicHUD)
 - 工作线程: FuguangWorker (NervousSystem)
 - 通信: Signal/Slot
 
@@ -15,12 +15,10 @@ import sys
 import os
 
 # ===================================================
-# 🛡️ DLL 冲突护身符 (必须在所有导入之前)
+# 🛡️ Torch 预加载 (确保 CUDA 正确初始化)
 # ===================================================
-# 1. 防止 OpenMP 冲突报错
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
-# 2. 优先加载 Torch (解决 DLL 初始化顺序问题)
+# 优先加载 Torch，确保 GPU 资源最先被正确初始化
+# 注：Conda 环境已彻底解决 OpenMP DLL 冲突，无需再设置 KMP_DUPLICATE_LIB_OK
 try:
     import torch
     print(f"✅ Torch 已加载: {torch.__version__}")
@@ -38,73 +36,15 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 # 3. 最后加载 PyQt6
-from PyQt6.QtWidgets import QApplication, QLabel
-from PyQt6.QtCore import QThread, pyqtSignal, QObject, Qt, QTimer, QMimeData
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
+from PyQt6.QtGui import QColor
 
 from fuguang.gui.ball import FloatingBall, FuguangSignals, BallState
+from fuguang.gui.hud import HolographicHUD
 # NervousSystem 延迟导入，避免 pygame/torch 初始化冲突
 
 logger = logging.getLogger("Fuguang")
-
-
-class SubtitleBubble(QLabel):
-    """字幕气泡 - 显示 AI 说话内容"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint | 
-            Qt.WindowType.WindowStaysOnTopHint | 
-            Qt.WindowType.Tool
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        
-        # 样式
-        self.setStyleSheet("""
-            QLabel {
-                background-color: rgba(20, 20, 20, 200);
-                color: white;
-                border-radius: 10px;
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-        """)
-        self.setFont(QFont("微软雅黑", 11))
-        self.setWordWrap(True)
-        self.setMaximumWidth(400)
-        self.setMinimumHeight(40)
-        
-        # 自动隐藏定时器
-        self.hide_timer = QTimer(self)
-        self.hide_timer.timeout.connect(self.fade_out)
-        
-        self.hide()
-
-    def show_message(self, text: str, duration: int = 8000):
-        """显示消息
-        
-        Args:
-            text: 要显示的文本
-            duration: 显示时长(毫秒)，默认 8 秒，-1 表示不自动隐藏
-        """
-        self.setText(text)
-        self.adjustSize()
-        self.show()
-        if duration > 0:
-            self.hide_timer.start(duration)
-        else:
-            self.hide_timer.stop()  # 不自动隐藏
-
-    def fade_out(self):
-        """淡出隐藏"""
-        self.hide_timer.stop()
-        self.hide()
-
-    def update_position(self, ball_x: int, ball_y: int):
-        """根据悬浮球位置更新气泡位置"""
-        # 显示在球的左边
-        self.move(ball_x - self.width() - 20, ball_y + 20)
 
 
 class FuguangWorker(QThread):
@@ -121,15 +61,14 @@ class FuguangWorker(QThread):
         self.signals = signals
         self.nervous_system = None
         self.is_running = True
-        self.is_awake = False
-        self.pending_screenshot = False
-        self.pending_file = None
+        self.is_awake = False  # [修复C-1] 演示模式下的唤醒状态
         
         # 连接来自 UI 的信号
         self.signals.wake_up.connect(self._on_wake_up)
         self.signals.sleep.connect(self._on_sleep)
         self.signals.screenshot_request.connect(self._on_screenshot_request)
         self.signals.quit_request.connect(self._on_quit)
+        self.signals.ptt_toggle.connect(self._on_ptt_toggle)
 
     def run(self):
         """工作线程主循环 - 完全复用 NervousSystem.run()"""
@@ -204,14 +143,16 @@ class FuguangWorker(QThread):
         # 3. TTS 开始说话回调
         def on_speech_start(text: str):
             self.state_changed.emit(BallState.SPEAKING)
-            display_text = text if len(text) <= 200 else text[:200] + "..."
-            self.subtitle_long.emit(display_text)
+            self.subtitle_long.emit(text)
         ns.mouth.on_speech_start = on_speech_start
         
         # 4. TTS 结束回调
         def on_speech_end():
-            # TTS 结束后恢复为 IDLE
-            self.state_changed.emit(BallState.IDLE)
+            # 如果 GUI 录音正在进行（用户打断了语音并开始新录音），不要重置为 IDLE
+            if self.nervous_system and self.nervous_system._gui_recording_active:
+                self.state_changed.emit(BallState.LISTENING)
+            else:
+                self.state_changed.emit(BallState.IDLE)
         ns.mouth.on_speech_end = on_speech_end
         
         logger.info("🔌 GUI 回调已注入到 NervousSystem")
@@ -246,21 +187,54 @@ class FuguangWorker(QThread):
             self.subtitle_update.emit(f"吞噬失败: {e}")
 
     def _on_wake_up(self):
-        """唤醒"""
-        self.is_awake = True
-        self.state_changed.emit(BallState.LISTENING)
-        self.subtitle_update.emit("指挥官，请说~")
-        # 不说话，只显示字幕，避免打断用户
+        """唤醒 - 通过操作队列发送给 NervousSystem"""
+        self.is_awake = True  # [修复C-1] 同步演示模式状态
+        if self.nervous_system:
+            self.nervous_system.queue_gui_action("wake")
+        else:
+            # 演示模式：直接发信号
+            self.state_changed.emit(BallState.LISTENING)
+            self.subtitle_update.emit("指挥官，请说~")
 
     def _on_sleep(self):
-        """休眠"""
-        self.is_awake = False
-        self.state_changed.emit(BallState.IDLE)
-        self.subtitle_update.emit("休眠中...")
+        """休眠 - 通过操作队列发送给 NervousSystem"""
+        self.is_awake = False  # [修复C-1] 同步演示模式状态
+        if self.nervous_system:
+            self.nervous_system.queue_gui_action("sleep")
+        else:
+            self.state_changed.emit(BallState.IDLE)
+            self.subtitle_update.emit("休眠中...")
 
     def _on_screenshot_request(self):
-        """截图请求"""
-        self.pending_screenshot = True
+        """截图请求 - 通过操作队列发送给 NervousSystem"""
+        if self.nervous_system:
+            self.nervous_system.queue_gui_action("screenshot")
+        else:
+            self.subtitle_update.emit("⚙️ 大脑离线，无法截图")
+
+    def _on_ptt_toggle(self, start: bool):
+        """PTT 录音切换（由悬浮球点击触发）
+        
+        设计：使用独立录音线程，完全绕开主循环，点击立刻生效。
+        start=True: 打断任何正在播放的语音 + 启动录音线程
+        start=False: 发送停止信号，录音线程自行收尾（识别+处理）
+        """
+        if self.nervous_system:
+            if start:
+                # 先打断正在播放的语音（线程安全，无副作用）
+                from fuguang import voice as fuguang_voice
+                fuguang_voice.stop_speaking()
+                # 启动独立录音线程
+                self.nervous_system.start_gui_recording()
+            else:
+                self.nervous_system.stop_gui_recording()
+        else:
+            if start:
+                self.state_changed.emit(BallState.LISTENING)
+                self.subtitle_update.emit("正在倾听，再次点击结束...")
+            else:
+                self.state_changed.emit(BallState.IDLE)
+                self.subtitle_update.emit("⚙️ 大脑离线，无法处理语音")
 
     def _on_quit(self):
         """退出"""
@@ -280,7 +254,9 @@ class FuguangApp:
         
         # 创建 UI 组件
         self.ball = FloatingBall(self.signals)
-        self.subtitle = SubtitleBubble()
+        
+        # 🔮 全息 HUD（替代旧版 SubtitleBubble，支持 Markdown + 代码高亮）
+        self.hud = HolographicHUD(parent_ball=self.ball)
         
         # 创建工作线程
         self.worker = FuguangWorker(self.signals)
@@ -288,40 +264,43 @@ class FuguangApp:
         # 连接工作线程信号到 UI
         self.worker.state_changed.connect(self.ball.set_state)
         self.worker.subtitle_update.connect(self._on_subtitle_update)
-        self.worker.subtitle_long.connect(self._on_subtitle_long)  # 持久字幕
+        self.worker.subtitle_long.connect(self._on_subtitle_long)
         self.worker.file_ingested.connect(self._on_file_ingested)
         
-        # 启用拖拽
+        # [修复H-6] 通过正式方法启用拖拽（不再 monkey-patch）
         self.ball.setAcceptDrops(True)
-        self.ball.dragEnterEvent = self._on_drag_enter
-        self.ball.dropEvent = self._on_drop
+        self.ball.drag_enter_handler = self._on_drag_enter
+        self.ball.drop_handler = self._on_drop
         
-        # 更新字幕位置定时器
+        # HUD 位置跟随定时器（100ms 刷新）
         self.position_timer = QTimer()
-        self.position_timer.timeout.connect(self._update_subtitle_position)
+        self.position_timer.timeout.connect(self._update_hud_position)
         self.position_timer.start(100)
+        
+        # 拖拽时实时跟随（比定时器更流畅）
+        self.signals.ball_moved.connect(self._update_hud_position)
 
     def _on_subtitle_update(self, text: str):
-        """更新字幕 (自动隐藏)"""
+        """更新 HUD 短消息（自动 8 秒隐藏）"""
         if text:
-            self.subtitle.show_message(text)
-            self._update_subtitle_position()
+            self.hud.show_message(text)
         else:
-            self.subtitle.hide()
+            self.hud.clear()
 
     def _on_subtitle_long(self, text: str):
-        """持久字幕 (不自动隐藏，用于 TTS 期间)"""
-        self.subtitle.show_message(text, duration=-1)  # -1 = 不自动隐藏
-        self._update_subtitle_position()
+        """显示 AI 完整回复（Markdown 渲染，不自动隐藏）"""
+        if text:
+            self.hud.show_response(text)
+        else:
+            self.hud.clear()
 
     def _on_file_ingested(self, result: str):
         """文件吞噬完成"""
-        self.subtitle.show_message(result, 8000)
+        self.hud.show_message(result, 8000)
 
-    def _update_subtitle_position(self):
-        """更新字幕位置"""
-        if self.subtitle.isVisible():
-            self.subtitle.update_position(self.ball.x(), self.ball.y())
+    def _update_hud_position(self):
+        """HUD 位置跟随悬浮球"""
+        self.hud.update_position()
 
     def _on_drag_enter(self, event):
         """拖拽进入"""
@@ -330,12 +309,15 @@ class FuguangApp:
             self.ball.set_state(BallState.THINKING)
 
     def _on_drop(self, event):
-        """文件投放"""
+        """文件投放 - 通过操作队列发送给 NervousSystem"""
         urls = event.mimeData().urls()
         if urls:
             file_path = urls[0].toLocalFile()
             logger.info(f"📁 拖拽文件: {file_path}")
-            self.worker.pending_file = file_path
+            if self.worker.nervous_system:
+                self.worker.nervous_system.queue_gui_action("ingest_file", file_path=file_path)
+            else:
+                self.worker.subtitle_update.emit("⚙️ 大脑离线，无法处理文件")
         self.ball.set_state(BallState.IDLE)
 
     def run(self):
@@ -349,10 +331,10 @@ class FuguangApp:
         self.worker.start()
         
         print("✅ 扶光已就绪！")
-        print("   - 单击悬浮球: 唤醒/休眠")
+        print("   - 单击悬浮球: 开始/停止录音")
         print("   - 双击: 截图分析")
         print("   - 拖拽文件: 知识吞噬")
-        print("   - 右键: 菜单")
+        print("   - 右键: 菜单（唤醒/休眠/退出）")
         
         # 进入事件循环
         return self.app.exec()

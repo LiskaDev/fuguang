@@ -1,9 +1,13 @@
 import json
 import os
 import time
+import logging
 import jieba  # 需要安装: pip install jieba (用于提取关键词)
 from datetime import datetime
 from .config import LONG_TERM_MEMORY_FILE
+
+# [修复C-3] 添加缺失的 logger 定义
+logger = logging.getLogger("Fuguang")
 
 # MEMORY_DB defined in config
 

@@ -3,6 +3,7 @@
 特点：云端合成，音质极佳，晓晓 (Xiaoxiao) 音色
 """
 import asyncio
+import re
 import edge_tts
 import pygame
 import time
@@ -21,19 +22,15 @@ _speak_lock = threading.Lock()
 # 🔥 全局打断标志
 _interrupted = False
 
-# 🔥 全局事件循环（避免重复创建）
-_loop = None
+# [修复H-4] 使用线程局部事件循环，避免多线程竞争
 
-def get_event_loop():
-    """获取或创建事件循环"""
-    global _loop
-    if _loop is None or _loop.is_closed():
-        try:
-            _loop = asyncio.get_event_loop()
-        except RuntimeError:
-            _loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(_loop)
-    return _loop
+def _run_async(coro):
+    """线程安全地运行异步协程"""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 # 初始化 pygame 混音器
 try:
@@ -65,6 +62,38 @@ def clear_interrupt():
     global _interrupted
     _interrupted = False
 
+
+def _clean_markdown(text: str) -> str:
+    """清理 Markdown 格式符号，避免 TTS 朗读星号、井号等
+    
+    示例：
+        '**专业解决方案总结：**' -> '专业解决方案总结：'
+        '# 标题' -> '标题'
+        '`code`' -> 'code'
+        '- 列表项' -> '列表项'
+    """
+    # 粗体 **text** 或 __text__
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    # 斜体 *text* 或 _text_（单个）
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'\1', text)
+    # 行内代码 `code`
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    # 标题 # ## ### 等
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # 无序列表 - 或 * 开头
+    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
+    # 有序列表 1. 2. 等
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+    # 链接 [text](url) -> text
+    text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)
+    # 残留的多余星号
+    text = text.replace('*', '')
+    # 代码块标记 ```
+    text = text.replace('```', '')
+    
+    return text.strip()
+
 def stop_speaking():
     """强制停止当前语音播放"""
     global _interrupted
@@ -83,14 +112,19 @@ def speak(text, voice="zh-CN-XiaoyiNeural"):
     if not text: 
         return
     
+    # [修复] 清理 Markdown 格式符号，避免 TTS 朗读星号等
+    text = _clean_markdown(text)
+    
+    if not text:
+        return
+    
     # 🔥 获取锁，确保同一时间只有一个语音在播放
     with _speak_lock:
         print(f"🔊 扶光: {text}")
         
-        # 1. 生成音频 (使用全局事件循环)
+        # 1. 生成音频 (使用线程安全事件循环)
         try:
-            loop = get_event_loop()
-            loop.run_until_complete(generate_audio(text, voice=voice))
+            _run_async(generate_audio(text, voice=voice))
         except Exception as e:
             print(f"❌ 语音合成失败: {e}")
             return

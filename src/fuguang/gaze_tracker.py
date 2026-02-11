@@ -40,12 +40,44 @@ class GazeTracker(threading.Thread):
         self._detect_count = 0
         self._found_count = 0
         
-        # [新增] 状态共享（用于回头杀/害羞机制）
-        self.has_face = False           # 当前是否检测到人脸
-        self.face_enter_time = 0        # 人脸首次出现的时间戳
-        self.last_face_seen_time = 0    # 上次看到人脸的时间戳
+        # [修复C-4] 状态共享（用于回头杀/害羞机制）- 线程锁保护
+        self._state_lock = threading.Lock()
+        self._has_face = False           # 当前是否检测到人脸
+        self._face_enter_time = 0        # 人脑首次出现的时间戳
+        self._last_face_seen_time = 0    # 上次看到人脸的时间戳
         
         self.daemon = True  # 守护线程，主程序退出时自动结束
+
+    # [修复C-4] 线程安全属性访问器
+    @property
+    def has_face(self) -> bool:
+        with self._state_lock:
+            return self._has_face
+    
+    @has_face.setter
+    def has_face(self, value: bool):
+        with self._state_lock:
+            self._has_face = value
+    
+    @property
+    def face_enter_time(self):
+        with self._state_lock:
+            return self._face_enter_time
+    
+    @face_enter_time.setter
+    def face_enter_time(self, value):
+        with self._state_lock:
+            self._face_enter_time = value
+    
+    @property
+    def last_face_seen_time(self):
+        with self._state_lock:
+            return self._last_face_seen_time
+    
+    @last_face_seen_time.setter
+    def last_face_seen_time(self, value):
+        with self._state_lock:
+            self._last_face_seen_time = value
     
     @property
     def enabled(self) -> bool:
