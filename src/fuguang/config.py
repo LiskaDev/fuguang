@@ -80,9 +80,9 @@ class ConfigManager:
     ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
     
     # 视觉识别配置
-    VISION_USE_FLASH = False  # True=极速模式(glm-4v-flash, 2秒), False=标准模式(glm-4v, 4秒)
+    VISION_USE_FLASH = True   # True=极速模式(glm-4v-flash, 2秒), False=标准模式(glm-4v, 4秒)
     VISION_QUALITY = 85       # 图片压缩质量 (60-95，越高越清晰但越慢)
-    VISION_MAX_SIZE = 1280    # 图片最大边长 (768-2048，越大越清晰但越慢)
+    VISION_MAX_SIZE = 1920    # 图片最大边长 (768-2048，越大越清晰但越慢)
 
     UNITY_IP = os.getenv("UNITY_IP", "127.0.0.1")
     UNITY_PORT = int(os.getenv("UNITY_PORT", "5005"))

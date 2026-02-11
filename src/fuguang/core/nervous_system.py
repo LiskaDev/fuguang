@@ -3,6 +3,9 @@ import time
 import logging
 import re
 import json
+import os
+import queue as _queue
+import threading
 import keyboard
 import speech_recognition as sr
 import datetime
@@ -61,6 +64,9 @@ class NervousSystem:
         self.LAST_ACTIVE_TIME = 0
         self.TEXT_INPUT_REQUESTED = False  # [新增] 打字输入模式标志
         
+        # [修复C-5] 键盘钩子运行在独立线程，需线程锁保护共享状态
+        self._input_state_lock = threading.Lock()
+        
         # [新增] 害羞机制冷却时间
         self.last_shy_time = 0
         
@@ -72,6 +78,18 @@ class NervousSystem:
         self.last_greet_date = None       # 上次打招呼的日期，防止重复
         self.is_processing_greet = False  # 防止多线程冲突
 
+        # ========================================
+        # [新增] GUI 线程安全操作队列
+        # ========================================
+        self._gui_action_queue = _queue.Queue()
+
+        # ========================================
+        # [新增] GUI 独立录音线程（点击悬浮球触发）
+        # ========================================
+        self._gui_recording_active = False   # 是否正在 GUI 录音
+        self._gui_stop_event = threading.Event()  # 停止录音信号
+        self._gui_record_thread = None
+
         # 注册按键监听
         keyboard.hook(self._on_key_event)
 
@@ -80,21 +98,23 @@ class NervousSystem:
 
 
     def _on_key_event(self, event):
-        """按键事件处理"""
+        """按键事件处理 [修复C-5] 使用锁保护共享状态"""
         # PTT 模式（右 Ctrl）
         if event.name == 'right ctrl':
-            if event.event_type == 'down' and not self.IS_PTT_PRESSED:
-                self.IS_PTT_PRESSED = True
-                logger.info("🎤 [PTT] 键按下")
-                fuguang_heartbeat.update_interaction()
-            elif event.event_type == 'up' and self.IS_PTT_PRESSED:
-                self.IS_PTT_PRESSED = False
-                self.LAST_ACTIVE_TIME = time.time()
-                logger.info("🎤 [PTT] 录音结束")
+            with self._input_state_lock:
+                if event.event_type == 'down' and not self.IS_PTT_PRESSED:
+                    self.IS_PTT_PRESSED = True
+                    logger.info("🎤 [PTT] 键按下")
+                    fuguang_heartbeat.update_interaction()
+                elif event.event_type == 'up' and self.IS_PTT_PRESSED:
+                    self.IS_PTT_PRESSED = False
+                    self.LAST_ACTIVE_TIME = time.time()
+                    logger.info("🎤 [PTT] 录音结束")
         
         # [新增] 打字输入模式（F1）
         elif event.name == 'f1' and event.event_type == 'down':
-            self.TEXT_INPUT_REQUESTED = True
+            with self._input_state_lock:
+                self.TEXT_INPUT_REQUESTED = True
             logger.info("⌨️ [打字模式] 已触发，请在终端输入文字")
 
     # ========================================
@@ -116,12 +136,189 @@ class NervousSystem:
             except Exception as e:
                 logger.warning(f"GUI 字幕回调异常: {e}")
 
+    # ========================================
+    # [新增] GUI 操作队列 (线程安全)
+    # ========================================
+    def queue_gui_action(self, action_type: str, **kwargs):
+        """从 GUI 线程安全地提交操作到主循环
+        
+        Args:
+            action_type: 操作类型 ("wake"/"sleep"/"screenshot"/"ingest_file"/"text_input")
+            **kwargs: 操作参数
+        """
+        self._gui_action_queue.put((action_type, kwargs))
+        logger.debug(f"📬 GUI 操作入队: {action_type}")
+
+    def _process_gui_actions(self):
+        """处理 GUI 提交的操作（在主循环每轮迭代的开头调用）"""
+        while not self._gui_action_queue.empty():
+            try:
+                action_type, kwargs = self._gui_action_queue.get_nowait()
+                logger.info(f"📬 处理 GUI 操作: {action_type}")
+                
+                if action_type == "wake":
+                    self.AWAKE_STATE = "voice_wake"
+                    self.LAST_ACTIVE_TIME = time.time()
+                    self._emit_state("LISTENING")
+                    self._emit_subtitle("指挥官，请说~")
+                    fuguang_heartbeat.update_interaction()
+                    
+                elif action_type == "sleep":
+                    self.AWAKE_STATE = "sleeping"
+                    self._emit_state("IDLE")
+                    self._emit_subtitle("休眠中...")
+                    
+                elif action_type == "screenshot":
+                    self._handle_screenshot_from_gui()
+                    
+                elif action_type == "ingest_file":
+                    file_path = kwargs.get("file_path", "")
+                    self._handle_file_ingestion_from_gui(file_path)
+                    
+                elif action_type == "text_input":
+                    text = kwargs.get("text", "")
+                    if text:
+                        self._process_command(text)
+                        
+            except _queue.Empty:
+                break
+            except Exception as e:
+                logger.error(f"GUI 操作处理异常: {e}")
+
+    # ========================================
+    # [新增] GUI 独立录音（完全绕开主循环）
+    # ========================================
+    def start_gui_recording(self):
+        """启动 GUI 独立录音线程（由悬浮球点击触发）
+        
+        设计要点：
+        - 独立线程，不依赖主循环，点击立刻开录
+        - 主循环检测 _gui_recording_active 跳过自己的麦克风操作，避免抢麦
+        - 录完自动识别，结果通过队列送回主循环处理
+        """
+        if self._gui_recording_active:
+            logger.warning("🎤 [GUI-PTT] 已在录音中，忽略重复启动")
+            return
+        
+        self._gui_recording_active = True
+        self._gui_stop_event.clear()
+        
+        # 确保已唤醒
+        if self.AWAKE_STATE == "sleeping":
+            self.AWAKE_STATE = "voice_wake"
+        self.LAST_ACTIVE_TIME = time.time()
+        fuguang_heartbeat.update_interaction()
+        
+        self._gui_record_thread = threading.Thread(
+            target=self._gui_record_worker, daemon=True, name="GUI-PTT-Record"
+        )
+        self._gui_record_thread.start()
+        logger.info("🎤 [GUI-PTT] 录音线程已启动")
+
+    def stop_gui_recording(self):
+        """停止 GUI 录音（由悬浮球再次点击触发）"""
+        if not self._gui_recording_active:
+            return
+        self._gui_stop_event.set()
+        logger.info("🎤 [GUI-PTT] 停止信号已发出")
+
+    def _gui_record_worker(self):
+        """GUI 录音工作线程：录音 → 识别 → 送结果回主循环"""
+        try:
+            with self.ears.get_microphone() as source:
+                self._emit_state("LISTENING")
+                self._emit_subtitle("正在倾听，再次点击结束...")
+                self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.05)
+                
+                frames = []
+                logger.info("🎤 [GUI-PTT] 开始录音...")
+                
+                while not self._gui_stop_event.is_set():
+                    try:
+                        buffer = source.stream.read(source.CHUNK)
+                        frames.append(buffer)
+                    except Exception:
+                        break
+                
+                self._gui_recording_active = False
+                
+                if frames:
+                    audio_data = b''.join(frames)
+                    logger.info(f"🎤 [GUI-PTT] 录制完成，共 {len(audio_data)} 字节")
+                    
+                    self._emit_state("THINKING")
+                    self._emit_subtitle("思考中...")
+                    
+                    text = self.ears.listen_ali(audio_data)
+                    if text:
+                        logger.info(f"👂 [GUI-PTT] 听到了: {text}")
+                        fuguang_heartbeat.update_interaction()
+                        self.LAST_ACTIVE_TIME = time.time()
+                        # 送回主循环处理（会调用 _process_command）
+                        self.queue_gui_action("text_input", text=text)
+                    else:
+                        logger.warning("🎤 [GUI-PTT] 未识别到语音")
+                        self._emit_subtitle("没听清，请再试一次")
+                        # 短暂显示后恢复
+                        time.sleep(2)
+                        self._emit_state("IDLE")
+                else:
+                    self._gui_recording_active = False
+                    logger.warning("🎤 [GUI-PTT] 没有录到声音")
+                    self._emit_subtitle("没有录到声音")
+                    time.sleep(2)
+                    self._emit_state("IDLE")
+                    
+        except Exception as e:
+            logger.error(f"🎤 [GUI-PTT] 录音异常: {e}")
+            self._gui_recording_active = False
+            self._emit_subtitle(f"录音失败: {e}")
+            time.sleep(2)
+            self._emit_state("IDLE")
+
+    def _handle_screenshot_from_gui(self):
+        """GUI 触发的截图分析"""
+        self._emit_state("THINKING")
+        self._emit_subtitle("正在分析屏幕...")
+        try:
+            result = self.skills.analyze_screen_content("请描述你看到的内容")
+            if result:
+                self._process_response(result)
+        except Exception as e:
+            logger.error(f"截图分析失败: {e}")
+            self.mouth.speak("抱歉指挥官，截图分析出了点问题。")
+        finally:
+            self._emit_state("IDLE")
+
+    def _handle_file_ingestion_from_gui(self, file_path: str):
+        """GUI 触发的文件吞噬"""
+        if not file_path or not os.path.exists(file_path):
+            self._emit_subtitle("文件路径无效")
+            return
+        
+        filename = os.path.basename(file_path)
+        self._emit_state("THINKING")
+        self._emit_subtitle(f"正在消化: {filename}")
+        try:
+            result = self.skills.ingest_knowledge_file(file_path)
+            self.mouth.speak(f"指挥官，{filename} 已消化，你可以问我关于它的问题了。")
+        except Exception as e:
+            logger.error(f"文件吞噬失败: {e}")
+            self.mouth.speak("抱歉指挥官，文件消化失败了。")
+        finally:
+            self._emit_state("IDLE")
+
     def _check_timeout(self):
         """检查语音唤醒是否超时"""
         if self.AWAKE_STATE == "voice_wake":
+            # GUI 录音活跃时不超时（用户正在操作）
+            if self._gui_recording_active:
+                self.LAST_ACTIVE_TIME = time.time()
+                return
             elapsed = time.time() - self.LAST_ACTIVE_TIME
             if elapsed > self.VOICE_WAKE_DURATION:
                 self.AWAKE_STATE = "sleeping"
+                self._emit_state("IDLE")
                 logger.info("💤 语音唤醒超时，回到待机")
 
     def _get_status_text(self) -> str:
@@ -207,6 +404,11 @@ class NervousSystem:
         perception_data["user_present"] = self.gaze_tracker.has_face if hasattr(self.gaze_tracker, 'has_face') else None
         
         system_content = self.brain.get_system_prompt(dynamic_context=perception_data) + memory_text
+        
+        # [自主模式] 告知 AI 当前执行模式
+        if self.skills.auto_execute:
+            system_content += "\n\n【自主执行模式已开启】指挥官已授权你自主执行所有操作（Shell命令、代码运行等），无需在回复中询问是否执行，直接调用工具完成任务。"
+        
         logger.info(f"📜 System Prompt (前200字): {system_content[:200]}...")
         logger.info(f"👁️ 感知数据: app={perception_data.get('app', 'N/A')[:30]}")
 
@@ -374,16 +576,13 @@ class NervousSystem:
                 self.skills.control_volume("down", self._extract_level(text))
                 return
 
-        # 软件启动 - 本地快捷
-        # [修复] 如果包含连接词("并"、"然后"、"写"、"输入"等)，说明是复合任务，交给 AI 处理
-        multi_step_indicators = ["并", "然后", "写", "输入", "搜索", "点击", "发送", "保存"]
-        is_multi_step = any(ind in text for ind in multi_step_indicators)
-        
+        # 软件启动 - 智能分流
+        # [优化] 短句(如"打开记事本")走本地快捷秒开，长句(如"打开记事本，不对，我是说计算器")交给AI理解
         if any(t in text for t in ["打开", "启动", "运行", "想听", "想玩", "想看"]):
-            if not is_multi_step:  # 只有简单的"打开XXX"才走快捷通道
+            if len(text) <= 10:  # 短句走快捷通道
                 if self.skills.open_app(text):
                     return
-            # 复合任务交给 AI 处理，它会自己决定先 Shell 打开再 GUI 操作
+            # 长句或复杂句一律交给 AI 理解语义
 
         # 本地查询 - 快速响应
         if "几点" in text or "时间" in text:
@@ -397,6 +596,20 @@ class NervousSystem:
             return
         if "状态" in text:
             self.mouth.speak(self.skills.check_status())
+            return
+
+        # [自主模式] 检测开关指令
+        auto_on_triggers = ["你自己解决", "不用问我", "自己搞定", "不用再问", "你全权处理", "自主执行", "全权处理"]
+        auto_off_triggers = ["问一下我", "要问我", "经过我同意", "确认一下", "关闭自主"]
+        if any(t in text for t in auto_on_triggers):
+            self.skills.auto_execute = True
+            self.mouth.speak("收到，指挥官。自主执行模式已开启，我会自行处理所有操作。")
+            logger.info("🤖 [自主模式] 已开启 - 跳过执行确认")
+            return
+        if any(t in text for t in auto_off_triggers):
+            self.skills.auto_execute = False
+            self.mouth.speak("好的指挥官，已切换回安全模式，执行操作前会先征求你的同意。")
+            logger.info("🛡️ [自主模式] 已关闭 - 恢复执行确认")
             return
 
         # 交给 AI 处理
@@ -431,6 +644,9 @@ class NervousSystem:
 
 
         while True:
+            # [GUI] 处理来自悬浮球的操作队列
+            self._process_gui_actions()
+            
             self._check_timeout()
             self.skills.check_reminders()
             
@@ -519,20 +735,28 @@ class NervousSystem:
 
             # ========================
             # 模式0: 打字输入（F1 触发）
+            # [修复H-9] GUI 模式下跳过 input() 避免阻塞
             # ========================
             if self.TEXT_INPUT_REQUESTED:
-                self.TEXT_INPUT_REQUESTED = False
-                print()  # 换行
-                try:
-                    user_text = input("📝 请输入消息 (回车发送): ").strip()
-                    if user_text:
-                        logger.info(f"⌨️ 收到打字输入: {user_text}")
-                        fuguang_heartbeat.update_interaction()
-                        self._process_command(user_text)
-                    else:
-                        logger.info("⌨️ 取消输入（空消息）")
-                except EOFError:
-                    logger.warning("⌨️ 输入被取消")
+                with self._input_state_lock:
+                    self.TEXT_INPUT_REQUESTED = False
+                
+                # 检测是否在 GUI 模式（stdin 不可用时跳过）
+                import sys
+                if sys.stdin and sys.stdin.isatty():
+                    print()  # 换行
+                    try:
+                        user_text = input("📝 请输入消息 (回车发送): ").strip()
+                        if user_text:
+                            logger.info(f"⌨️ 收到打字输入: {user_text}")
+                            fuguang_heartbeat.update_interaction()
+                            self._process_command(user_text)
+                        else:
+                            logger.info("⌨️ 取消输入（空消息）")
+                    except EOFError:
+                        logger.warning("⌨️ 输入被取消")
+                else:
+                    logger.info("⌨️ GUI 模式下 F1 打字输入已禁用，请使用悬浮球交互")
                 continue
 
             # ========================
@@ -545,11 +769,16 @@ class NervousSystem:
                 time.sleep(0.1)
                 continue
             
+            # [新增] GUI 录音活跃时，跳过主循环的麦克风操作（避免抢麦）
+            if self._gui_recording_active:
+                time.sleep(0.1)
+                continue
+
             if self.IS_PTT_PRESSED:
                 with self.ears.get_microphone() as source:
                     logger.info("🎤 [PTT] 正在录音，松开CTRL结束...")
                     self._emit_state("LISTENING")  # [GUI] 通知界面状态
-                    self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.2)
+                    self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.05)  # [优化] 缩短到50ms，按下即录
 
                     try:
                         frames = []
@@ -589,9 +818,9 @@ class NervousSystem:
                 continue
             
             with self.ears.get_microphone() as source:
-                self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.3)
+                self.ears.recognizer.adjust_for_ambient_noise(source, duration=0.1)  # [优化] 缩短噪声检测
 
-                if self.IS_PTT_PRESSED:
+                if self.IS_PTT_PRESSED or self._gui_recording_active:
                     time.sleep(0.1)
                     continue
 
@@ -615,6 +844,7 @@ class NervousSystem:
                                 self.AWAKE_STATE = "voice_wake"
                                 self.LAST_ACTIVE_TIME = time.time()
                                 fuguang_heartbeat.update_interaction()
+                                self._emit_state("LISTENING")  # [GUI] 通知界面
                                 self.mouth.send_to_unity("Surprised")
                                 self.mouth.speak("我在。")
                                 if clean_text:
