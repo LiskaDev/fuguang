@@ -11,7 +11,7 @@
 | :--- | :--- | :--- | :--- |
 | **`nervous_system.py`** | **神经系统** | **信号协调**。负责主循环、按键监听 (PTT)、将输入传给大脑、播放回复。 | 修改按键逻辑、调整交互流程、修改心跳机制。 |
 | **`brain.py`** | **大脑** | **思考与对话**。负责调用 LLM API、**工具调用循环 (Function Calling)**、管理对话历史、记忆检索与归档。 | 修改 System Prompt、更换 AI 模型、调整记忆长度、**修改工具调用逻辑**。 |
-| **`skills.py`** | **手/技能** | **执行**。负责所有 Function Calling 工具（搜索、打开App、写文件、**视觉识别**）。 | **这是最常修改的文件**。增加新功能（如关机、查天气）都在这里。 |
+| **`skills/`** | **手/技能** | **执行**。模块化技能包，通过 Mixin 多继承组合 6 大技能领域：`vision.py`(视觉)、`gui.py`(桌面控制)、`browser.py`(浏览器)、`system.py`(系统命令)、`memory.py`(记忆)、`mcp.py`(外部扩展)。 | **这是最常修改的目录**。增加新功能按领域放入对应模块。 |
 | **`ears.py`** | **耳朵** | **听觉**。负责麦克风录音、ASR 语音识别、唤醒词检测。 | 调整麦克风灵敏度、修改唤醒词、更换语音识别服务。 |
 | **`eyes.py`** | **眼睛** | **视觉**。负责获取窗口标题、剪贴板内容、屏幕截图，结合 **GLM-4V** 进行视觉分析。 | 新增视觉识别场景、调整图片质量、切换极速/标准模式。 |
 | **`mouth.py`** | **嘴巴** | **表达**。负责 TTS 语音合成、发送表情/动作指令给 Unity。 | 更换 TTS 音色、对接新的 Unity 动画事件。 |
@@ -327,6 +327,30 @@ python verify_config.py
 ## 📝 更新日志 (Changelog)
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v4.1.0 - Skills 器官分化重构 Organ Differentiation (2025-02-14) 🧬🔬
+
+> **背景**：`skills.py` 膨胀至 3087 行 / 53 个方法，维护困难。
+> 按「器官分化」理念将单体文件拆分为模块化技能包。
+
+**架构改进：**
+- **[重构]** 🧬 **Mixin 多继承**：`SkillManager` 组合 6 个领域 Mixin（`VisionSkills` / `GUISkills` / `BrowserSkills` / `SystemSkills` / `MemorySkills` / `MCPSkills`），共享初始化和常量由 `BaseSkillMixin` 统一管理。
+- **[重构]** 📦 **skills/ 包结构**：
+  - `base.py` — 共享 `__init__`、`APP_REGISTRY`、`WEBSITE_REGISTRY`、辅助方法
+  - `vision.py` — GLM-4V 屏幕/图片分析、视觉历史
+  - `gui.py` — 鼠标/键盘/OCR/YOLO 桌面控制
+  - `browser.py` — 网页搜索、阅读、深度浏览、视频播放
+  - `system.py` — Shell 执行、音量控制、代码生成、提醒、应用启动
+  - `memory.py` — 长期记忆、知识库管理
+  - `mcp.py` — 外部 MCP 扩展占位
+  - `__init__.py` — SkillManager 组合器、`execute_tool`、`get_tools_schema`
+- **[兼容]** ✅ **零破坏性变更**：`nervous_system.py` 等所有外部调用无需修改。
+
+**文件变更：**
+- 新增 `core/skills/` 目录（8 个文件）
+- 重命名 `core/skills.py` → `core/skills_legacy.py`（参考备份）
+
+---
 
 ### v4.0.0 - 全息 HUD + 自主执行模式 Holographic HUD & Auto-Execute (2025-07-16) 🖥️🤖
 

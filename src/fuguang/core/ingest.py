@@ -32,6 +32,20 @@ except ImportError:
     DOCX_AVAILABLE = False
     logger.warning("⚠️ python-docx 未安装，Word 导入功能将不可用")
 
+try:
+    from pptx import Presentation
+    PPTX_AVAILABLE = True
+except ImportError:
+    PPTX_AVAILABLE = False
+    logger.warning("⚠️ python-pptx 未安装，PowerPoint 导入功能将不可用")
+
+try:
+    import openpyxl
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
+    logger.warning("⚠️ openpyxl 未安装，Excel 导入功能将不可用")
+
 
 class KnowledgeEater:
     """知识吞噬者 - 将文件内容导入向量数据库"""
@@ -40,6 +54,9 @@ class KnowledgeEater:
     SUPPORTED_EXTENSIONS = {
         'pdf': '📕 PDF文档',
         'docx': '📘 Word文档',
+        'pptx': '📊 PowerPoint演示',
+        'xlsx': '📗 Excel表格',
+        'xls': '📗 Excel表格(旧版)',
         'txt': '📄 纯文本',
         'md': '📝 Markdown',
         'py': '🐍 Python代码',
@@ -192,6 +209,36 @@ class KnowledgeEater:
             paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
             return "\n\n".join(paragraphs)
         
+        elif ext == 'pptx':
+            if not PPTX_AVAILABLE:
+                raise RuntimeError("python-pptx 未安装，请运行: pip install python-pptx")
+            prs = Presentation(str(path))
+            text_parts = []
+            for slide_num, slide in enumerate(prs.slides, 1):
+                slide_texts = []
+                for shape in slide.shapes:
+                    if hasattr(shape, 'text') and shape.text.strip():
+                        slide_texts.append(shape.text.strip())
+                if slide_texts:
+                    text_parts.append(f"[幻灯片{slide_num}] " + "\n".join(slide_texts))
+            return "\n\n".join(text_parts)
+        
+        elif ext in ('xlsx', 'xls'):
+            if not OPENPYXL_AVAILABLE:
+                raise RuntimeError("openpyxl 未安装，请运行: pip install openpyxl")
+            wb = openpyxl.load_workbook(str(path), data_only=True)
+            text_parts = []
+            for sheet_name in wb.sheetnames:
+                ws = wb[sheet_name]
+                rows = []
+                for row in ws.iter_rows(values_only=True):
+                    cells = [str(c) if c is not None else '' for c in row]
+                    if any(c.strip() for c in cells):
+                        rows.append(' | '.join(cells))
+                if rows:
+                    text_parts.append(f"[工作表: {sheet_name}]\n" + "\n".join(rows))
+            return "\n\n".join(text_parts)
+        
         else:
             # 纯文本类文件
             encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
@@ -265,7 +312,7 @@ class KnowledgeEater:
             chunks.append(current_chunk)
         
         # 过滤太短的块（少于 50 字符）
-        chunks = [c for c in chunks if len(c.strip()) >= 50]
+        chunks = [c for c in chunks if len(c.strip()) >= 10]
         
         return chunks
     

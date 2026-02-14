@@ -59,20 +59,9 @@ class MemoryBank:
             logger.warning(f"⚠️ 多语言模型加载失败: {e}，使用默认嵌入")
             self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
         
-        # 4. 创建/获取两个独立集合
-        # 对话记忆集合
-        self.memories = self.client.get_or_create_collection(
-            name=self.COLLECTION_MEMORIES,
-            embedding_function=self.embedding_fn,
-            metadata={"description": "对话记忆：用户偏好、重要信息、历史对话"}
-        )
-        
-        # 知识库集合
-        self.knowledge = self.client.get_or_create_collection(
-            name=self.COLLECTION_KNOWLEDGE,
-            embedding_function=self.embedding_fn,
-            metadata={"description": "知识库：PDF/Word/代码等文档内容"}
-        )
+        # 4. 创建/获取两个独立集合（带损坏自动修复）
+        self.memories = self._safe_get_collection(self.COLLECTION_MEMORIES, "对话记忆：用户偏好、重要信息、历史对话")
+        self.knowledge = self._safe_get_collection(self.COLLECTION_KNOWLEDGE, "知识库：PDF/Word/代码等文档内容")
         
         # 兼容性：保留 collection 属性指向记忆集合
         self.collection = self.memories
@@ -80,6 +69,35 @@ class MemoryBank:
         mem_count = self.memories.count()
         know_count = self.knowledge.count()
         logger.info(f"✅ [记忆] 双集合加载完成: 对话记忆 {mem_count} 条 | 知识库 {know_count} 条")
+
+    def _safe_get_collection(self, name: str, description: str):
+        """安全获取集合，HNSW索引损坏时自动重建"""
+        try:
+            collection = self.client.get_or_create_collection(
+                name=name,
+                embedding_function=self.embedding_fn,
+                metadata={"description": description}
+            )
+            # 尝试访问一下，触发索引加载
+            collection.count()
+            return collection
+        except Exception as e:
+            error_msg = str(e)
+            if "hnsw" in error_msg.lower() or "Nothing found on disk" in error_msg:
+                logger.warning(f"⚠️ [记忆] {name} 索引损坏，正在自动重建...")
+                try:
+                    self.client.delete_collection(name)
+                except Exception:
+                    pass
+                collection = self.client.get_or_create_collection(
+                    name=name,
+                    embedding_function=self.embedding_fn,
+                    metadata={"description": description}
+                )
+                logger.info(f"✅ [记忆] {name} 已重建（之前的数据已丢失）")
+                return collection
+            else:
+                raise
 
     # ========================
     # 对话记忆 (Memories)

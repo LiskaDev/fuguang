@@ -2361,29 +2361,50 @@ Start-Process -FilePath $shortcut.TargetPath -WorkingDirectory $shortcut.Working
         """
         logger.info(f"⚡ [Shell] AI 申请执行: {command}")
         
-        # === 🛡️ 1. 黑名单熔断机制 ===
-        # 绝对禁止的危险命令
+        # === 🛡️ 1. 黑名单熔断机制 (双层防护) ===
+        command_lower = command.lower()
+        
+        # --- 第1层：绝对禁止的命令（直接拦截） ---
         forbidden_patterns = [
-            # 文件系统破坏
-            "rm -rf", "rm -r /", "rmdir /s /q c:", 
-            "del /s /q c:", "rd /s /q c:", "format ",
-            "mkfs", "dd if=", "> /dev/sda",
+            # 系统级破坏
+            "format ", "mkfs", "dd if=", "> /dev/sda",
+            "clear-disk", "format-volume",
             # 系统关机/重启
             "shutdown", "restart", "reboot", "poweroff",
             # 注册表破坏
             "reg delete hklm", "reg delete hkcr",
             # Fork 炸弹
             ":(){ :|:& };:", "%0|%0",
-            # 危险的 PowerShell
-            "remove-item -recurse -force c:",
-            "clear-disk", "format-volume",
+            # 系统目录操作
+            "c:\\windows", "c:\\program files", "system32",
         ]
         
-        command_lower = command.lower()
         for pattern in forbidden_patterns:
             if pattern.lower() in command_lower:
                 logger.warning(f"🛡️ [安全拦截] 已阻止危险命令: {command}")
                 return f"❌ [安全拦截] 命令包含高危操作 '{pattern}'，已拒绝执行。\n\n如果确实需要执行此操作，请手动在终端执行。"
+        
+        # --- 第2层：删除操作 - 只拦截系统关键目录 ---
+        delete_keywords = ["remove-item", "del ", "rm ", "rd ", "rmdir", "rm -r", "rm -f"]
+        is_delete = any(kw in command_lower for kw in delete_keywords)
+        
+        if is_delete:
+            # 绝对禁止删除的系统关键目录
+            danger_paths = [
+                "c:\\windows", "c:\\program files", "c:\\program files (x86)",
+                "c:\\users\\all", "system32", "syswow64",
+                "$env:windir", "$env:systemroot",
+                "\\appdata\\roaming\\microsoft",
+                # Linux/Mac 系统目录（以防万一）
+                "/etc", "/usr", "/bin", "/sbin", "/boot", "/var",
+            ]
+            hits_danger = any(dp in command_lower for dp in danger_paths)
+            
+            if hits_danger:
+                logger.warning(f"🛡️ [安全拦截] 删除操作涉及系统目录: {command}")
+                return "❌ [安全拦截] 禁止删除系统关键目录！\n\n如果确实需要操作系统文件，请手动在终端以管理员权限执行。"
+            else:
+                logger.info(f"⚠️ [删除操作] 路径安全检查通过: {command}")
         
         try:
             # === 2. 执行命令 ===
@@ -2743,6 +2764,31 @@ Start-Process -FilePath $shortcut.TargetPath -WorkingDirectory $shortcut.Working
         
         # 执行代码
         logger.info(f"🚀 正在运行: {file_path}")
+        
+        # 检测是否是交互式脚本（包含input()）
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                code_content = f.read()
+            is_interactive = 'input(' in code_content
+        except Exception:
+            is_interactive = False
+        
+        if is_interactive:
+            # 交互式脚本 → 打开新终端窗口运行，用户可以直接操作
+            logger.info(f"🖥️ [交互式脚本] 在新终端窗口运行: {filename}")
+            self.mouth.speak(f"这是个交互式程序，给你打开新窗口运行~")
+            try:
+                subprocess.Popen(
+                    f'start cmd /k "chcp 65001 >nul && "{sys.executable}" "{file_path}""',
+                    shell=True,
+                    cwd=str(self.config.GENERATED_DIR)
+                )
+                return f"✅ 已在新终端窗口启动 {filename}，请在弹出的窗口中操作~"
+            except Exception as e:
+                logger.error(f"打开终端失败: {e}")
+                return f"❌ 打开终端失败: {str(e)}"
+        
+        # 非交互式脚本 → 后台运行并捕获输出
         self.mouth.speak("正在执行代码...")
         
         try:
@@ -2750,8 +2796,11 @@ Start-Process -FilePath $shortcut.TargetPath -WorkingDirectory $shortcut.Working
                 [sys.executable, str(file_path)],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 timeout=60,  # 60秒超时保护
-                cwd=str(self.config.GENERATED_DIR)  # 在 generated 目录下运行
+                cwd=str(self.config.GENERATED_DIR),  # 在 generated 目录下运行
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"}  # 强制UTF-8输出
             )
             
             output = result.stdout

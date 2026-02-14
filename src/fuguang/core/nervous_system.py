@@ -250,7 +250,17 @@ class NervousSystem:
                     self._emit_subtitle("思考中...")
                     
                     text = self.ears.listen_ali(audio_data)
-                    if text:
+                    if text == "[NETWORK_ERROR]":
+                        logger.warning("⚠️ [GUI-PTT] 网络连接中断")
+                        print("⚠️ 网络连接中断，请检查WiFi")
+                        self._emit_subtitle("网络连接中断，请检查WiFi")
+                        try:
+                            self.mouth.speak("指挥官，网络似乎断开了")
+                        except Exception:
+                            pass
+                        time.sleep(3)
+                        self._emit_state("IDLE")
+                    elif text:
                         logger.info(f"👂 [GUI-PTT] 听到了: {text}")
                         fuguang_heartbeat.update_interaction()
                         self.LAST_ACTIVE_TIME = time.time()
@@ -385,18 +395,22 @@ class NervousSystem:
 
         # 检索相关记忆 (使用 ChromaDB 向量数据库)
         memory_text = ""
-        if hasattr(self.skills, 'memory') and self.skills.memory:
-            # 使用新的向量数据库进行语义检索
-            memory_context = self.skills.memory.get_memory_context(user_input, n_results=3)
-            if memory_context:
-                memory_text = memory_context
-                logger.info(f"📖 [RAG] 已注入长期记忆上下文")
-        else:
-            # 备用：使用旧的记忆系统
-            related_memories = self.brain.memory_system.search_memory(user_input)
-            if related_memories:
-                memory_text = "\n【相关长期记忆】\n" + "\n".join(related_memories)
-                logger.info(f"🧠 激活记忆: {related_memories}")
+        try:
+            if hasattr(self.skills, 'memory') and self.skills.memory:
+                # 使用新的向量数据库进行语义检索
+                memory_context = self.skills.memory.get_memory_context(user_input, n_results=3)
+                if memory_context:
+                    memory_text = memory_context
+                    logger.info(f"📖 [RAG] 已注入长期记忆上下文")
+            else:
+                # 备用：使用旧的记忆系统
+                related_memories = self.brain.memory_system.search_memory(user_input)
+                if related_memories:
+                    memory_text = "\n【相关长期记忆】\n" + "\n".join(related_memories)
+                    logger.info(f"🧠 激活记忆: {related_memories}")
+        except Exception as e:
+            logger.warning(f"⚠️ [RAG] 记忆检索失败（不影响对话）: {e}")
+            memory_text = ""
 
 
         # 收集实时感知数据
@@ -437,11 +451,24 @@ class NervousSystem:
             # 根据异常类型给出更具体的提示
             error_msg = str(e).lower()
             if "timeout" in error_msg or "timed out" in error_msg:
-                self.mouth.speak("指挥官，思考时间太长了，网络有点慢...")
+                hint = "思考超时，网络有点慢..."
+            elif "connection" in error_msg or "connect" in error_msg:
+                hint = "⚠️ 网络连接中断，请检查WiFi"
             elif "token" in error_msg or "length" in error_msg:
-                self.mouth.speak("指挥官，这个任务太复杂了，超出了我的处理能力...")
+                hint = "任务太复杂，超出处理能力..."
             else:
-                self.mouth.speak("指挥官，连接受到干扰...")
+                hint = "连接受到干扰..."
+            
+            # GUI字幕 + 终端输出（确保两种模式都能看到）
+            print(f"⚠️ {hint}")
+            self._emit_subtitle(hint, persistent=True)
+            self._emit_state("IDLE")
+            
+            # 尝试语音提示（断网时会静默失败）
+            try:
+                self.mouth.speak(f"指挥官，{hint}")
+            except Exception:
+                pass  # TTS也断网了，至少字幕还能看到
             self.mouth.send_to_unity("Sorrow")
 
 
@@ -557,8 +584,10 @@ class NervousSystem:
             self.skills.control_volume("down", 3 if "很" in text else 2)
             return
         
-        # [新增] 礼貌回应
-        if any(w in text for w in ["你好", "哈喽", "Hello", "hi"]):
+        # [新增] 礼貌回应 - 如果包含操作动词则不走问候快捷，交给AI处理
+        action_verbs = ["点击", "打开", "输入", "搜索", "分析", "看看", "帮我", "运行", "启动"]
+        has_action = any(v in text for v in action_verbs)
+        if any(w in text for w in ["你好", "哈喽", "Hello", "hi"]) and not has_action:
             self.mouth.wave()
             self.mouth.speak("你好呀指挥官")
             return
@@ -795,18 +824,33 @@ class NervousSystem:
 
                             text = self.ears.listen_ali(audio_data)
 
-                            if text:
+                            if text == "[NETWORK_ERROR]":
+                                logger.warning("⚠️ [PTT] 网络连接中断")
+                                print("⚠️ 网络连接中断，请检查WiFi")
+                                self._emit_subtitle("⚠️ 网络连接中断，请检查WiFi", persistent=True)
+                                self._emit_state("IDLE")
+                                try:
+                                    self.mouth.speak("指挥官，网络似乎断开了")
+                                except Exception:
+                                    pass
+                            elif text:
                                 logger.info(f"👂 听到了: {text}")
                                 fuguang_heartbeat.update_interaction()
                                 self._process_command(text)
                             else:
                                 logger.warning("未识别到语音")
+                                self._emit_subtitle("没听清，请再说一次")
+                                self._emit_state("IDLE")
 
                         time.sleep(0.1)
                         continue
 
                     except Exception as e:
                         logger.error(f"PTT 异常: {e}")
+                        try:
+                            self.mouth.speak("指挥官，处理出了点问题，请再说一次")
+                        except Exception:
+                            pass
                         continue
 
             # ========================
@@ -833,6 +877,10 @@ class NervousSystem:
 
                     audio_data = audio.get_raw_data(convert_rate=16000, convert_width=2)
                     text = self.ears.listen_ali(audio_data)
+
+                    if text == "[NETWORK_ERROR]":
+                        logger.warning("⚠️ 网络连接中断，无法识别语音")
+                        continue
 
                     if text:
                         logger.info(f"👂 听到了: {text}")

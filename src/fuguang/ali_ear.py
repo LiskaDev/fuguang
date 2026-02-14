@@ -54,6 +54,10 @@ def get_token():
         
         return token
     except Exception as e:
+        error_str = str(e).lower()
+        if any(kw in error_str for kw in ['connection', 'timeout', 'refused', 'unreachable', 'network', 'getaddrinfo']):
+            print(f"❌ Token 网络错误 (可能断网): {e}")
+            return "__NETWORK_ERROR__"
         print(f"❌ Token 错误: {e}")
         return None
 
@@ -103,7 +107,19 @@ def listen_ali(audio_data):
     global result_holder
     result_holder = RecognitionResult()
     
+    # 先快速检查网络连通性（解决Token缓存后NLS静默超时的问题）
+    try:
+        import socket
+        sock = socket.create_connection(("223.5.5.5", 53), timeout=2)  # 阿里DNS
+        sock.close()
+    except (socket.timeout, OSError, ConnectionError):
+        print("⚠️ 网络连接中断，无法进行语音识别")
+        return "[NETWORK_ERROR]"
+    
     token = get_token()
+    if token == "__NETWORK_ERROR__":
+        print("❌ 网络连接失败，无法进行语音识别")
+        return "[NETWORK_ERROR]"
     if not token:
         return ""
     
@@ -145,8 +161,18 @@ def listen_ali(audio_data):
             print(f"✅ 识别: {result_holder.text}")
             return result_holder.text.strip()
         else:
+            # 检查是否有NLS SDK报告的错误（如断网时连接失败）
+            if result_holder.error:
+                err = str(result_holder.error).lower()
+                print(f"⚠️ NLS错误: {result_holder.error}")
+                if any(kw in err for kw in ['connect', 'timeout', 'network', 'refused', 'eof', 'ssl', 'socket', 'name resolution']):
+                    return "[NETWORK_ERROR]"
             return ""
         
     except Exception as e:
+        error_str = str(e).lower()
+        if any(kw in error_str for kw in ['connection', 'timeout', 'refused', 'unreachable', 'network']):
+            print(f"❌ 识别失败 (网络问题): {e}")
+            return "[NETWORK_ERROR]"
         print(f"❌ 识别失败: {e}")
         return ""
