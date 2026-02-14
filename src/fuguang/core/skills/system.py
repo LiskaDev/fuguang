@@ -131,13 +131,12 @@ class SystemSkills:
             if auto_action and isinstance(auto_action, dict):
                 reminder_task["auto_action"] = auto_action
                 action_desc = f"（到时将自动执行: {auto_action.get('tool_name', '未知操作')}）"
-                self.mouth.speak(f"好的，已设置提醒，会在 {target_time} 叫你，并自动帮你执行。")
             else:
                 action_desc = ""
-                self.mouth.speak(f"好的，已设置提醒，会在 {target_time} 叫你。")
             self.reminders.append(reminder_task)
             self._save_reminders_to_disk()
-            self.take_note(f"设定提醒 {target_time}: {content}{action_desc}", category="待办")
+            # 不调用 mouth.speak —— 让 AI 的自然语言回复作为唯一确认
+            # 不调用 take_note —— 避免副作用产生额外 TTS
             return f"✅ 已设定提醒: {target_time} {content}{action_desc}"
         except ValueError:
             return f"❌ 时间格式错误"
@@ -149,15 +148,22 @@ class SystemSkills:
             task_time = datetime.datetime.strptime(task["time"], "%Y-%m-%d %H:%M:%S")
             if current_time >= task_time:
                 self.mouth.send_to_unity("Surprised")
-                self.mouth.speak(f"指挥官，{task['content']}")
                 self._show_toast("Fuguang IDE 提醒", task['content'])
+                # [修复#9] auto_action 执行
                 if "auto_action" in task and task["auto_action"]:
                     action = task["auto_action"]
+                    tool_name = action.get("tool_name", "")
+                    arguments = action.get("arguments", {})
+                    logger.info(f"⏰ [提醒] 正在自动执行: {tool_name}({arguments})")
                     try:
-                        result = self.execute_tool(action.get("tool_name", ""), action.get("arguments", {}))
-                        self.mouth.speak("已自动帮你执行~")
+                        result = self.execute_tool(tool_name, arguments)
+                        logger.info(f"✅ [提醒] 自动执行完成: {result[:100] if result else 'OK'}")
+                        self.mouth.speak(f"指挥官，已帮你{task['content']}")
                     except Exception as e:
-                        self.mouth.speak("自动操作出了点问题...")
+                        logger.error(f"❌ [提醒] 自动执行失败: {tool_name} -> {e}")
+                        self.mouth.speak(f"指挥官，{task['content']}，但自动执行出了点问题")
+                else:
+                    self.mouth.speak(f"指挥官，{task['content']}")
                 is_changed = True
             else:
                 active_reminders.append(task)
@@ -280,15 +286,27 @@ class SystemSkills:
                 return full
             except ImportError: return calc_sim(s1, s2)
         try:
-            start_menu_paths = [
-                Path(os.getenv('APPDATA')) / "Microsoft/Windows/Start Menu/Programs",
-                Path(os.getenv('ProgramData')) / "Microsoft/Windows/Start Menu/Programs",
-            ]
-            desktop = Path(os.path.expanduser("~/Desktop"))
-            all_sc = []
-            for base in start_menu_paths + [desktop]:
-                if not base.exists(): continue
-                for s in base.rglob("*.lnk"): all_sc.append(s)
+            # [修复#11] 缓存快捷方式列表，避免每次都扫描文件系统（32秒→即时）
+            _CACHE_TTL = 600  # 缓存10分钟
+            now = time.time()
+            if not hasattr(self, '_shortcut_cache') or not self._shortcut_cache or \
+               now - getattr(self, '_shortcut_cache_time', 0) > _CACHE_TTL:
+                start_menu_paths = [
+                    Path(os.getenv('APPDATA')) / "Microsoft/Windows/Start Menu/Programs",
+                    Path(os.getenv('ProgramData')) / "Microsoft/Windows/Start Menu/Programs",
+                ]
+                desktop = Path(os.path.expanduser("~/Desktop"))
+                all_sc = []
+                for base in start_menu_paths + [desktop]:
+                    if not base.exists(): continue
+                    for s in base.rglob("*.lnk"): all_sc.append(s)
+                self._shortcut_cache = all_sc
+                self._shortcut_cache_time = now
+                logger.info(f"📂 [缓存] 已扫描 {len(all_sc)} 个快捷方式并缓存")
+            else:
+                all_sc = self._shortcut_cache
+                logger.debug(f"📂 [缓存] 使用缓存的 {len(all_sc)} 个快捷方式")
+
             matched = []
             for sc in all_sc:
                 name = sc.stem; score = 0

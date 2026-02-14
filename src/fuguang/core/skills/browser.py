@@ -135,30 +135,44 @@ class BrowserSkills:
     # 📺 视频搜索
     # ========================
     def open_video(self, keyword: str, silent: bool = False) -> str:
+        """在B站搜索视频并自动播放第一个结果"""
         logger.info(f"📺 正在搜索视频: {keyword}")
         if not silent:
             self.mouth.speak(f"正在帮你搜索并播放 {keyword}...")
         try:
-            if self.ghost and PLAYWRIGHT_AVAILABLE:
-                page = self._get_browser_page()
-                if not page:
-                    webbrowser.open(f"https://search.bilibili.com/all?keyword={keyword}")
-                    return f"✅ 已在浏览器中打开B站搜索页面"
-                url = f"https://search.bilibili.com/all?keyword={keyword}"
-                page.goto(url, timeout=30000)
-                page.wait_for_load_state("domcontentloaded", timeout=10000)
-                try:
-                    first_video = page.locator('.video-list .bili-video-card').first
-                    first_video.click(timeout=8000)
-                    page.wait_for_load_state("domcontentloaded", timeout=8000)
-                    video_title = page.title()
-                    if not silent: self.mouth.speak(f"已打开视频")
-                    return f"✅ 正在播放: {video_title}"
-                except Exception:
-                    return f"✅ 已打开搜索页面，请选择视频播放"
-            else:
-                webbrowser.open(f"https://search.bilibili.com/all?keyword={keyword}")
-                return f"✅ 已在浏览器中打开B站搜索页面"
+            import urllib.parse
+            encoded_keyword = urllib.parse.quote(keyword)
+            
+            # [修复#12] 先通过 B站搜索 API 获取第一个视频的 bvid
+            try:
+                search_url = f"https://api.bilibili.com/x/web-interface/search/type?search_type=video&keyword={encoded_keyword}&page=1&page_size=1"
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Referer': 'https://www.bilibili.com'
+                }
+                resp = requests.get(search_url, headers=headers, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    results = data.get("data", {}).get("result", [])
+                    if results:
+                        first = results[0]
+                        bvid = first.get("bvid", "")
+                        title = first.get("title", "").replace("<em class=\"keyword\">", "").replace("</em>", "")
+                        if bvid:
+                            video_url = f"https://www.bilibili.com/video/{bvid}"
+                            webbrowser.open(video_url, new=2)
+                            if not silent:
+                                self.mouth.speak(f"已打开视频: {title[:30]}")
+                            return f"✅ 正在播放: {title} ({video_url})"
+            except Exception as e:
+                logger.warning(f"⚠️ B站 API 搜索失败，回退到搜索页: {e}")
+            
+            # 回退：直接打开搜索页面
+            url = f"https://search.bilibili.com/all?keyword={encoded_keyword}"
+            webbrowser.open(url, new=2)
+            if not silent:
+                self.mouth.speak("已打开B站搜索页面，请选择你想看的视频~")
+            return f"✅ 已在默认浏览器中打开B站搜索: {keyword}"
         except Exception as e:
             return f"❌ 视频播放失败: {str(e)}"
 

@@ -99,6 +99,32 @@ class Eyes:
             logger.warning(f"读取剪贴板失败: {e}")
             return f"（读取失败）"
     
+    # 常见网站名 → URL 映射（从窗口标题推断）
+    _SITE_URL_MAP = {
+        # 中文站
+        "哔哩哔哩": "bilibili.com", "bilibili": "bilibili.com", "b站": "bilibili.com",
+        "知乎": "zhihu.com", "百度": "baidu.com", "csdn": "csdn.net",
+        "掘金": "juejin.cn", "简书": "jianshu.com", "微博": "weibo.com",
+        "淘宝": "taobao.com", "京东": "jd.com", "豆瓣": "douban.com",
+        "gitee": "gitee.com", "腾讯": "qq.com", "网易": "163.com",
+        "小红书": "xiaohongshu.com", "抖音": "douyin.com",
+        # 英文站
+        "github": "github.com", "youtube": "youtube.com", "google": "google.com",
+        "stackoverflow": "stackoverflow.com", "stack overflow": "stackoverflow.com",
+        "reddit": "reddit.com", "twitter": "twitter.com", "medium": "medium.com",
+        "wikipedia": "wikipedia.org", "amazon": "amazon.com",
+        "notion": "notion.so", "figma": "figma.com",
+        "chatgpt": "chat.openai.com", "claude": "claude.ai",
+    }
+
+    def _infer_url_from_title(self, window_title: str) -> str:
+        """从窗口标题推断当前浏览的网站 URL"""
+        title_lower = window_title.lower()
+        for site_name, domain in self._SITE_URL_MAP.items():
+            if site_name.lower() in title_lower:
+                return f"https://www.{domain}"
+        return ""
+
     def get_perception_data(self) -> dict:
         """
         获取所有感知数据（打包成字典）
@@ -107,12 +133,49 @@ class Eyes:
             {
                 "app": "VS Code - main.py",
                 "clipboard": "error: xxx...",
+                "app_category": "coding" | "browsing" | ...,
+                "browser_hint": "用户正在浏览 bilibili.com，可用 browse_website 读取"
             }
         """
-        return {
-            "app": self.get_active_window(),
-            "clipboard": self.get_clipboard_content(limit=300),
+        window_title = self.get_active_window()
+        category = self.get_app_category()
+        clipboard = self.get_clipboard_content(limit=300)
+        
+        data = {
+            "app": window_title,
+            "clipboard": clipboard,
+            "app_category": category,
         }
+        
+        # [修复#5] 浏览器增强感知：推断 URL 并告知 AI
+        if category == "browsing":
+            inferred_url = self._infer_url_from_title(window_title)
+            
+            # 也检查剪贴板是否有 URL
+            clipboard_url = ""
+            if clipboard.startswith("http://") or clipboard.startswith("https://"):
+                clipboard_url = clipboard.split()[0]  # 取第一个 URL
+            
+            if clipboard_url:
+                data["browser_hint"] = (
+                    f"用户正在浏览器中查看网页，窗口标题: {window_title}。"
+                    f"剪贴板中有 URL: {clipboard_url}。"
+                    f"可以直接调用 browse_website(url='{clipboard_url}') 读取网页内容。"
+                )
+            elif inferred_url:
+                data["browser_hint"] = (
+                    f"用户正在浏览 {inferred_url} 相关页面，窗口标题: {window_title}。"
+                    f"如果用户想了解网页内容，可以调用 browse_website 或 read_web_page 工具。"
+                    f"如果需要精确 URL，可以让用户复制地址栏链接。"
+                )
+            else:
+                data["browser_hint"] = (
+                    f"用户正在使用浏览器，窗口标题: {window_title}。"
+                    f"可以使用 browse_website(url) 或 read_web_page(url) 读取网页内容。"
+                    f"如果不知道 URL，可以让用户复制地址栏链接，或根据标题关键词搜索。"
+                )
+        
+        return data
     
     def get_app_category(self) -> str:
         """

@@ -104,6 +104,8 @@ class FloatingBall(QWidget):
         
         # 鼠标拖拽
         self.old_pos = None
+        self._is_dragging = False   # [修复#7] 拖拽标志，防止拖拽触发点击
+        self._press_pos = None      # [修复#7] 记录按下位置，用于判断拖拽距离
         
         # 初始化 UI
         self._init_ui()
@@ -214,12 +216,11 @@ class FloatingBall(QWidget):
     # ========================
     
     def mousePressEvent(self, event):
-        """鼠标按下"""
+        """鼠标按下 — 只记录位置，不触发点击"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.old_pos = event.globalPosition().toPoint()
-            self.click_count += 1
-            if not self.click_timer.isActive():
-                self.click_timer.start(300)  # 300ms 内的点击算双击
+            self._press_pos = event.globalPosition().toPoint()
+            self._is_dragging = False
 
     def mouseMoveEvent(self, event):
         """鼠标拖拽"""
@@ -229,10 +230,29 @@ class FloatingBall(QWidget):
             self.old_pos = event.globalPosition().toPoint()
             # 通知 HUD 跟随移动
             self.signals.ball_moved.emit()
+            
+            # [修复#7] 如果移动距离超过 5px 阈值，判定为拖拽
+            if self._press_pos:
+                moved = event.globalPosition().toPoint() - self._press_pos
+                if abs(moved.x()) > 5 or abs(moved.y()) > 5:
+                    self._is_dragging = True
 
     def mouseReleaseEvent(self, event):
-        """鼠标释放"""
+        """鼠标释放 — 只有非拖拽时才计入点击"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            if not self._is_dragging:
+                # 不是拖拽，算作一次点击
+                self.click_count += 1
+                if not self.click_timer.isActive():
+                    self.click_timer.start(300)
+            else:
+                # 拖拽结束，忽略点击
+                self.click_count = 0
+                self.click_timer.stop()
+                logger.debug("🔮 [GUI] 拖拽结束，已忽略点击")
         self.old_pos = None
+        self._press_pos = None
+        self._is_dragging = False
 
     def _handle_click(self):
         """处理点击（区分单击/双击）

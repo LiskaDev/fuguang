@@ -311,6 +311,15 @@ class NervousSystem:
         self._emit_subtitle(f"正在消化: {filename}")
         try:
             result = self.skills.ingest_knowledge_file(file_path)
+            # [修复#8] 向对话历史注入通知，让 AI 知道用户刚投喂了文件
+            self.brain.chat_history.append({
+                "role": "user",
+                "content": f"【系统通知】用户刚刚投喂了文件: {filename}，内容已存入知识库。用户接下来可能会问关于这个文件的问题。"
+            })
+            self.brain.chat_history.append({
+                "role": "assistant",
+                "content": f"好的，{filename} 已经消化完毕，我可以回答关于它的问题了。"
+            })
             self.mouth.speak(f"指挥官，{filename} 已消化，你可以问我关于它的问题了。")
         except Exception as e:
             logger.error(f"文件吞噬失败: {e}")
@@ -419,6 +428,18 @@ class NervousSystem:
         
         system_content = self.brain.get_system_prompt(dynamic_context=perception_data) + memory_text
         
+        # [修复#4+#6] 视觉意图自动截屏 — 用户提到视觉关键词时，自动截屏分析并注入上下文
+        _VISUAL_KEYWORDS = ["看看", "屏幕", "报错", "界面", "显示", "这个错", "什么情况", "出了什么", "怎么回事", "看一下", "帮我看"]
+        if any(kw in user_input for kw in _VISUAL_KEYWORDS):
+            try:
+                logger.info("👁️ [自动截屏] 检测到视觉意图，正在自动截屏分析...")
+                screen_analysis = self.skills.analyze_screen_content(question=user_input)
+                if screen_analysis and not screen_analysis.startswith("❌"):
+                    system_content += f"\n\n【自动截屏分析结果】以下是当前屏幕的实时内容：\n{screen_analysis}\n请基于以上信息回答用户问题，不需要再次调用 analyze_screen_content。"
+                    logger.info("✅ [自动截屏] 已将截屏分析结果注入上下文")
+            except Exception as e:
+                logger.warning(f"⚠️ [自动截屏] 失败（不影响对话）: {e}")
+
         # [自主模式] 告知 AI 当前执行模式
         if self.skills.auto_execute:
             system_content += "\n\n【自主执行模式已开启】指挥官已授权你自主执行所有操作（Shell命令、代码运行等），无需在回复中询问是否执行，直接调用工具完成任务。"
