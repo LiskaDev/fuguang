@@ -130,6 +130,8 @@ class SkillManager(
             return self.type_text(func_args.get("text", ""), func_args.get("press_enter", True))
         elif func_name == "click_by_description":
             return self.click_by_description(func_args.get("description", ""), func_args.get("double_click", False))
+        elif func_name == "list_ui_elements":
+            return self.list_ui_elements(func_args.get("window_title", ""))
 
         # --- System ---
         elif func_name == "execute_shell":

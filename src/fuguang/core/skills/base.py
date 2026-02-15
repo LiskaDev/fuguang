@@ -33,13 +33,21 @@ from ..memory import MemoryBank
 
 logger = logging.getLogger("fuguang.skills")
 
-# [视觉] 导入 EasyOCR（文字识别）
+# [视觉] 导入 OCR 引擎（优先 RapidOCR，回退 EasyOCR）
+try:
+    from rapidocr_onnxruntime import RapidOCR
+    RAPIDOCR_AVAILABLE = True
+except ImportError:
+    RAPIDOCR_AVAILABLE = False
+
 try:
     import easyocr
     EASYOCR_AVAILABLE = True
 except ImportError:
     EASYOCR_AVAILABLE = False
-    logger.warning("⚠️ EasyOCR 未安装，文字识别功能将受限")
+
+if not RAPIDOCR_AVAILABLE and not EASYOCR_AVAILABLE:
+    logger.warning("⚠️ 无 OCR 引擎可用（需要 rapidocr-onnxruntime 或 easyocr）")
 
 # [视觉] 导入 YOLO-World（零样本识别）
 try:
@@ -71,6 +79,14 @@ try:
     PYGETWINDOW_AVAILABLE = True
 except ImportError:
     PYGETWINDOW_AVAILABLE = False
+
+# [GUI] 导入 pywinauto (Windows UI Automation)
+try:
+    import pywinauto
+    PYWINAUTO_AVAILABLE = True
+except ImportError:
+    PYWINAUTO_AVAILABLE = False
+    logger.warning("⚠️ pywinauto 未安装，UIA 控件操作功能将受限")
 
 # [浏览器] 导入 CyberGhost
 try:
@@ -170,13 +186,24 @@ class BaseSkillMixin:
             self.yolo_world = None
             logger.warning("⚠️ YOLO-World 未安装，图标识别功能将受限")
             
-        # [视觉] 初始化 EasyOCR (文字识别)
-        if EASYOCR_AVAILABLE:
+        # [视觉] 初始化 OCR (优先 RapidOCR，回退 EasyOCR)
+        self._ocr_engine = None  # 'rapid' | 'easy'
+        if RAPIDOCR_AVAILABLE:
+            try:
+                self._ocr_reader = RapidOCR()
+                self._ocr_engine = 'rapid'
+                logger.info("✅ RapidOCR 中文文字识别已就绪（ONNX 推理）")
+            except Exception as e:
+                logger.error(f"❌ RapidOCR 加载失败: {e}")
+                self._ocr_reader = None
+        
+        if self._ocr_reader is None and EASYOCR_AVAILABLE:
             try:
                 logger.info("📖 正在加载 EasyOCR 模型 (首次运行需下载)...")
                 import easyocr
                 self._ocr_reader = easyocr.Reader(['ch_sim', 'en'], gpu=False)
-                logger.info("✅ EasyOCR 文字识别已就绪")
+                self._ocr_engine = 'easy'
+                logger.info("✅ EasyOCR 文字识别已就绪（回退引擎）")
             except Exception as e:
                 logger.error(f"❌ EasyOCR 加载失败: {e}")
                 self._ocr_reader = None
