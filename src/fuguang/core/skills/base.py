@@ -188,6 +188,7 @@ class BaseSkillMixin:
             
         # [视觉] 初始化 OCR (优先 RapidOCR，回退 EasyOCR)
         self._ocr_engine = None  # 'rapid' | 'easy'
+        self._ocr_reader = None
         if RAPIDOCR_AVAILABLE:
             try:
                 self._ocr_reader = RapidOCR()

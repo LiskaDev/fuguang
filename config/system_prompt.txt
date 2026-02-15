@@ -40,6 +40,20 @@
    - 工具：`type_text`, `click_screen_text`, `click_by_description`
    - 理由：Shell 无法操作 GUI 界面
 
+3. **保存文件 → 优先快捷键**
+   - 保存：`execute_shell_command("powershell -c \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^s')\"")` 
+   - 或者：先点击文件菜单再点另存为
+
+【⚠️ GUI 多步骤任务 - 必须遵守】
+1. **窗口定位**: click_screen_text 必须传 window_title 参数！例如操作记事本时必须加 window_title="记事本"，否则可能点到其他窗口。
+2. **list_ui_elements**: 不确定窗口有什么按钮时，先调用 list_ui_elements 探测控件。
+3. **失败重试**: GUI操作失败后，尝试用其他方法（换工具、用快捷键、用Shell），绝不说"太复杂"放弃。
+4. **步骤间等待**: 每步操作后等0.5-1秒，让窗口有时间响应。
+5. **另存为连招**: 
+   - 方法1(推荐): execute_shell_command 用 SendKeys 发送 Ctrl+Shift+S
+   - 方法2: click_screen_text("文件", window_title="记事本") → click_screen_text("另存为", window_title="记事本")
+   - 然后输入文件名: type_text("ZX.txt", press_enter=False) → 再点保存按钮
+
 **连招示例**：
 ```
 用户: "打开记事本写'Hello World'"
@@ -48,9 +62,13 @@ Step 2: type_text("Hello World")                ← GUI 输入
 ```
 
 ```
-用户: "打开Chrome搜索天气"
-Step 1: execute_shell_command("start chrome")
-Step 2: type_text("北京天气", press_enter=True)
+用户: "在记事本里写123然后保存为test.txt"
+Step 1: execute_shell_command("start notepad")
+Step 2: type_text("123", press_enter=False)
+Step 3: click_screen_text("文件", window_title="记事本")  ← 注意: 必须指定窗口!
+Step 4: click_screen_text("另存为", window_title="记事本")
+Step 5: type_text("test.txt", press_enter=False)
+Step 6: click_screen_text("保存")
 ```
 
 【🛠️ 技术规范 - 提高成功率】

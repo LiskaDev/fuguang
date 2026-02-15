@@ -12,7 +12,7 @@ logger = logging.getLogger("fuguang.skills")
 # ---- Schema 定义 ----
 _GUI_TOOLS_SCHEMA = [
     {"type":"function","function":{"name":"open_application","description":"【应用启动】打开常用应用程序（记事本、浏览器、计算器等）。使用场景: 用户说\"打开记事本\"等。","parameters":{"type":"object","properties":{"app_name":{"type":"string","description":"应用名称"},"args":{"type":"string","description":"可选参数"}},"required":["app_name"]}}},
-    {"type":"function","function":{"name":"click_screen_text","description":"【GUI控制】智能寻找屏幕上的指定文字并模拟鼠标点击。优先用 Windows UIA 控件树精确匹配，失败后用 OCR 识别文字坐标。","parameters":{"type":"object","properties":{"target_text":{"type":"string","description":"要点击的文字内容"},"double_click":{"type":"boolean","description":"是否双击"},"window_title":{"type":"string","description":"可选：指定窗口标题"}},"required":["target_text"]}}},
+    {"type":"function","function":{"name":"click_screen_text","description":"【GUI控制】智能寻找屏幕上的指定文字并模拟鼠标点击。优先用 Windows UIA 控件树精确匹配，失败后用 OCR 识别文字坐标。⚠️ 重要：操作特定窗口时必须传 window_title 参数（如'记事本'），否则可能点到其他窗口！","parameters":{"type":"object","properties":{"target_text":{"type":"string","description":"要点击的文字内容"},"double_click":{"type":"boolean","description":"是否双击"},"window_title":{"type":"string","description":"【强烈建议】目标窗口标题关键词（如'记事本'、'Chrome'），防止点错窗口"}},"required":["target_text"]}}},
     {"type":"function","function":{"name":"type_text","description":"【键盘输入】在当前光标位置输入文字。需要先点击输入框再调用此工具。","parameters":{"type":"object","properties":{"text":{"type":"string","description":"要输入的内容"},"press_enter":{"type":"boolean","description":"输入完是否按回车（默认True）"}},"required":["text"]}}},
     {"type":"function","function":{"name":"click_by_description","description":"【智能视觉点击】通过自然语言描述(英文)来寻找并点击屏幕上的UI元素（图标、按钮、图片等）。description参数必须用英文！","parameters":{"type":"object","properties":{"description":{"type":"string","description":"物体的英文描述（如 'red button', 'chrome icon'）"},"double_click":{"type":"boolean","description":"是否双击"}},"required":["description"]}}},
     {"type":"function","function":{"name":"list_ui_elements","description":"【UI探测器】列出指定窗口的所有可交互控件（按钮、菜单、输入框等）。用于了解界面结构，辅助精准点击。","parameters":{"type":"object","properties":{"window_title":{"type":"string","description":"窗口标题关键词（如'记事本'、'Chrome'）"}},"required":["window_title"]}}},
@@ -82,10 +82,9 @@ class GUISkills:
             desktop = Desktop(backend='uia')
 
             # 获取目标窗口
+            target_win = None
             if window_title:
-                windows = desktop.windows()
-                target_win = None
-                for w in windows:
+                for w in desktop.windows():
                     try:
                         title = w.window_text()
                         if window_title.lower() in title.lower():
@@ -97,9 +96,31 @@ class GUISkills:
                     logger.debug(f"UIA: 未找到窗口 '{window_title}'")
                     return None
             else:
-                # 使用前台窗口
-                import pywinauto
-                target_win = pywinauto.application.Application(backend='uia').connect(active_only=True).active()
+                # 使用 win32 前台窗口（比 connect(active_only) 更可靠）
+                try:
+                    import ctypes
+                    hwnd = ctypes.windll.user32.GetForegroundWindow()
+                    if hwnd:
+                        for w in desktop.windows():
+                            try:
+                                if w.handle == hwnd:
+                                    target_win = w
+                                    break
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
+                if not target_win:
+                    logger.debug("UIA: 无法获取前台窗口")
+                    return None
+
+            # 确保目标窗口在前台（防止点到别的窗口）
+            try:
+                target_win.set_focus()
+                import time as _time
+                _time.sleep(0.2)
+            except Exception:
+                pass
 
             # 遍历控件树，寻找匹配的控件
             target_lower = target_text.lower().strip()
