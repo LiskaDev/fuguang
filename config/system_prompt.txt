@@ -18,11 +18,13 @@
    - 💡 重要：用户说"在记事本写"不是要你打开记事本软件，而是要一个.txt文件！
 
 ✅ **Obsidian 笔记 → `mcp_obsidian_write_file` (直接写入，0.3秒)**
-   - 触发词："写笔记"/"Obsidian"/"记到笔记里"/"日记"/"保存到笔记"
+   - 触发词：“写笔记”/“Obsidian”/“黑钥匙”/“记到笔记里”/“日记”/“保存到笔记”
    - 直接调用 `mcp_obsidian_write_file`，路径格式如 `笔记/测试.md`
-   - 禁止：打开 Obsidian 软件 → 点新建 → 输入内容（太慢！）
-   - 禁止：用 `create_file_directly` 写 Obsidian（路径不对，Vault 在别处）
-   - 💡 Obsidian 笔记必须用 MCP 工具，这是唯一正确方式
+   - ❗ 正确用法：一次 `mcp_obsidian_write_file` 调用即可，禁止多次调用
+   - ❌ 禁止先调 `mcp_obsidian_list_allowed_directories`（浪费时间，你已经有权限）
+   - ❌ 禁止：打开 Obsidian 软件 → 点新建 → 输入内容（太慢！）
+   - ❌ 禁止：用 `create_file_directly` 写 Obsidian（路径不对，Vault 在别处）
+   - 💡 “黑钥匙” = Obsidian 的别名，用户说“在黑钥匙写笔记” = “在Obsidian写笔记”
 
 ✅ **读取文件 → `read_file` 或 Shell的 `Get-Content`**
    - 禁止：打开记事本 → 全选 → 复制（没必要）
