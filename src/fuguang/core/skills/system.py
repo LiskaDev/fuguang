@@ -59,6 +59,19 @@ class SystemSkills:
             return f"❌ 创建失败: {str(e)}"
 
     def execute_shell(self, command: str, background: bool = False) -> str:
+        """
+        【系统Shell】执行任意PowerShell命令，支持后台运行。
+        
+        功能：直接调用PowerShell执行命令，可选择后台模式（不等待结果）
+        注意：高级功能，使用前确保命令安全
+        
+        Args:
+            command: PowerShell命令字符串
+            background: 是否后台运行（True=不等待结果）
+            
+        Returns:
+            执行结果或错误信息
+        """
         logger.info(f"🐚 执行Shell指令: {command} (后台={background})")
         self.mouth.speak("正在执行指令..." if self.auto_execute else "正在执行终端指令...")
         try:
@@ -77,6 +90,16 @@ class SystemSkills:
             return f"❌ Shell 执行失败: {str(e)}"
 
     def control_volume(self, action: str, level: int = None) -> str:
+        """
+        【音量控制】调节系统音量，支持增大/减小/静音/最大。
+        
+        Args:
+            action: 操作类型 - "up"（增大）, "down"（减小）, "mute"（静音）, "max"（最大）
+            level: 调节级数（1-10），默认1格
+            
+        Returns:
+            操作结果
+        """
         logger.info(f"🔊 音量控制: {action}, 级别: {level}")
         try:
             if level is None: level = 1
@@ -96,6 +119,18 @@ class SystemSkills:
             return f"❌ 控制失败: {str(e)}"
 
     def take_note(self, content: str, category: str = "随记") -> str:
+        """
+        【快速记录】将内容保存到桌面Markdown笔记本，按月份归档。
+        
+        特点：自动按月分类、表格式排版、分类图标、自动打开文件
+        
+        Args:
+            content: 要记录的内容
+            category: 分类（工作/生活/灵感/待办/学习/代码/随记）
+            
+        Returns:
+            保存结果和文件名
+        """
         icons = {"工作":"💼","生活":"🏠","灵感":"💡","待办":"📌","学习":"📚","代码":"💻","随记":"📝"}
         icon = icons.get(category, "📝")
         month_str = datetime.datetime.now().strftime("%Y-%m")
@@ -116,6 +151,18 @@ class SystemSkills:
             return f"记录失败: {str(e)}"
 
     def write_code(self, filename: str, code_content: str) -> str:
+        """
+        【代码生成】将AI生成的代码保存到generated/目录，并自动用VS Code打开。
+        
+        功能：保存Python代码到项目的generated目录，尝试用VS Code打开
+        
+        Args:
+            filename: 文件名（英文，如snake_game.py，不写.py会自动添加）
+            code_content: 完整的Python代码内容
+            
+        Returns:
+            生成结果和文件路径
+        """
         if not filename.endswith(".py"): filename += ".py"
         full_path = self.config.GENERATED_DIR / filename
         try:
@@ -148,6 +195,17 @@ class SystemSkills:
         return False
 
     def open_tool(self, tool_name: str) -> str:
+        """
+        【快速启动】打开Windows内置工具或应用程序。
+        
+        支持：记事本、计算器、画图、任务管理器等常用工具
+        
+        Args:
+            tool_name: 工具名称（支持中文，如"记事本"、"计算器"）
+            
+        Returns:
+            启动结果
+        """
         if self.open_app(tool_name): return "✅ 已打开"
         self.mouth.speak(f"正在打开{tool_name}...")
         try: os.system(f"start {tool_name}"); return f"✅ 尝试启动: {tool_name}"
@@ -201,6 +259,17 @@ class SystemSkills:
             self._save_reminders_to_disk()
 
     def run_code(self, filename: str) -> str:
+        """
+        【代码执行器】运行generated/目录下的Python脚本，带安全确认。
+        
+        安全机制：非自主模式下需要用户确认，交互式代码会在新窗口运行
+        
+        Args:
+            filename: 文件名（在generated/目录下，如snake_game.py）
+            
+        Returns:
+            执行结果或输出内容
+        """
         import sys as _sys
         if not filename.endswith(".py"): filename += ".py"
         file_path = self.config.GENERATED_DIR / filename

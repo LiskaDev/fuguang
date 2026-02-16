@@ -69,6 +69,22 @@ class GUISkills:
     # ========================
 
     def click_screen_text(self, target_text: str, double_click: bool = False, window_title: str = None) -> str:
+        """
+        【智能GUI控制】自动寻找屏幕上的文字并点击，支持UIA/OCR/GLM-4V多重备选。
+        
+        优先级：
+        1. UIA控件树（精准快速）
+        2. RapidOCR文字识别（兼容性好）
+        3. GLM-4V视觉理解（智能兰底）
+        
+        Args:
+            target_text: 要点击的文字内容（如"文件"、"保存"、"确定"）
+            double_click: 是否双击
+            window_title: 锁定特定窗口（可选，防止点错）
+            
+        Returns:
+            点击结果
+        """
         if not self.config.ENABLE_GUI_CONTROL:
             return "❌ GUI 控制功能未启用，请在配置中开启 ENABLE_GUI_CONTROL。"
         logger.info(f"🖱️ [GUI] 正在寻找屏幕上的文字: '{target_text}'" + (f" (窗口: {window_title})" if window_title else ""))
@@ -448,6 +464,19 @@ class GUISkills:
     # ========================
 
     def click_by_description(self, description: str, double_click: bool = False) -> str:
+        """
+        【智能定位】通过描述性语句找到屏幕元素并点击，GLM-4V驱动。
+        
+        适用场景：无文字按钮、图标按钮、复杂布局场景
+        示例："右上角的红色关闭按钮"、"左侧导航栏的第二个图标"
+        
+        Args:
+            description: 目标元素的描述（自然语言）
+            double_click: 是否双击
+            
+        Returns:
+            点击结果
+        """
         if not self.config.ENABLE_GUI_CONTROL: return "❌ GUI 控制功能未启用。"
 
         logger.info(f"👁️ [视觉] 正在寻找: '{description}'")
