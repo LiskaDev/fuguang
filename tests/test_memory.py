@@ -59,6 +59,27 @@ class TestMemoryBank:
         assert len(results) > 0
 
     @pytest.mark.integration
+    def test_recipe_dedup_by_solution(self, tmp_path):
+        """相同教训、不同触发词的配方应被去重"""
+        from fuguang.core.memory import MemoryBank
+        mb = MemoryBank(persist_dir=str(tmp_path / "test_db"))
+        
+        # 第一次存入
+        mb.add_recipe(
+            trigger="帮我在Obsidian写一篇笔记，标题是可能",
+            solution="应该直接用mcp_obsidian_write_file工具一次完成，不要先调list"
+        )
+        # 第二次存入——触发词不同但教训相同
+        mb.add_recipe(
+            trigger="帮我在Obsidian写一篇笔记，标题是测试",
+            solution="应该直接用mcp_obsidian_write_file工具一次完成，避免多次调用list和write"
+        )
+        
+        # 应该只有 1 条（第二条替换了第一条）
+        count = mb.recipes.count()
+        assert count == 1, f"配方应去重为1条，实际有{count}条"
+
+    @pytest.mark.integration
     def test_get_memory_context(self, tmp_path):
         """get_memory_context 返回格式化的记忆文本"""
         from fuguang.core.memory import MemoryBank

@@ -225,8 +225,13 @@ class MemoryBank:
         
         # === 去重检测 ===
         # 查找是否已有高度相似的配方（距离 < 0.5 视为"同一类经验"）
+        # 同时检查 trigger 和 solution，任一命中即视为重复
         DEDUP_THRESHOLD = 0.5
         existing = self.search_recipes(trigger, n_results=1, threshold=DEDUP_THRESHOLD)
+        
+        # trigger 没命中时，再拿 solution 做二次查重（核心教训相同但触发词不同的情况）
+        if not existing:
+            existing = self.search_recipes(solution, n_results=1, threshold=DEDUP_THRESHOLD)
         
         replaced_id = None
         if existing:
