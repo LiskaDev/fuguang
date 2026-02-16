@@ -42,6 +42,10 @@ class Brain:
 
         # 状态
         self.IS_CREATION_MODE = False
+        
+        # 🔥 性能监控系统
+        self.performance_log = []  # 记录每次任务的性能数据
+        self.system_hints = []  # 存储给AI的系统提示（如性能警告）
 
     def load_memory(self) -> dict:
         """加载短期记忆"""
@@ -188,6 +192,16 @@ class Brain:
         Returns:
             AI 的最终回复文本
         """
+        # 🔥 性能监控：记录开始时间
+        start_time = time.time()
+        tool_calls_list = []  # 记录本次调用的所有工具
+        
+        # 注入系统提示（如性能警告）
+        if self.system_hints:
+            hints_text = "\n".join(self.system_hints)
+            system_content += f"\n\n【⚠️ 系统提示】\n{hints_text}\n"
+            self.system_hints.clear()  # 清空提示，只显示一次
+        
         messages = [{"role": "system", "content": system_content}]
         messages.extend(self.chat_history)
         messages.append({"role": "user", "content": user_input})
@@ -251,6 +265,7 @@ class Brain:
                         continue
                     
                     logger.info(f"📞 调用工具: {func_name}")
+                    tool_calls_list.append(func_name)  # 🔥 记录工具调用
                     result = tool_executor(func_name, func_args)
                     
                     messages.append({
@@ -270,6 +285,38 @@ class Brain:
         else:
             # 超过最大迭代次数
             ai_reply = "指挥官，这个问题有点复杂，我需要更多时间思考..."
+        
+        # 🔥 性能监控：记录结束时间和统计数据
+        elapsed_time = time.time() - start_time
+        tool_count = len(tool_calls_list)
+        
+        # 记录到性能日志（保留最近20条）
+        self.performance_log.append({
+            "task": user_input[:50],  # 截取前50字符
+            "time": round(elapsed_time, 2),
+            "steps": tool_count,
+            "tools_used": tool_calls_list,
+            "timestamp": datetime.datetime.now().strftime("%H:%M:%S")
+        })
+        if len(self.performance_log) > 20:
+            self.performance_log.pop(0)  # 移除最旧的记录
+        
+        logger.info(f"⏱️ [性能] 本次任务耗时: {elapsed_time:.2f}秒，调用工具: {tool_count}个")
+        
+        # 🔥 性能警告：如果太慢或调用太多工具，给AI发送优化建议
+        if elapsed_time > 10 and tool_count > 3:
+            warning = f"""⚠️ 性能警告：上一个任务耗时 {elapsed_time:.1f}秒，调用了 {tool_count} 个工具。
+
+请反思：
+- 是否有更快的方法？（如用 create_file_directly 代替打开记事本）
+- 是否可以用快捷键代替点击菜单？（如 Ctrl+S 保存）
+- 是否可以合并多个操作为一个工具调用？
+
+记住：用户要的是结果，不是过程。优先使用【工具优先级1-2】的方法。
+
+最近调用的工具：{', '.join(tool_calls_list[-5:])}"""
+            self.system_hints.append(warning)  # 下次对话时自动注入
+            logger.warning(f"🐢 性能警告已生成，将在下次对话时提醒AI优化")
         
         # 更新对话历史
         self.chat_history.append({"role": "user", "content": user_input})
