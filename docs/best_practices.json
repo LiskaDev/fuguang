@@ -1,0 +1,234 @@
+{
+  "$schema": "扶光AI助手 - 最佳实践库",
+  "version": "1.0.0",
+  "description": "记录各类任务的最优执行方案，供AI参考学习",
+  
+  "文件操作": {
+    "创建文本文件": {
+      "最佳工具": "create_file_directly",
+      "平均耗时": "0.05秒",
+      "优点": "直接写硬盘，速度快420倍",
+      "示例场景": ["在记事本写XXX", "保存内容到文件", "创建XXX.txt"],
+      "替代方案": {
+        "方案1": {
+          "工具链": ["launch_application('记事本')", "type_text()", "send_hotkey('ctrl','s')", "type_text(文件名)"],
+          "耗时": "15秒+",
+          "缺点": "步骤多、速度慢、容易出错"
+        }
+      },
+      "禁止场景": ["用户明确要求看操作过程"]
+    },
+    
+    "读取文件内容": {
+      "最佳工具": "execute_shell_command('Get-Content 路径')",
+      "平均耗时": "0.2秒",
+      "替代方案_GUI": {
+        "工具链": ["launch_application('记事本')", "打开文件", "analyze_screen_content"],
+        "耗时": "10秒+",
+        "缺点": "没必要打开GUI"
+      }
+    },
+    
+    "删除文件": {
+      "最佳工具": "execute_shell_command('Remove-Item 路径')",
+      "平均耗时": "0.1秒",
+      "注意事项": "删除前必须告知用户完整路径并等待确认"
+    }
+  },
+  
+  "快捷键优先": {
+    "保存文件": {
+      "最佳工具": "send_hotkey('ctrl', 's')",
+      "平均耗时": "0.1秒",
+      "禁止方案": "click_screen_text('文件') → click_screen_text('保存')",
+      "禁止原因": "点击菜单需要5秒，快捷键只需0.1秒（提速50倍）"
+    },
+    
+    "复制粘贴": {
+      "复制": {
+        "工具": "send_hotkey('ctrl', 'c')",
+        "耗时": "0.1秒"
+      },
+      "粘贴": {
+        "工具": "send_hotkey('ctrl', 'v')",
+        "耗时": "0.1秒"
+      },
+      "全选": {
+        "工具": "send_hotkey('ctrl', 'a')",
+        "耗时": "0.1秒"
+      }
+    },
+    
+    "另存为": {
+      "最佳工具": "send_hotkey('ctrl', 'shift', 's')",
+      "平均耗时": "0.1秒",
+      "禁止方案": "点击'文件'菜单 → 点击'另存为'"
+    },
+    
+    "关闭窗口": {
+      "最佳工具": "send_hotkey('alt', 'f4')",
+      "平均耗时": "0.1秒"
+    },
+    
+    "查找": {
+      "最佳工具": "send_hotkey('ctrl', 'f')",
+      "平均耗时": "0.1秒"
+    },
+    
+    "撤销": {
+      "最佳工具": "send_hotkey('ctrl', 'z')",
+      "平均耗时": "0.1秒"
+    }
+  },
+  
+  "文本输入": {
+    "长文本输入": {
+      "判断标准": "超过10个字符",
+      "最佳工具": "type_text(text, use_clipboard=True)",
+      "原理": "自动复制到剪贴板 → Ctrl+V粘贴",
+      "平均耗时": "0.2秒（瞬间完成）",
+      "禁止方案": "type_text(text, use_clipboard=False) 逐字打字",
+      "禁止原因": "逐字打字每个字50ms，100字需要5秒"
+    },
+    
+    "短文本输入": {
+      "判断标准": "少于10个字符",
+      "最佳工具": "type_text(text, use_clipboard=False)",
+      "原因": "短文本逐字输入更自然，避免剪贴板污染"
+    },
+    
+    "密码输入": {
+      "最佳工具": "type_text(password, use_clipboard=False)",
+      "原因": "安全考虑，不能留在剪贴板"
+    }
+  },
+  
+  "应用程序启动": {
+    "启动软件": {
+      "最佳工具": "launch_application(app_name)",
+      "平均耗时": "1-3秒",
+      "优点": "智能匹配（同音字、拼音、简称）、历史记录加速",
+      "替代方案": "execute_shell_command('start 软件名')",
+      "禁止方案": "click_by_description('软件图标')",
+      "禁止原因": "点击图标需要视觉识别（慢）且容易失败"
+    }
+  },
+  
+  "Shell命令优先": {
+    "文件管理": {
+      "创建目录": "execute_shell_command('New-Item -ItemType Directory 路径')",
+      "重命名": "execute_shell_command('Rename-Item 旧名 新名')",
+      "移动文件": "execute_shell_command('Move-Item 源 目标')",
+      "复制文件": "execute_shell_command('Copy-Item 源 目标')"
+    },
+    
+    "系统操作": {
+      "查看进程": "execute_shell_command('Get-Process')",
+      "结束进程": "execute_shell_command('Stop-Process -Name 进程名')",
+      "查看服务": "execute_shell_command('Get-Service')"
+    }
+  },
+  
+  "视觉工具使用": {
+    "analyze_screen_content": {
+      "触发场景": ["屏幕", "报错", "界面", "显示", "这个错", "截图"],
+      "禁止场景": ["设提醒", "打开应用", "搜索", "对话", "不涉及视觉的任务"],
+      "原因": "截屏分析需要4秒+，非视觉任务不应调用"
+    },
+    
+    "click_by_description": {
+      "适用场景": "纯图标按钮（没有文字）",
+      "注意事项": "description参数必须用英文",
+      "示例": {
+        "Chrome图标": "chrome icon",
+        "关闭按钮": "close button",
+        "搜索框": "search box",
+        "红色按钮": "red button"
+      }
+    },
+    
+    "click_screen_text": {
+      "适用场景": "有文字的按钮/菜单",
+      "必须参数": "window_title（指定窗口，避免点错）",
+      "错误示例": "click_screen_text('保存')  # 可能点到其他窗口",
+      "正确示例": "click_screen_text('保存', window_title='记事本')"
+    }
+  },
+  
+  "常见任务优化方案": {
+    "在记事本写内容并保存": {
+      "最优方案": {
+        "工具": "create_file_directly(file_path, content)",
+        "耗时": "0.05秒",
+        "步骤": 1
+      },
+      "错误方案": {
+        "工具链": ["launch_application('记事本')", "type_text(content)", "click_screen_text('文件')", "click_screen_text('另存为')", "type_text(文件名)", "click_screen_text('保存')"],
+        "耗时": "20秒+",
+        "步骤": 6
+      },
+      "性能对比": "最优方案提速400倍"
+    },
+    
+    "保存当前打开的文件": {
+      "最优方案": {
+        "工具": "send_hotkey('ctrl', 's')",
+        "耗时": "0.1秒",
+        "步骤": 1
+      },
+      "错误方案": {
+        "工具链": ["click_screen_text('文件')", "click_screen_text('保存')"],
+        "耗时": "5秒+",
+        "步骤": 2
+      },
+      "性能对比": "最优方案提速50倍"
+    },
+    
+    "输入一段话（50字以上）": {
+      "最优方案": {
+        "工具": "type_text(text, use_clipboard=True)",
+        "耗时": "0.2秒",
+        "原理": "剪贴板粘贴"
+      },
+      "错误方案": {
+        "工具": "type_text(text, use_clipboard=False)",
+        "耗时": "2.5秒+",
+        "原理": "逐字打字（每字50ms）"
+      },
+      "性能对比": "最优方案提速12倍"
+    }
+  },
+  
+  "错误处理": {
+    "工具调用失败": {
+      "步骤1": "读取错误信息（stderr/返回值）",
+      "步骤2": "分析失败原因（命令错误？权限不足？环境问题？）",
+      "步骤3": "修正后重试（生成新命令或换不同工具）",
+      "步骤4": "如果2次仍失败，告知用户原因并请求帮助",
+      "禁止行为": "直接放弃或说'太复杂做不了'"
+    }
+  },
+  
+  "性能基准": {
+    "优秀": {
+      "总耗时": "< 1秒",
+      "工具调用": "1-2个",
+      "示例": "create_file_directly, send_hotkey"
+    },
+    "良好": {
+      "总耗时": "1-5秒",
+      "工具调用": "2-3个",
+      "示例": "launch_application + type_text + send_hotkey"
+    },
+    "可接受": {
+      "总耗时": "5-10秒",
+      "工具调用": "3-5个",
+      "示例": "复杂的GUI操作流程"
+    },
+    "需要优化": {
+      "总耗时": "> 10秒",
+      "工具调用": "> 5个",
+      "建议": "检查是否有更快的方法，参考本文档的最佳实践"
+    }
+  }
+}
