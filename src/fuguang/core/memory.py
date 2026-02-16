@@ -224,14 +224,34 @@ class MemoryBank:
         document = f"当用户说'{trigger}'时，{solution}"
         
         # === 去重检测 ===
-        # 查找是否已有高度相似的配方（距离 < 0.5 视为"同一类经验"）
-        # 同时检查 trigger 和 solution，任一命中即视为重复
+        # 策略：trigger 相似 且 solution 也相似 → 同一教训，替换
+        #        trigger 不同 但 solution 几乎一样 → 同一教训换了触发词，替换
+        #        trigger 相似 但 solution 不同 → 不同教训，保留（如"打开Chrome" vs "打开记事本"）
         DEDUP_THRESHOLD = 0.5
-        existing = self.search_recipes(trigger, n_results=1, threshold=DEDUP_THRESHOLD)
+        existing = None
         
-        # trigger 没命中时，再拿 solution 做二次查重（核心教训相同但触发词不同的情况）
+        # 1. 先查 trigger
+        trigger_match = self.search_recipes(trigger, n_results=1, threshold=DEDUP_THRESHOLD)
+        
+        if trigger_match:
+            # trigger 命中了，再验证 solution 是否也相似（防止误删不同教训）
+            old_solution = trigger_match[0].get('metadata', {}).get('solution', '')
+            if old_solution:
+                # 用简单文本相似度判断 solution 是否相近
+                # 取两者共有关键词比例（轻量级，不额外调 ChromaDB）
+                old_words = set(old_solution)
+                new_words = set(solution)
+                overlap = len(old_words & new_words) / max(len(old_words | new_words), 1)
+                if overlap > 0.4:  # 40% 字符重叠即视为同一教训
+                    existing = trigger_match
+                else:
+                    logger.debug(f"🔄 [配方] trigger 相似但 solution 不同(重叠={overlap:.2f})，保留两条")
+        
+        # 2. trigger 没命中时，拿 solution 做二次查重（核心教训相同但触发词完全不同）
         if not existing:
-            existing = self.search_recipes(solution, n_results=1, threshold=DEDUP_THRESHOLD)
+            solution_match = self.search_recipes(solution, n_results=1, threshold=DEDUP_THRESHOLD)
+            if solution_match:
+                existing = solution_match
         
         replaced_id = None
         if existing:

@@ -80,6 +80,25 @@ class TestMemoryBank:
         assert count == 1, f"配方应去重为1条，实际有{count}条"
 
     @pytest.mark.integration
+    def test_recipe_keeps_different_lessons(self, tmp_path):
+        """trigger 相似但教训不同的配方应保留两条"""
+        from fuguang.core.memory import MemoryBank
+        mb = MemoryBank(persist_dir=str(tmp_path / "test_db"))
+        
+        # 两个"打开XX"但教训完全不同
+        mb.add_recipe(
+            trigger="打开Chrome浏览器",
+            solution="用execute_shell_command执行start chrome命令"
+        )
+        mb.add_recipe(
+            trigger="打开记事本软件",
+            solution="用create_file_directly直接写文件，不要启动notepad"
+        )
+        
+        count = mb.recipes.count()
+        assert count == 2, f"不同教训应保留2条，实际有{count}条"
+
+    @pytest.mark.integration
     def test_get_memory_context(self, tmp_path):
         """get_memory_context 返回格式化的记忆文本"""
         from fuguang.core.memory import MemoryBank
