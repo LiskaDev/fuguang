@@ -10,7 +10,7 @@ import threading
 from openai import OpenAI
 from .config import ConfigManager
 from .mouth import Mouth
-from .. import memory as fuguang_memory
+from .memory import MemoryBank  # [Migration] Use new ChromaDB memory
 
 logger = logging.getLogger("Fuguang")
 
@@ -34,8 +34,8 @@ class Brain:
             timeout=httpx.Timeout(120.0, connect=10.0)
         )
 
-        # 长期记忆系统
-        self.memory_system = fuguang_memory.MemorySystem()
+        # [Migration] 长期记忆系统 (ChromaDB)
+        self.memory_system = MemoryBank(persist_dir=str(self.config.PROJECT_ROOT / "data" / "memory_db"))
 
         # 短期对话历史
         self.chat_history = []
@@ -304,7 +304,8 @@ class Brain:
         logger.info(f"⏱️ [性能] 本次任务耗时: {elapsed_time:.2f}秒，调用工具: {tool_count}个")
         
         # 🔥 性能警告：如果太慢或调用太多工具，给AI发送优化建议
-        if elapsed_time > 10 and tool_count > 3:
+        # [优化] 降低触发阈值：5秒 + 2个工具，更容易触发学习
+        if elapsed_time > 5 and tool_count > 2:
             warning = f"""⚠️ 性能警告：上一个任务耗时 {elapsed_time:.1f}秒，调用了 {tool_count} 个工具。
 
 请反思：
@@ -396,8 +397,8 @@ importance 等级说明：
                 if not content:
                     return
                 
-                # 5. 存入长期记忆
-                self.memory_system.add_memory(content, importance)
+                # 5. 存入长期记忆 [Migration] Adjust API call
+                self.memory_system.add_memory(content, category="fact", metadata={"importance": importance})
                 logger.info(f"🧠 [潜意识] 已自动归档记忆：{content} (重要度: {importance})")
                 
             except json.JSONDecodeError as e:
@@ -467,8 +468,8 @@ importance 等级说明：
                 if not lesson:
                     return
                 
-                # 5. 保存到长期记忆（importance=4，因为这是性能优化的核心知识）
-                self.memory_system.add_memory(lesson, importance=4)
+                # 5. 保存到长期记忆 [Migration] Adjust API call (Category="task", importance=4)
+                self.memory_system.add_memory(lesson, category="task", metadata={"importance": 4})
                 logger.info(f"📚 [性能学习] 已永久记住教训：{lesson}")
                 
             except json.JSONDecodeError as e:

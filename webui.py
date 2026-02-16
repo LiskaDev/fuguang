@@ -1,21 +1,12 @@
-"""
-扶光AI助手 - Gradio Web UI
-支持浏览器访问，展示对话记录和性能监控
-"""
+
 import gradio as gr
 import pandas as pd
-import os
 import sys
+import os
 import logging
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(__file__))
-
-from src.fuguang.core.config import ConfigManager
-from src.fuguang.core.mouth import Mouth
-from src.fuguang.core.brain import Brain
-from src.fuguang.core.eyes import Eyes
-from src.fuguang.core.skills.base import SkillManager
 
 # 配置日志
 logging.basicConfig(
@@ -25,13 +16,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Fuguang.WebUI")
 
+# 只导入需要的模块（直接导入避免__init__.py的连锁反应）
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+from fuguang.core.config import ConfigManager
+from fuguang.core.mouth import Mouth
+from fuguang.core.brain import Brain
+from fuguang.core.eyes import Eyes
+from fuguang.core.skills import SkillManager  # SkillManager在__init__.py中
+
+# 自定义CSS（全局）
+custom_css = """
+.gradio-container {
+    font-family: 'Microsoft YaHei', sans-serif;
+}
+.performance-stats {
+    font-size: 14px;
+    line-height: 1.6;
+}
+"""
+
 # 全局变量：扶光系统实例
 fuguang_brain = None
 fuguang_skills = None
 fuguang_eyes = None
 
 def initialize_fuguang():
-    """初始化扶光系统（Web模式）"""
+    """初始化扶光系统（Web模式 - 不需要keyboard等）"""
     global fuguang_brain, fuguang_skills, fuguang_eyes
     
     try:
@@ -55,6 +68,12 @@ def initialize_fuguang():
         traceback.print_exc()
         return False
 
+# 初始化扶光
+logger.info("🚀 正在启动扶光内核...")
+if not initialize_fuguang():
+    logger.error("❌ 系统初始化失败")
+    sys.exit(1)
+logger.info("✅ 扶光内核已就绪")
 
 def chat_interface(message, history):
     """
@@ -99,7 +118,7 @@ def chat_interface(message, history):
         response = fuguang_brain.chat(
             user_input=message,
             system_content=system_content,
-            tools_schema=fuguang_skills.get_all_tools(),
+            tools_schema=fuguang_skills.get_tools_schema(),
             tool_executor=fuguang_skills.execute_tool
         )
         
@@ -117,7 +136,6 @@ def chat_interface(message, history):
         import traceback
         traceback.print_exc()
         return f"❌ 处理失败: {str(e)}"
-
 
 def get_performance_stats():
     """获取性能统计数据"""
@@ -148,10 +166,10 @@ def get_performance_stats():
 - 📝 总任务数: **{total_tasks}**
 
 ### 🚀 最快的3个任务
-{slowest.to_markdown(index=False) if not slowest.empty else "无数据"}
+{fastest.to_markdown(index=False) if not fastest.empty else "无数据"}
 
 ### 🐢 最慢的3个任务
-{fastest.to_markdown(index=False) if not fastest.empty else "无数据"}
+{slowest.to_markdown(index=False) if not slowest.empty else "无数据"}
 
 ### 💡 优化建议
 - ✅ 耗时<1秒：优秀（使用了create_file_directly、send_hotkey等极速工具）
@@ -171,22 +189,9 @@ def get_performance_stats():
 def create_gradio_app():
     """创建Gradio应用"""
     
-    # 自定义CSS
-    custom_css = """
-    .gradio-container {
-        font-family: 'Microsoft YaHei', sans-serif;
-    }
-    .performance-stats {
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    """
-    
     # 创建多Tab界面
     with gr.Blocks(
-        title="扶光AI助手",
-        theme=gr.themes.Soft(),
-        css=custom_css
+        title="扶光AI助手"
     ) as demo:
         
         gr.Markdown("""
@@ -217,10 +222,7 @@ def create_gradio_app():
                     "创建一个Python文件，内容是Hello World",
                     "设置提醒，明天早上9点开会",
                     "你能做什么？"
-                ],
-                retry_btn="🔄 重试",
-                undo_btn="↶ 撤销",
-                clear_btn="🗑️ 清空"
+                ]
             )
         
         with gr.Tab("📊 性能监控"):
@@ -283,7 +285,7 @@ def create_gradio_app():
             
             ---
             
-            **版本**: v4.5.0  
+            **版本**: v4.6.0  
             **作者**: 阿鑫  
             **项目地址**: [GitHub](https://github.com/LiskaDev/fuguang)
             """)
@@ -296,11 +298,6 @@ def main():
     print("=" * 60)
     print("🌌 扶光AI助手 - Gradio Web UI")
     print("=" * 60)
-    
-    # 初始化系统
-    if not initialize_fuguang():
-        print("❌ 系统初始化失败，请检查配置")
-        return
     
     print("\n✅ 系统启动成功！")
     print("\n📡 Web界面地址:")
@@ -318,7 +315,8 @@ def main():
             server_port=7860,
             share=False,  # 改成True可生成公网链接（需要gradio账号）
             show_error=True,
-            quiet=False
+            quiet=False,
+            css=custom_css  # Gradio 6.0: CSS移到launch方法
         )
     except KeyboardInterrupt:
         print("\n\n👋 再见！扶光系统已停止")
@@ -330,3 +328,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
