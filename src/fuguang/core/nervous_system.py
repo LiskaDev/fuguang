@@ -429,8 +429,14 @@ class NervousSystem:
         system_content = self.brain.get_system_prompt(dynamic_context=perception_data) + memory_text
         
         # [修复#4+#6] 视觉意图自动截屏 — 用户提到视觉关键词时，自动截屏分析并注入上下文
-        _VISUAL_KEYWORDS = ["看看", "屏幕", "报错", "界面", "显示", "这个错", "什么情况", "出了什么", "怎么回事", "看一下", "帮我看"]
-        if any(kw in user_input for kw in _VISUAL_KEYWORDS):
+        _VISUAL_KEYWORDS = ["屏幕", "报错", "界面", "显示", "这个错", "什么情况", "出了什么", "怎么回事", "截图", "截屏"]
+        _EXCLUDE_KEYWORDS = ["打开", "启动", "运行", "执行", "创建", "写", "保存", "搜索", "查", "找"]
+        
+        # 检测视觉意图：有视觉关键词 且 没有排除关键词
+        has_visual_kw = any(kw in user_input for kw in _VISUAL_KEYWORDS)
+        has_exclude_kw = any(kw in user_input for kw in _EXCLUDE_KEYWORDS)
+        
+        if has_visual_kw and not has_exclude_kw:
             try:
                 logger.info("👁️ [自动截屏] 检测到视觉意图，正在自动截屏分析...")
                 screen_analysis = self.skills.analyze_screen_content(question=user_input)
