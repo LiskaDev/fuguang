@@ -317,6 +317,9 @@ class Brain:
 最近调用的工具：{', '.join(tool_calls_list[-5:])}"""
             self.system_hints.append(warning)  # 下次对话时自动注入
             logger.warning(f"🐢 性能警告已生成，将在下次对话时提醒AI优化")
+            
+            # 🔥 自动学习：把性能教训保存到长期记忆（永久记住）
+            self.learn_from_performance(user_input, tool_calls_list, elapsed_time)
         
         # 更新对话历史
         self.chat_history.append({"role": "user", "content": user_input})
@@ -403,5 +406,76 @@ importance 等级说明：
                 logger.warning(f"潜意识记忆提取失败: {e}")
         
         # 启动后台线程，不阻塞主对话
+        thread = threading.Thread(target=_background_task, daemon=True)
+        thread.start()
+
+    def learn_from_performance(self, user_task: str, tools_used: list, elapsed_time: float):
+        """
+        🔥 从慢操作中自动学习，把教训永久保存到长期记忆
+        
+        Args:
+            user_task: 用户的任务描述
+            tools_used: 调用的工具列表
+            elapsed_time: 耗时（秒）
+        """
+        def _background_task():
+            try:
+                # 1. 让AI分析这次慢操作，提取教训
+                learning_prompt = f"""分析以下慢操作，提取【性能优化教训】。
+
+【任务】：{user_task}
+【耗时】：{elapsed_time:.1f}秒
+【调用的工具】：{', '.join(tools_used)}
+
+【分析规则】
+- 如果调用了GUI操作（click_screen_text, click_by_description），是否有更快的方法？
+- 如果调用了launch_application后又有type_text，是否应该用create_file_directly？
+- 如果调用了多次点击，是否应该用快捷键？
+
+【输出格式】
+严格按照以下JSON格式输出（不要Markdown，不要废话）：
+{{"lesson": "陈述句格式的教训，必须包含【触发场景关键词】，说明下次遇到XX任务应该用YY方法"}}
+
+【重要】教训中必须包含用户可能说的话，方便以后召回！
+
+【示例】
+{{"lesson": "当用户说'在记事本写'、'创建文件'、'保存内容到文件'时，应该直接用create_file_directly工具，不要打开记事本软件，可以提速400倍"}}
+{{"lesson": "当用户说'保存文件'、'保存一下'时，应该用send_hotkey('ctrl', 's')快捷键，不要点击'文件'菜单，可以提速50倍"}}
+{{"lesson": "当用户要求'输入一段话'、'打一段文字'且文本超过10字时，应该用type_text(use_clipboard=True)剪贴板粘贴，不要逐字打字"}}
+
+如果这次操作已经是最优方案，输出 None
+"""
+                
+                # 2. 调用LLM分析
+                response = self.client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[{"role": "user", "content": learning_prompt}],
+                    max_tokens=200,
+                    temperature=0.2  # 低温度，更精确
+                )
+                result = response.choices[0].message.content.strip()
+                
+                # 3. 检查是否有教训
+                if "None" in result or "none" in result or "{" not in result:
+                    return  # 已经是最优方案
+                
+                # 4. 解析JSON
+                clean_json = result.replace("```json", "").replace("```", "").strip()
+                lesson_item = json.loads(clean_json)
+                
+                lesson = lesson_item.get("lesson", "")
+                if not lesson:
+                    return
+                
+                # 5. 保存到长期记忆（importance=4，因为这是性能优化的核心知识）
+                self.memory_system.add_memory(lesson, importance=4)
+                logger.info(f"📚 [性能学习] 已永久记住教训：{lesson}")
+                
+            except json.JSONDecodeError as e:
+                logger.debug(f"性能教训解析失败: {e}")
+            except Exception as e:
+                logger.warning(f"性能学习失败: {e}")
+        
+        # 后台线程运行，不阻塞对话
         thread = threading.Thread(target=_background_task, daemon=True)
         thread.start()
