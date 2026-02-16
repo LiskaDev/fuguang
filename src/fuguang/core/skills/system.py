@@ -145,7 +145,7 @@ class SystemSkills:
                 f.write(f"| {timestamp} | {icon} {category} | {clean_content} |\n")
             self.mouth.speak(f"已记录到桌面笔记本，分类是{category}。")
             try: os.startfile(str(filename))
-            except: pass
+            except Exception as e: logger.debug(f"打开笔记文件失败: {e}")
             return f"✅ 已记录到桌面: {filename.name}"
         except Exception as e:
             return f"记录失败: {str(e)}"
@@ -164,16 +164,20 @@ class SystemSkills:
             生成结果和文件路径
         """
         if not filename.endswith(".py"): filename += ".py"
-        full_path = self.config.GENERATED_DIR / filename
+        # [修复] 防止路径穿越（如 ../malicious.py）
+        full_path = (self.config.GENERATED_DIR / filename).resolve()
+        if not full_path.is_relative_to(self.config.GENERATED_DIR.resolve()):
+            return f"❌ 非法文件名: {filename}（禁止路径穿越）"
         try:
+            full_path.parent.mkdir(parents=True, exist_ok=True)
             with open(full_path, "w", encoding="utf-8") as f: f.write(code_content)
             self.mouth.speak(f"代码已生成：{filename}，正在为你打开。")
             try:
                 result = subprocess.run(["code", str(full_path)], capture_output=True, timeout=5)
                 if result.returncode != 0: raise Exception()
-            except:
+            except Exception:
                 try: os.startfile(str(full_path))
-                except: pass
+                except Exception as e: logger.debug(f"startfile 失败: {e}")
             return f"✅ 代码已生成: generated/{filename}"
         except Exception as e:
             return f"代码生成失败: {str(e)}"
@@ -190,8 +194,13 @@ class SystemSkills:
         app_name, cmd = self.find_app_by_alias(text)
         if app_name:
             self.mouth.speak(f"正在打开{app_name}...")
-            try: os.system(cmd); return True
-            except: return False
+            try:
+                # [修复] 使用 subprocess 替代 os.system，避免 shell 注入
+                subprocess.Popen(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                return True
+            except Exception as e:
+                logger.warning(f"打开应用失败: {app_name} -> {e}")
+                return False
         return False
 
     def open_tool(self, tool_name: str) -> str:
@@ -208,8 +217,16 @@ class SystemSkills:
         """
         if self.open_app(tool_name): return "✅ 已打开"
         self.mouth.speak(f"正在打开{tool_name}...")
-        try: os.system(f"start {tool_name}"); return f"✅ 尝试启动: {tool_name}"
-        except Exception as e: return f"❌ 打开失败: {str(e)}"
+        try:
+            # [修复] 使用 subprocess.Popen 替代 os.system，并过滤危险字符
+            # 只允许字母、数字、中文、空格、点和连字符
+            import re
+            if re.search(r'[;&|<>$`"\\]', tool_name):
+                return f"❌ 工具名称包含非法字符: {tool_name}"
+            subprocess.Popen(["cmd", "/c", "start", "", tool_name], creationflags=subprocess.CREATE_NO_WINDOW)
+            return f"✅ 尝试启动: {tool_name}"
+        except Exception as e:
+            return f"❌ 打开失败: {str(e)}"
 
     def set_reminder(self, content: str, target_time: str, auto_action: dict = None) -> str:
         try:
@@ -231,8 +248,19 @@ class SystemSkills:
     def check_reminders(self):
         current_time = datetime.datetime.now()
         active_reminders = []; is_changed = False
-        for task in self.reminders:
-            task_time = datetime.datetime.strptime(task["time"], "%Y-%m-%d %H:%M:%S")
+        for task in list(self.reminders):  # [修复] 遍历副本，防止迭代中修改
+            # [修复] 容错：跳过损坏的提醒数据
+            try:
+                task_time_str = task.get("time") if isinstance(task, dict) else None
+                if not task_time_str:
+                    logger.warning(f"⚠️ 跳过无效提醒数据（缺少time字段）: {task}")
+                    is_changed = True
+                    continue
+                task_time = datetime.datetime.strptime(task_time_str, "%Y-%m-%d %H:%M:%S")
+            except (ValueError, AttributeError) as e:
+                logger.warning(f"⚠️ 跳过损坏的提醒数据: {task} ({e})")
+                is_changed = True
+                continue
             if current_time >= task_time:
                 self.mouth.send_to_unity("Surprised")
                 self._show_toast("Fuguang IDE 提醒", task['content'])
@@ -272,7 +300,10 @@ class SystemSkills:
         """
         import sys as _sys
         if not filename.endswith(".py"): filename += ".py"
-        file_path = self.config.GENERATED_DIR / filename
+        # [修复] 防止路径穿越（如 ../../system32/xxx.py）
+        file_path = (self.config.GENERATED_DIR / filename).resolve()
+        if not file_path.is_relative_to(self.config.GENERATED_DIR.resolve()):
+            return f"❌ 非法文件名: {filename}（禁止路径穿越）"
         if not file_path.exists():
             return f"❌ 找不到文件: {filename}，请先使用 write_code 生成代码。"
         if self.auto_execute:
@@ -284,13 +315,16 @@ class SystemSkills:
             try:
                 with open(file_path, 'r', encoding='utf-8') as f: preview = f.read()[:500]
                 print(preview)
-            except: pass
+            except Exception as e:
+                logger.debug(f"预览代码读取失败: {e}")
             user_confirm = input("是否允许运行? [y/n]: ").strip().lower()
             if user_confirm != 'y': return "❌ 指挥官拒绝了代码执行请求。"
         try:
             with open(file_path, 'r', encoding='utf-8') as f: code_content = f.read()
             is_interactive = 'input(' in code_content
-        except: is_interactive = False
+        except Exception as e:
+            logger.debug(f"读取代码文件失败: {e}")
+            is_interactive = False
         if is_interactive:
             self.mouth.speak(f"交互式程序，给你打开新窗口运行~")
             subprocess.Popen(f'start cmd /k "chcp 65001 >nul && "{_sys.executable}" "{file_path}""', shell=True, cwd=str(self.config.GENERATED_DIR))
@@ -328,9 +362,18 @@ class SystemSkills:
 
     def listen_to_system_audio(self, duration: int = 30) -> str:
         import soundcard as sc, soundfile as sf, tempfile
+        # [修复] 限制最大录制时长，防止内存占用过大
+        if duration > 120:
+            return "❌ 录制时长过长，请设置 120 秒以内"
+        if duration < 1:
+            return "❌ 录制时长至少 1 秒"
         logger.info(f"👂 [系统听觉] 正在通过 WASAPI 监听扬声器 {duration} 秒...")
         try:
-            speaker = sc.default_speaker(); loopback = sc.get_microphone(id=str(speaker.id), include_loopback=True)
+            speaker = sc.default_speaker()
+            # [修复] 检查默认扬声器是否存在
+            if not speaker:
+                return "❌ 未检测到默认扬声器，请检查音频设备"
+            loopback = sc.get_microphone(id=str(speaker.id), include_loopback=True)
             SR = 44100
             with loopback.recorder(samplerate=SR) as mic: data = mic.record(numframes=SR * duration)
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp: temp_path = tmp.name

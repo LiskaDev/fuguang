@@ -16,6 +16,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Fuguang.WebUI")
 
+# 降低第三方库日志噪音
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+logging.getLogger("chromadb").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
+
 # 只导入需要的模块（直接导入避免__init__.py的连锁反应）
 import sys
 import os
@@ -189,6 +197,83 @@ def get_performance_stats():
 def create_gradio_app():
     """创建Gradio应用"""
     
+    def get_system_status():
+        """获取系统全局状态"""
+        sections = []
+        
+        # === 记忆系统 ===
+        try:
+            if fuguang_skills and hasattr(fuguang_skills, 'memory') and fuguang_skills.memory:
+                stats = fuguang_skills.memory.get_stats()
+                mem_status = "🟢 在线"
+                sections.append(f"""### 🧠 记忆系统 {mem_status}
+| 集合 | 数量 |
+|------|------|
+| 💬 对话记忆 | {stats['memories_count']} 条 |
+| 📚 知识库 | {stats['knowledge_count']} 条 |
+| ⚡ 技能配方 | {stats['recipes_count']} 条 |
+| **合计** | **{stats['total']} 条** |""")
+            else:
+                sections.append("### 🧠 记忆系统 🔴 离线")
+        except Exception as e:
+            sections.append(f"### 🧠 记忆系统 🔴 异常: {e}")
+        
+        # === MCP 连接 ===
+        try:
+            if fuguang_skills and hasattr(fuguang_skills, '_mcp_clients'):
+                clients = fuguang_skills._mcp_clients
+                if clients:
+                    rows = []
+                    total_tools = 0
+                    for name, client in clients.items():
+                        connected = client.is_connected
+                        icon = "🟢" if connected else "🔴"
+                        n_tools = len(client.tools_schema) if connected else 0
+                        total_tools += n_tools
+                        rows.append(f"| {icon} {name} | {n_tools} 个工具 | {'已连接' if connected else '已断开'} |")
+                    rows_text = "\n".join(rows)
+                    sections.append(f"""### 🔌 MCP 外部工具
+| Server | 工具数 | 状态 |
+|--------|--------|------|
+{rows_text}
+| **合计** | **{total_tools} 个工具** | |""")
+                else:
+                    sections.append("### 🔌 MCP 外部工具 ⚪ 未配置")
+            else:
+                sections.append("### 🔌 MCP 外部工具 ⚪ 未初始化")
+        except Exception as e:
+            sections.append(f"### 🔌 MCP 外部工具 🔴 异常: {e}")
+        
+        # === Obsidian 同步 ===
+        try:
+            if fuguang_skills and hasattr(fuguang_skills, 'memory') and fuguang_skills.memory:
+                vault = getattr(fuguang_skills.memory, 'obsidian_vault_path', '')
+                if vault and os.path.isdir(vault):
+                    diary_dir = os.path.join(vault, '扶光成长日记')
+                    diary_count = 0
+                    if os.path.isdir(diary_dir):
+                        diary_count = len([f for f in os.listdir(diary_dir) if f.endswith('.md') and f != 'README.md'])
+                    sections.append(f"""### 📓 Obsidian 成长日记 🟢 已启用
+- **Vault**: `{vault}`
+- **日记天数**: {diary_count} 天""")
+                else:
+                    sections.append("### 📓 Obsidian 成长日记 ⚪ 未配置")
+        except Exception as e:
+            sections.append(f"### 📓 Obsidian 成长日记 🔴 异常: {e}")
+        
+        # === 性能数据 ===
+        try:
+            if fuguang_brain and fuguang_brain.performance_log:
+                n = len(fuguang_brain.performance_log)
+                avg = sum(p['time'] for p in fuguang_brain.performance_log) / n
+                sections.append(f"""### 📊 本轮性能
+- **已完成任务**: {n} 个
+- **平均耗时**: {avg:.2f} 秒""")
+        except Exception:
+            pass
+        
+        return "# 🔧 扶光系统状态\n\n" + "\n\n---\n\n".join(sections)
+    
     # 创建多Tab界面
     with gr.Blocks(
         title="扶光AI助手"
@@ -257,6 +342,17 @@ def create_gradio_app():
             - 输入文本: 5秒 → 0.2秒 (提速 **25倍**)
             """)
         
+        with gr.Tab("🔧 系统状态"):
+            status_output = gr.Markdown(
+                value=get_system_status,
+                every=None
+            )
+            status_refresh_btn = gr.Button("🔄 刷新状态", variant="primary")
+            status_refresh_btn.click(
+                fn=get_system_status,
+                outputs=status_output
+            )
+        
         with gr.Tab("ℹ️ 关于"):
             gr.Markdown("""
             ## 扶光AI助手系统
@@ -285,7 +381,7 @@ def create_gradio_app():
             
             ---
             
-            **版本**: v4.6.0  
+            **版本**: v5.1.0  
             **作者**: 阿鑫  
             **项目地址**: [GitHub](https://github.com/LiskaDev/fuguang)
             """)

@@ -35,7 +35,10 @@ class Brain:
         )
 
         # [Migration] 长期记忆系统 (ChromaDB)
-        self.memory_system = MemoryBank(persist_dir=str(self.config.PROJECT_ROOT / "data" / "memory_db"))
+        self.memory_system = MemoryBank(
+            persist_dir=str(self.config.PROJECT_ROOT / "data" / "memory_db"),
+            obsidian_vault_path=getattr(self.config, 'OBSIDIAN_VAULT_PATH', '')
+        )
 
         # 短期对话历史
         self.chat_history = []
@@ -468,9 +471,13 @@ importance 等级说明：
                 if not lesson:
                     return
                 
-                # 5. 保存到长期记忆 [Migration] Adjust API call (Category="task", importance=4)
-                self.memory_system.add_memory(lesson, category="task", metadata={"importance": 4})
-                logger.info(f"📚 [性能学习] 已永久记住教训：{lesson}")
+                # 5. 保存到 recipes 配方记忆（而非通用记忆池）
+                self.memory_system.add_recipe(
+                    trigger=user_task,
+                    solution=lesson,
+                    metadata={"source": "auto_learn", "elapsed": elapsed_time, "tools": ",".join(tools_used)}
+                )
+                logger.info(f"📚 [性能学习] 已存入配方记忆：{lesson}")
                 
             except json.JSONDecodeError as e:
                 logger.debug(f"性能教训解析失败: {e}")

@@ -177,16 +177,22 @@ class Camera:
                                 )
                                 distance = face_distances[0]
                                 
-                                # tolerance=0.4 更严格（默认0.6太宽松）
-                                # 距离 < 0.4 认为是同一人
-                                tolerance = 0.4
+                                # tolerance=0.50 适中（默认0.6太宽松，0.4太严格导致遮嘴/遮眼误判）
+                                # 距离 < 0.50 认为是同一人
+                                tolerance = 0.50
                                 
                                 if distance < tolerance:
                                     self._cached_identity = "Commander"
+                                    self._stranger_consecutive = 0  # 重置陌生人计数
                                     logger.debug(f"✅ 身份匹配: distance={distance:.3f} < {tolerance}")
                                 else:
-                                    self._cached_identity = "Stranger"
-                                    logger.warning(f"🚨 陌生人: distance={distance:.3f} >= {tolerance}")
+                                    # 连续确认机制：需连续3次识别为陌生人才触发，防止单帧误判
+                                    self._stranger_consecutive = getattr(self, '_stranger_consecutive', 0) + 1
+                                    if self._stranger_consecutive >= 3:
+                                        self._cached_identity = "Stranger"
+                                        logger.warning(f"🚨 陌生人: distance={distance:.3f} >= {tolerance} (连续{self._stranger_consecutive}次)")
+                                    else:
+                                        logger.debug(f"⚠️ 疑似陌生人: distance={distance:.3f} >= {tolerance} (第{self._stranger_consecutive}次，等待确认)")
                             # 如果没算出特征，保持上次身份不变
                         except Exception as e:
                             logger.debug(f"身份识别异常: {e}")

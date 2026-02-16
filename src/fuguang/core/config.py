@@ -53,6 +53,8 @@ class ConfigManager:
         self.DEEPSEEK_BASE_URL = GlobalConfig.DEEPSEEK_BASE_URL
         self.SERPER_API_KEY = GlobalConfig.SERPER_API_KEY
         self.ZHIPU_API_KEY = GlobalConfig.ZHIPU_API_KEY
+        self.GITHUB_TOKEN = GlobalConfig.GITHUB_TOKEN
+        self.OBSIDIAN_VAULT_PATH = GlobalConfig.OBSIDIAN_VAULT_PATH
         
         # 视觉识别配置
         self.VISION_USE_FLASH = GlobalConfig.VISION_USE_FLASH

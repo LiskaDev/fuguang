@@ -98,10 +98,17 @@ class NervousSystem:
 
 
     def _on_key_event(self, event):
-        """按键事件处理 [修复C-5] 使用锁保护共享状态"""
+        """按键事件处理 [修复C-5] 使用锁保护共享状态 + 防抖"""
         # PTT 模式（右 Ctrl）
         if event.name == 'right ctrl':
             with self._input_state_lock:
+                now = time.time()
+                # 防抖：200ms 内重复事件忽略
+                last_ptt = getattr(self, '_last_ptt_event_time', 0)
+                if now - last_ptt < 0.2:
+                    return
+                self._last_ptt_event_time = now
+                
                 if event.event_type == 'down' and not self.IS_PTT_PRESSED:
                     self.IS_PTT_PRESSED = True
                     logger.info("🎤 [PTT] 键按下")
@@ -410,7 +417,8 @@ class NervousSystem:
                 memory_context = self.skills.memory.get_memory_context(user_input, n_results=3)
                 if memory_context:
                     memory_text = memory_context
-                    logger.info(f"📖 [RAG] 已注入长期记忆上下文")
+                    has_recipe = "最佳实践" in memory_context
+                    logger.info(f"📖 [RAG] 已注入长期记忆上下文{' (含配方⚡)' if has_recipe else ''}")
             else:
                 # 备用：使用旧的记忆系统
                 related_memories = self.brain.memory_system.search_memory(user_input)
@@ -429,8 +437,9 @@ class NervousSystem:
         system_content = self.brain.get_system_prompt(dynamic_context=perception_data) + memory_text
         
         # [修复#4+#6] 视觉意图自动截屏 — 用户提到视觉关键词时，自动截屏分析并注入上下文
-        _VISUAL_KEYWORDS = ["屏幕", "报错", "界面", "显示", "这个错", "什么情况", "出了什么", "怎么回事", "截图", "截屏"]
-        _EXCLUDE_KEYWORDS = ["打开", "启动", "运行", "执行", "创建", "写", "保存", "搜索", "查", "找"]
+        # 收紧视觉关键词：移除"什么情况""怎么回事"等过于宽泛的词，避免误触发
+        _VISUAL_KEYWORDS = ["屏幕", "报错", "这个错", "截图", "截屏", "界面上"]
+        _EXCLUDE_KEYWORDS = ["打开", "启动", "运行", "执行", "创建", "写", "保存", "搜索", "查", "找", "多少", "几个", "记", "笔记"]
         
         # 检测视觉意图：有视觉关键词 且 没有排除关键词
         has_visual_kw = any(kw in user_input for kw in _VISUAL_KEYWORDS)
@@ -738,7 +747,7 @@ class NervousSystem:
                     time.sleep(0.1)
                     continue
                 
-                # --- 情况 B: 指挥官回归 ---
+                # --- 情况 B: 指挥官回归（快速解锁）---
                 if found and identity == "Commander" and self.security_mode_active:
                     logger.info("✅ 身份确认：指挥官。警报解除。")
                     self.mouth.send_to_unity("Joy")
@@ -746,6 +755,13 @@ class NervousSystem:
                     self.security_mode_active = False
                     self.LAST_ACTIVE_TIME = now
                     fuguang_heartbeat.update_interaction()
+                
+                # --- 没人脸 + 锁定超60秒 → 自动解锁（防止误判后永久锁死）---
+                if not found and self.security_mode_active:
+                    lock_duration = now - getattr(self, 'last_security_warning_time', now)
+                    if lock_duration > 60:
+                        logger.info("🔓 安保超时(60s无人脸)，自动解锁。")
+                        self.security_mode_active = False
                 
                 # --- 情况 C: 正常状态下的情感交互 ---
                 if self.gaze_tracker and self.gaze_tracker.has_face and identity == "Commander":

@@ -170,10 +170,12 @@ class KnowledgeEater:
             return f"❌ 这不是文件夹: {folder_path}"
         
         # 收集所有支持的文件
-        pattern = "**/*" if recursive else "*"
-        files = []
-        for ext in self.SUPPORTED_EXTENSIONS.keys():
-            files.extend(folder.glob(f"{pattern}.{ext}"))
+        # [优化] 一次遍历代替多次 glob，大目录下显著提速
+        allowed_exts = {f".{ext}" for ext in self.SUPPORTED_EXTENSIONS}
+        if recursive:
+            files = [p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in allowed_exts]
+        else:
+            files = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in allowed_exts]
         
         if not files:
             return f"⚠️ 文件夹中没有找到支持的文件"

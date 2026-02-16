@@ -61,9 +61,16 @@ except ImportError:
 try:
     import whisper
     WHISPER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     WHISPER_AVAILABLE = False
-    logger.warning("⚠️ Whisper 未安装，语音转文字功能将受限")
+    # [改进] 显示详细错误信息，帮助快速定位依赖冲突
+    error_msg = str(e)
+    if "Numba" in error_msg or "NumPy" in error_msg:
+        logger.warning(f"⚠️ Whisper 导入失败（依赖冲突）: {error_msg}")
+        logger.warning("💡 尝试修复: pip install 'numpy<2.4,>=2.0'")
+    else:
+        logger.warning(f"⚠️ Whisper 未安装: {error_msg}")
+        logger.warning("💡 安装命令: pip install openai-whisper")
 
 # [浏览器] 导入 Playwright
 try:
@@ -213,9 +220,17 @@ class BaseSkillMixin:
         self.whisper_model = None
         
         # [记忆] 向量数据库长期记忆 (海马体)
+        # 优先复用 Brain 的 MemoryBank 实例（避免双实例浪费内存）
         try:
-            self.memory = MemoryBank(persist_dir=str(self.config.PROJECT_ROOT / "data" / "memory_db"))
-            logger.info("✅ 长期记忆系统已就绪")
+            if hasattr(self.brain, 'memory_system') and self.brain.memory_system:
+                self.memory = self.brain.memory_system
+                logger.info("✅ 长期记忆系统已就绪（共享 Brain 实例）")
+            else:
+                self.memory = MemoryBank(
+                    persist_dir=str(self.config.PROJECT_ROOT / "data" / "memory_db"),
+                    obsidian_vault_path=getattr(self.config, 'OBSIDIAN_VAULT_PATH', '')
+                )
+                logger.info("✅ 长期记忆系统已就绪（独立实例）")
         except Exception as e:
             self.memory = None
             logger.error(f"❌ 长期记忆系统加载失败: {e}")
@@ -246,6 +261,13 @@ class BaseSkillMixin:
         self._browser_page = None
         self._playwright = None
         logger.info("⚡ 浏览器复用机制已启用")
+        
+        # [🧩 MCP] 初始化外部工具服务器
+        if hasattr(self, '_init_mcp'):
+            try:
+                self._init_mcp()
+            except Exception as e:
+                logger.warning(f"⚠️ [MCP] 初始化失败（不影响核心功能）: {e}")
     
     # ------ 内部辅助方法 ------
     
@@ -270,9 +292,15 @@ class BaseSkillMixin:
     def _show_toast(self, title: str, message: str):
         """发送 Windows 系统通知 [修复M-6] 防止 PowerShell 注入"""
         try:
-            # 清理输入，移除可能的 PowerShell 注入字符
-            safe_title = title.replace("'", "''").replace("`", "")
-            safe_message = message.replace("'", "''").replace("`", "")
+            import re
+            # [修复] 更彻底的 PowerShell 注入防护：只保留安全字符
+            def sanitize_ps(text: str) -> str:
+                # 移除所有 PowerShell 特殊字符：' ` $ ( ) { } ; | & < > \
+                cleaned = re.sub(r'''['"`$(){};&|<>\\]''', '', text)
+                return cleaned[:200]  # 限制长度防止溢出
+            
+            safe_title = sanitize_ps(title)
+            safe_message = sanitize_ps(message)
             
             ps_script = f"""
             Add-Type -AssemblyName System.Windows.Forms

@@ -5,7 +5,87 @@
 
 ---
 
-## 🎉 最新功能亮点 (v4.7.1)
+## 🎉 最新功能亮点 (v5.2.0)
+
+### 🧠 **智能记忆 + MCP 外部工具 + Obsidian 成长日记**
+
+扶光现在拥有完整的“学习 → 记忆 → 可视化”闭环：
+
+```
+用户下达任务 → 扶光执行 (通过 40 个 MCP 工具)
+     ↓
+性能自监控 → 自动提取经验教训
+     ↓
+配方去重 → 存入 ChromaDB (用旧替新，不节省)
+     ↓
+实时同步 → Obsidian 成长日记 (Markdown)
+     ↓
+下次同类任务 → 自动召回配方，提速 60 倍
+```
+
+**核心能力：**
+- 🐙 **GitHub MCP** — 26 个工具（搜索/读文件/创建 Issue & PR）
+- 📓 **Obsidian MCP** — 14 个工具（读写笔记/目录管理/搜索）
+- ⚡ **配方记忆** — 自动去重、进化替换、Obsidian 日记同步
+- 🔄 **MCP 断线重连** — Server 崩溃自动恢复，不用重启
+- 📊 **WebUI 状态面板** — 一眨看到记忆/MCP/Obsidian 状态
+
+**🛠️ GitHub 能力（26 个工具自动发现）：**
+- 搜索仓库 / 搜索代码 / 搜索 Issue & PR
+- 查看文件内容 / 获取 Commit 历史 / 查看 Release
+- 创建 Issue / 创建 PR / Fork 仓库
+- 创建/更新文件 / 推送代码 / 创建分支
+
+**📁 涉及文件：**
+
+| 文件 | 改动内容 |
+|:---|:---|
+| `src/fuguang/core/skills/mcp.py` | 从占位模块重写为完整 MCP Client（MCPClient 类 + MCPSkills Mixin），含连接管理/工具发现/Schema 转换/异步调用桥接 |
+| `src/fuguang/core/skills/base.py` | `__init__` 末尾调用 `_init_mcp()` 启动 MCP 服务器 |
+| `src/fuguang/core/skills/__init__.py` | `execute_tool` 新增 `mcp_` 前缀路由，所有 MCP 工具自动桥接 |
+| `src/fuguang/config.py` + `core/config.py` | 新增 `GITHUB_TOKEN` 配置项 |
+| `.env` | 新增 `GITHUB_TOKEN` |
+
+**💡 扩展方式：**
+> 未来要接入更多 MCP Server（如 Obsidian、Notion），只需在 `_init_mcp()` 中注册新的 `MCPClient` 即可，无需修改其他文件。这就是 MCP 的"插拔式"价值。
+
+---
+
+## 📋 历史更新 (v4.8.0)
+
+### ⚡ **配方记忆系统 (Recipe Memory)** - AI 的"肌肉记忆"
+
+扶光新增第三种记忆集合——**技能配方 (Recipes)**，专门存储成功的工具链和操作模式。当 AI 遇到类似场景时，配方会被**自动召回并优先执行**，实现"做过一次就永远记住最优解"。
+
+**🧠 记忆架构升级（双集合 → 三集合）：**
+
+| 集合 | 用途 | 示例 |
+|:---|:---|:---|
+| `fuguang_memories` | 对话记忆（事实、偏好） | "用户喜欢暗色主题" |
+| `fuguang_knowledge` | 知识库（文件吞噬） | PDF/Word/代码文档内容 |
+| **`fuguang_recipes`** ⚡ NEW | 技能配方（肌肉记忆） | "写文件用 create_file_directly，不要打开记事本" |
+
+**🔄 工作原理：**
+1. **自动学习**：Brain 检测到慢操作（>5秒 且 >2个工具调用）→ LLM 分析原因 → 教训自动存入 recipes 集合
+2. **AI 主动存储**：AI 可通过 `remember_recipe` 工具手动保存最佳实践
+3. **自动召回**：每次用户提问 → `get_memory_context()` 优先查询 recipes → 匹配的配方以"⚡ 最佳实践（务必优先遵循）"注入 system prompt
+4. **AI 主动查询**：AI 可通过 `recall_recipe` 工具按场景搜索配方
+
+**📁 涉及文件：**
+
+| 文件 | 改动内容 |
+|:---|:---|
+| `src/fuguang/core/memory.py` | 新增 `fuguang_recipes` 集合 + `add_recipe()` / `recall_recipe()` / `search_recipes()` API + `get_memory_context()` 配方优先路由 + `get_stats()` 含配方统计 |
+| `src/fuguang/core/brain.py` | `learn_from_performance()` 教训存入 recipes 集合（原先存入通用记忆池） |
+| `src/fuguang/core/skills/memory.py` | 新增 `remember_recipe` / `recall_recipe` 两个 Function Calling 工具定义 + 对应方法实现 |
+| `src/fuguang/core/nervous_system.py` | RAG 检索日志区分配方命中 `(含配方⚡)` |
+
+**💡 设计思路：**
+> 参考 GPT/Gemini 对记忆层级的分析，采用"务实版"方案——只新增 recipes 集合（而非完整 4 层），以最小改动获得最大收益。配方记忆本质上是"条件反射"：触发场景 → 最优解法，让 AI 不再重复犯同样的慢操作错误。
+
+---
+
+## 📋 历史更新 (v4.7.1)
 
 ### 📚 **完善工具文档** - 覆盖率提升到88%
 为18个核心工具方法添加规范的docstring，大幅提升工具扫描器覆盖率！
@@ -29,7 +109,7 @@
 
 ---
 
-## ⚡ 上一版本更新 (v4.6.1)
+## 📋 历史更新 (v4.6.1)
 
 ### ⚡ **Web UI界面** - 轻松体验AI助手
 不需要配置语音/摄像头，直接在浏览器中使用扶光！
@@ -101,7 +181,7 @@ def create_file_directly(self, file_path: str, content: str):
 | :--- | :--- | :--- | :--- |
 | **`nervous_system.py`** | **神经系统** | **信号协调**。负责主循环、按键监听 (PTT)、将输入传给大脑、播放回复。 | 修改按键逻辑、调整交互流程、修改心跳机制。 |
 | **`brain.py`** | **大脑** | **思考与对话**。负责调用 LLM API、**工具调用循环 (Function Calling)**、管理对话历史、记忆检索与归档。 | 修改 System Prompt、更换 AI 模型、调整记忆长度、**修改工具调用逻辑**。 |
-| **`skills/`** | **手/技能** | **执行**。模块化技能包，通过 Mixin 多继承组合 6 大技能领域：`vision.py`(视觉)、`gui.py`(桌面控制)、`browser.py`(浏览器)、`system.py`(系统命令)、`memory.py`(记忆)、`mcp.py`(外部扩展)。 | **这是最常修改的目录**。增加新功能按领域放入对应模块。 |
+| **`skills/`** | **手/技能** | **执行**。模块化技能包，通过 Mixin 多继承组合 7 大技能领域：`vision.py`(视觉)、`gui.py`(桌面控制)、`browser.py`(浏览器)、`system.py`(系统命令)、`memory.py`(记忆)、`mcp.py`(MCP外部协议)。 | **这是最常修改的目录**。增加新功能按领域放入对应模块。 |
 | **`ears.py`** | **耳朵** | **听觉**。负责麦克风录音、ASR 语音识别、唤醒词检测。 | 调整麦克风灵敏度、修改唤醒词、更换语音识别服务。 |
 | **`eyes.py`** | **眼睛** | **视觉**。负责获取窗口标题、剪贴板内容、屏幕截图，结合 **GLM-4V** 进行视觉分析。 | 新增视觉识别场景、调整图片质量、切换极速/标准模式。 |
 | **`mouth.py`** | **嘴巴** | **表达**。负责 TTS 语音合成、发送表情/动作指令给 Unity。 | 更换 TTS 音色、对接新的 Unity 动画事件。 |
@@ -401,6 +481,122 @@ python verify_config.py
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
 
+### v5.2.0 - 深度打磨: Prompt/单实例/日志 (2026-02-17) 🔧
+> **背景**：功能堪称出强大但细节需打磨——System Prompt 还不知道新能力，ChromaDB 浪费双实例，日志刷屏。
+
+**核心升级：**
+- **[优化]** 🧠 **System Prompt 全面更新**：加入 MCP GitHub/Obsidian 能力声明 + 配方三集合架构说明。
+  - 扶光现在知道自己能操作 GitHub、读写 Obsidian、导出配方。
+  - 触发词映射：“GitHub/仓库/Issue” → mcp_github_*，“写笔记/Obsidian/日记” → mcp_obsidian_*。
+- **[优化]** 💾 **MemoryBank 单实例共享**：SkillManager 复用 Brain 的 MemoryBank，不再创建第二个 ChromaDB 实例。
+  - 省内存 + 数据一致性保证，启动日志显示「共享 Brain 实例」。
+- **[优化]** 📡 **日志降噪**：httpx/httpcore/sentence_transformers/chromadb/huggingface_hub 日志级别设为 WARNING。
+  - 启动日志从 ~60 行降到 ~15 行，全是关键信息。
+
+**文件变更：**
+- 修改 `config/system_prompt.txt`（新增 MCP/Obsidian/配方能力声明）。
+- 修改 `core/skills/base.py`（MemoryBank 复用 Brain 实例）。
+- 修改 `webui.py`（第三方库日志降级）。
+
+---
+
+### v5.1.0 - 健壮性升级: 去重/重连/状态面板 (2026-02-17) 🛡️
+> **背景**：功能堆了很多但配方会重复、MCP 断线无法恢复、运行状态不可见。
+
+**核心升级：**
+- **[新增]** 🔄 **配方去重机制**：`add_recipe()` 入库前语义查重（距离 < 0.5），相似配方自动替换而非重复堆积。
+  - 日志显示「已进化」而非「已习得」，配方库保持精练。
+- **[新增]** 🔌 **MCP 断线自动重连**：`call_tool()` 失败时检测连接类错误，自动 disconnect → connect 重试一次。
+  - 覆盖 closed/broken/eof/connection/transport 等异常关键词。
+- **[新增]** 📊 **WebUI 状态面板**：新增「🔧 系统状态」Tab，一键查看：
+  - 记忆统计（对话/知识/配方条数）、MCP 连接状态、Obsidian 日记天数、性能数据。
+- **[优化]** `_search_collection()` 返回结果新增 `id` 和 `metadata` 字段，支撑去重逻辑。
+
+**文件变更：**
+- 修改 `core/memory.py`（配方去重、搜索结果返回 id）。
+- 修改 `core/skills/mcp.py`（断线重连 + `_reconnect()` 方法）。
+- 修改 `webui.py`（新增状态面板 Tab）。
+
+---
+
+### v5.0.5 - MCP Obsidian FileSystem 接入 (2026-02-17) 📁
+> **背景**：借助已有 MCPClient 架构，仅加 3 行配置就接入了 Obsidian 文件系统 MCP Server。
+
+**核心升级：**
+- **[新增]** 📁 **Obsidian FileSystem MCP**：通过 `@modelcontextprotocol/server-filesystem` 接入。
+  - 14 个工具自动发现：read_file/write_file/edit_file/list_directory/search_files 等。
+  - 工具前缀 `mcp_obsidian_*`，AI 可主动读写 Obsidian 笔记。
+  - 安全沙箱：只允许访问指定的 Vault 目录。
+- **[架构]** 插拔式设计验证：新增 MCP Server 只需在 `_init_mcp()` 加几行代码。
+
+**文件变更：**
+- 修改 `core/skills/mcp.py`（`_init_mcp()` 新增 Obsidian FileSystem 注册）。
+
+---
+
+### v5.0.0 - Obsidian 成长日记 (2026-02-17) 📓
+> **背景**：让扶光的配方记忆从"黑箱数据库"变成可视化的 Obsidian Markdown 日记，
+> 方便用户浏览、搜索、分享扶光的成长轨迹。
+
+**核心升级：**
+- **[新增]** 📓 **Obsidian 实时同步**：`add_recipe()` 调用时自动将配方追加到当天日记文件。
+  - 每日一个 `.md` 文件，带 YAML front-matter（tags/date）。
+  - Markdown 格式：二级标题 + 引用块 + 元数据（时间/来源）。
+- **[新增]** 📚 **全量导出**：`export_all_recipes_to_obsidian()` 一键生成所有历史配方日记 + 索引页。
+  - 索引页 `README.md` 使用 Obsidian `[[wiki-link]]` 格式，支持图谱导航。
+- **[新增]** 🔧 **Function Calling 工具**：`export_recipes_to_obsidian`，AI 可自主触发导出。
+- **[配置]** `.env` + 两个 `config.py` 新增 `OBSIDIAN_VAULT_PATH`。
+
+**文件变更：**
+- 修改 `core/memory.py`（新增 `_sync_recipe_to_obsidian()`、`export_all_recipes_to_obsidian()`、构造函数接受 `obsidian_vault_path`）。
+- 修改 `core/skills/memory.py`（新增 `export_recipes_to_obsidian` 工具 Schema + 方法）。
+- 修改 `core/skills/__init__.py`（工具路由新增 `export_recipes_to_obsidian`）。
+- 修改 `core/skills/base.py`、`core/brain.py`（传递 `obsidian_vault_path` 参数）。
+- 修改 `config.py`、`core/config.py`、`.env`。
+
+---
+
+### v4.9.0 - MCP 协议接入 Model Context Protocol (2026-02-17) 🧩
+> **背景**：接入 Anthropic 制定的 MCP 标准协议，实现插拔式外部工具扩展架构。
+> 首个接入 GitHub MCP Server，扶光获得 26 个 GitHub 操作能力。
+
+**核心升级：**
+- **[新增]** 🧩 **MCP Client 实现**：完整的 MCP 客户端（`MCPClient` 类）。
+  - stdio JSON-RPC 通信，自动启动/管理 Node.js MCP Server 子进程。
+  - 自动发现 Server 暴露的工具列表，动态转换为 OpenAI Function Calling Schema。
+  - 异步事件循环桥接（`asyncio` + `threading`），同步 API 封装异步 MCP 调用。
+  - 输出截断保护（4000 字符上限，防止 token 爆炸）。
+- **[新增]** 🐙 **GitHub MCP Server 接入**：`@modelcontextprotocol/server-github`。
+  - 26 个工具自动注册：搜索仓库/代码/Issue、查看文件/Commit/Release、创建 Issue/PR 等。
+  - 工具命名规则：`mcp_github_{tool_name}`，自动路由到 `execute_mcp_tool()`。
+- **[架构]** 🔌 **插拔式扩展**：`_init_mcp()` 中注册新 `MCPClient` 即可接入更多 Server。
+- **[配置]** `.env` + 两个 `config.py` 新增 `GITHUB_TOKEN`。
+
+**文件变更：**
+- 重写 `core/skills/mcp.py`（从占位 → 完整 MCP Client + MCPSkills Mixin）。
+- 修改 `core/skills/base.py`（`__init__` 末尾调用 `_init_mcp()`）。
+- 修改 `core/skills/__init__.py`（`execute_tool` 新增 `mcp_` 前缀路由 + `remember_recipe`/`recall_recipe` 路由）。
+- 修改 `config.py`、`core/config.py`、`.env`。
+
+---
+
+### v4.8.0 - 配方记忆系统 Recipe Memory (2026-02-16) ⚡
+> **背景**：参考 GPT/Gemini 对记忆层级的分析，采用"务实版"方案——新增 recipes 集合。
+> 让 AI 从慢操作中自动学习，存储最佳实践，下次遇到类似场景自动召回。
+
+**核心升级：**
+- **[新增]** ⚡ **技能配方集合** `fuguang_recipes`（记忆架构：双集合 → 三集合）。
+  - `add_recipe(trigger, solution)` / `recall_recipe(query)` / `search_recipes()` API。
+  - `get_memory_context()` 配方优先路由，匹配的配方以"⚡ 最佳实践"注入 system prompt。
+- **[修改]** 🧠 `brain.py` 的 `learn_from_performance()` 教训存入 recipes 集合（原存通用记忆池）。
+- **[新增]** 🔧 `remember_recipe` + `recall_recipe` 两个 Function Calling 工具（AI 主动存取配方）。
+- **[修复]** 🔒 10 个代码质量问题（命令注入、路径穿越、except:pass、glob 性能等）。
+
+**文件变更：**
+- 修改 `core/memory.py`、`core/brain.py`、`core/skills/memory.py`、`core/nervous_system.py`。
+- 修改 `core/skills/system.py`、`core/skills/gui.py`、`core/skills/base.py`、`core/ingest.py`（安全修复）。
+
+---
 
 ### v4.2.0 - 开源能力集成 Open Source Integration (2026-02-15) 🚀
 > **背景**：为了提升 GUI 操作的准确性和中文识别速度，集成两大开源利器。

@@ -132,8 +132,12 @@ class SkillManager(
             return self.click_by_description(func_args.get("description", ""), func_args.get("double_click", False))
         elif func_name == "list_ui_elements":
             return self.list_ui_elements(func_args.get("window_title", ""))
+        elif func_name == "send_hotkey":
+            return self.send_hotkey(func_args.get("keys", []))
 
         # --- System ---
+        elif func_name == "create_file_directly":
+            return self.create_file_directly(func_args.get("file_path", ""), func_args.get("content", ""))
         elif func_name == "execute_shell":
             return self.execute_shell(func_args.get("command", ""), func_args.get("background", False))
         elif func_name == "execute_shell_command":
@@ -177,6 +181,16 @@ class SkillManager(
             return self.forget_memory(func_args.get("keyword", ""))
         elif func_name == "list_learned_files":
             return self.list_learned_files()
+        elif func_name == "remember_recipe":
+            return self.remember_recipe(func_args.get("trigger", ""), func_args.get("solution", ""))
+        elif func_name == "recall_recipe":
+            return self.recall_recipe(func_args.get("query", ""))
+        elif func_name == "export_recipes_to_obsidian":
+            return self.export_recipes_to_obsidian()
+
+        # --- MCP (外部工具服务器) ---
+        elif func_name.startswith("mcp_"):
+            return self.execute_mcp_tool(func_name, func_args)
 
         else:
             return f"未知工具: {func_name}"

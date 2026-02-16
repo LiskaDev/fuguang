@@ -54,9 +54,15 @@ class GUISkills:
             app_key = app_name.lower().strip()
             executable = app_map.get(app_key)
             if not executable:
-                executable = app_name if app_name.endswith(".exe") else f"{app_name}.exe"
-            cmd = f"{executable} {args}" if args else executable
-            subprocess.Popen(cmd, shell=True)
+                # [修复] 不在白名单中的应用，拒绝直接拼接执行，防止命令注入
+                logger.warning(f"⚠️ 未知应用: {app_name}，尝试通过 start 命令启动")
+                subprocess.Popen(["cmd", "/c", "start", "", app_name], creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                # [修复] 使用列表参数代替字符串拼接，避免 shell=True
+                cmd_list = [executable]
+                if args:
+                    cmd_list.append(args)
+                subprocess.Popen(cmd_list)
             time.sleep(1.5)
             self.mouth.speak(f"已打开 {app_name}")
             return f"✅ 已打开 {app_name}"

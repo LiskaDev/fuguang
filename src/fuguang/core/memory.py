@@ -30,15 +30,18 @@ class MemoryBank:
     # 集合名称常量
     COLLECTION_MEMORIES = "fuguang_memories"   # 对话记忆
     COLLECTION_KNOWLEDGE = "fuguang_knowledge"  # 知识库
+    COLLECTION_RECIPES = "fuguang_recipes"      # 技能配方（肌肉记忆）
     
-    def __init__(self, persist_dir: str = "data/memory_db"):
+    def __init__(self, persist_dir: str = "data/memory_db", obsidian_vault_path: str = ""):
         """
         初始化向量数据库（双集合）
         
         Args:
             persist_dir: 持久化存储目录
+            obsidian_vault_path: Obsidian Vault 根目录（为空则不同步）
         """
         self.persist_dir = persist_dir
+        self.obsidian_vault_path = obsidian_vault_path
         
         # 1. 确保目录存在
         if not os.path.exists(persist_dir):
@@ -59,16 +62,18 @@ class MemoryBank:
             logger.warning(f"⚠️ 多语言模型加载失败: {e}，使用默认嵌入")
             self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
         
-        # 4. 创建/获取两个独立集合（带损坏自动修复）
+        # 4. 创建/获取三个独立集合（带损坏自动修复）
         self.memories = self._safe_get_collection(self.COLLECTION_MEMORIES, "对话记忆：用户偏好、重要信息、历史对话")
         self.knowledge = self._safe_get_collection(self.COLLECTION_KNOWLEDGE, "知识库：PDF/Word/代码等文档内容")
+        self.recipes = self._safe_get_collection(self.COLLECTION_RECIPES, "技能配方：成功工作流、工具链、最佳实践")
         
         # 兼容性：保留 collection 属性指向记忆集合
         self.collection = self.memories
         
         mem_count = self.memories.count()
         know_count = self.knowledge.count()
-        logger.info(f"✅ [记忆] 双集合加载完成: 对话记忆 {mem_count} 条 | 知识库 {know_count} 条")
+        recipe_count = self.recipes.count()
+        logger.info(f"✅ [记忆] 三集合加载完成: 对话记忆 {mem_count} 条 | 知识库 {know_count} 条 | 技能配方 {recipe_count} 条")
 
     def _safe_get_collection(self, name: str, description: str):
         """安全获取集合，HNSW索引损坏时自动重建"""
@@ -173,6 +178,12 @@ class MemoryBank:
         """
         return self._search_collection(self.knowledge, query, n_results, threshold)
     
+    def search_recipes(self, query: str, n_results: int = 3, threshold: float = 1.2) -> list:
+        """
+        语义检索技能配方
+        """
+        return self._search_collection(self.recipes, query, n_results, threshold)
+    
     def search_all(self, query: str, n_results: int = 5, threshold: float = 1.2) -> list:
         """
         同时检索对话记忆和知识库，返回合并结果（按相似度排序）
@@ -185,7 +196,233 @@ class MemoryBank:
         combined.sort(key=lambda x: x['distance'])
         
         return combined[:n_results]
+
+    # ========================
+    # 技能配方 (Recipes) — 肌肉记忆
+    # ========================
     
+    def add_recipe(self, trigger: str, solution: str, metadata: dict = None) -> str:
+        """
+        存入一条技能配方（最佳实践/工作流经验）
+        带去重机制：如果已存在高度相似的配方，会替换旧版而非重复追加。
+        
+        Args:
+            trigger: 触发场景描述（用户会怎么说）
+            solution: 最佳方案描述（应该怎么做）
+            metadata: 附加信息（来源、工具链等）
+            
+        Returns:
+            确认消息
+        """
+        if not trigger or not solution:
+            return "❌ 触发场景和解决方案不能为空"
+        
+        if metadata is None:
+            metadata = {}
+        
+        # 将触发词和方案合并为文档（方便向量检索）
+        document = f"当用户说'{trigger}'时，{solution}"
+        
+        # === 去重检测 ===
+        # 查找是否已有高度相似的配方（距离 < 0.5 视为"同一类经验"）
+        DEDUP_THRESHOLD = 0.5
+        existing = self.search_recipes(trigger, n_results=1, threshold=DEDUP_THRESHOLD)
+        
+        replaced_id = None
+        if existing:
+            old = existing[0]
+            old_id = old.get('id', '')
+            old_trigger = old.get('metadata', {}).get('trigger', '')
+            logger.info(f"🔄 [配方] 发现相似配方(距离={old['distance']:.3f}): '{old_trigger[:30]}' → 用新版替换")
+            # 删除旧配方
+            try:
+                self.recipes.delete(ids=[old_id])
+                replaced_id = old_id
+            except Exception as e:
+                logger.warning(f"⚠️ [配方] 删除旧配方失败: {e}")
+        
+        metadata.update({
+            "trigger": trigger[:200],
+            "solution": solution[:500],
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source": metadata.get("source", "auto_learn")
+        })
+        
+        recipe_id = f"recipe_{uuid.uuid4().hex[:12]}"
+        
+        self.recipes.add(
+            documents=[document],
+            metadatas=[metadata],
+            ids=[recipe_id]
+        )
+        
+        if replaced_id:
+            logger.info(f"🔄 [配方] 已进化: '{trigger[:30]}' (替换了 {replaced_id[:20]})")
+            action = "进化"
+        else:
+            logger.info(f"🍳 [配方] 已习得: '{trigger[:30]}' → '{solution[:50]}'")
+            action = "习得"
+        
+        # 同步到 Obsidian 成长日记
+        self._sync_recipe_to_obsidian(trigger, solution, metadata)
+        
+        return f"✅ 已{action}技能配方: {trigger}"
+    
+    def recall_recipe(self, query: str, n_results: int = 2) -> str:
+        """
+        回忆相关的技能配方，返回格式化文本（直接注入 Prompt）
+        
+        Args:
+            query: 当前任务/用户输入
+            n_results: 最多返回几条
+            
+        Returns:
+            格式化的配方提示文本，无匹配时返回空字符串
+        """
+        results = self.search_recipes(query, n_results=n_results, threshold=1.0)
+        
+        if not results:
+            return ""
+        
+        lines = []
+        for r in results:
+            lines.append(f"- {r['content']}")
+        
+        return "\n".join(lines)
+    
+    # ========================
+    # Obsidian 成长日记同步
+    # ========================
+    
+    def _get_obsidian_diary_dir(self) -> Optional[str]:
+        """获取 Obsidian 成长日记目录，不存在则创建"""
+        if not self.obsidian_vault_path:
+            return None
+        diary_dir = os.path.join(self.obsidian_vault_path, "扶光成长日记")
+        if not os.path.exists(diary_dir):
+            try:
+                os.makedirs(diary_dir)
+                logger.info(f"📓 [Obsidian] 已创建成长日记目录: {diary_dir}")
+            except OSError as e:
+                logger.error(f"❌ [Obsidian] 创建目录失败: {e}")
+                return None
+        return diary_dir
+
+    def _sync_recipe_to_obsidian(self, trigger: str, solution: str, metadata: dict):
+        """将单条配方追加到当天的 Obsidian 日记"""
+        diary_dir = self._get_obsidian_diary_dir()
+        if not diary_dir:
+            return
+        
+        today = datetime.datetime.now()
+        date_str = today.strftime("%Y-%m-%d")
+        time_str = today.strftime("%H:%M:%S")
+        filepath = os.path.join(diary_dir, f"{date_str}.md")
+        
+        source = metadata.get("source", "unknown") if metadata else "unknown"
+        
+        # 构建 Markdown 条目
+        entry = (
+            f"\n## ⚡ {trigger}\n\n"
+            f"- **时间**: {time_str}\n"
+            f"- **来源**: `{source}`\n\n"
+            f"> {solution}\n\n"
+            f"---\n"
+        )
+        
+        try:
+            is_new = not os.path.exists(filepath)
+            with open(filepath, "a", encoding="utf-8") as f:
+                if is_new:
+                    # 新文件加 YAML front-matter + 标题
+                    f.write(
+                        f"---\ntags:\n  - 扶光\n  - 配方记忆\ndate: {date_str}\n---\n\n"
+                        f"# 🌟 扶光成长日记 — {date_str}\n\n"
+                        f"> 今天扶光学到的新技能和最佳实践。\n\n---\n"
+                    )
+                f.write(entry)
+            logger.info(f"📓 [Obsidian] 已同步配方到 {date_str}.md")
+        except Exception as e:
+            logger.error(f"❌ [Obsidian] 写入失败: {e}")
+
+    def export_all_recipes_to_obsidian(self) -> str:
+        """
+        将所有配方一次性导出到 Obsidian，生成索引页 + 按日期归档。
+        用于首次开启 Obsidian 同步时补全历史数据。
+        
+        Returns:
+            导出结果消息
+        """
+        diary_dir = self._get_obsidian_diary_dir()
+        if not diary_dir:
+            return "❌ 未配置 Obsidian Vault 路径"
+        
+        recipe_count = self.recipes.count()
+        if recipe_count == 0:
+            return "📭 配方库是空的，没有需要导出的内容"
+        
+        # 获取所有配方
+        results = self.recipes.get(limit=recipe_count)
+        
+        # 按日期分组
+        date_groups: Dict[str, list] = {}
+        for i in range(len(results['ids'])):
+            meta = results['metadatas'][i]
+            ts = meta.get('timestamp', '')
+            date_key = ts[:10] if len(ts) >= 10 else "未知日期"
+            
+            if date_key not in date_groups:
+                date_groups[date_key] = []
+            date_groups[date_key].append({
+                "trigger": meta.get("trigger", ""),
+                "solution": meta.get("solution", ""),
+                "source": meta.get("source", "unknown"),
+                "time": ts[11:] if len(ts) > 11 else ""
+            })
+        
+        # 写入每日文件
+        exported = 0
+        for date_str, recipes in sorted(date_groups.items()):
+            filepath = os.path.join(diary_dir, f"{date_str}.md")
+            try:
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(
+                        f"---\ntags:\n  - 扶光\n  - 配方记忆\ndate: {date_str}\n---\n\n"
+                        f"# 🌟 扶光成长日记 — {date_str}\n\n"
+                        f"> 今天扶光学到的新技能和最佳实践。\n\n---\n"
+                    )
+                    for r in recipes:
+                        f.write(
+                            f"\n## ⚡ {r['trigger']}\n\n"
+                            f"- **时间**: {r['time'] or '未知'}\n"
+                            f"- **来源**: `{r['source']}`\n\n"
+                            f"> {r['solution']}\n\n"
+                            f"---\n"
+                        )
+                exported += len(recipes)
+            except Exception as e:
+                logger.error(f"❌ [Obsidian] 导出 {date_str}.md 失败: {e}")
+        
+        # 生成索引页
+        index_path = os.path.join(diary_dir, "README.md")
+        try:
+            with open(index_path, "w", encoding="utf-8") as f:
+                f.write(
+                    "---\ntags:\n  - 扶光\n  - 配方记忆\n---\n\n"
+                    "# 📚 扶光成长日记\n\n"
+                    "> 扶光通过实践自动习得的技能配方，按日期归档。\n\n"
+                )
+                for date_str in sorted(date_groups.keys(), reverse=True):
+                    count = len(date_groups[date_str])
+                    f.write(f"- [[{date_str}]] — {count} 条配方\n")
+                f.write(f"\n---\n\n*共 {exported} 条配方，{len(date_groups)} 天记录*\n")
+        except Exception as e:
+            logger.error(f"❌ [Obsidian] 索引页写入失败: {e}")
+        
+        msg = f"✅ 已导出 {exported} 条配方到 Obsidian ({len(date_groups)} 天)"
+        logger.info(f"📓 [Obsidian] {msg}")
+        return msg
+
     def _search_collection(self, collection, query: str, n_results: int, threshold: float) -> list:
         """通用检索方法"""
         if not query or not query.strip():
@@ -202,13 +439,16 @@ class MemoryBank:
         documents = results.get('documents', [[]])[0]
         distances = results.get('distances', [[]])[0]
         metadatas = results.get('metadatas', [[]])[0]
+        ids = results.get('ids', [[]])[0]
         
         valid_results = []
         for i in range(len(documents)):
             if distances[i] < threshold:
                 valid_results.append({
+                    "id": ids[i],
                     "content": documents[i],
                     "distance": round(distances[i], 3),
+                    "metadata": metadatas[i],
                     "category": metadatas[i].get("category", "unknown"),
                     "timestamp": metadatas[i].get("timestamp", "unknown"),
                     "source": metadatas[i].get("source", "unknown")
@@ -219,24 +459,31 @@ class MemoryBank:
     def get_memory_context(self, query: str, n_results: int = 5) -> str:
         """
         获取格式化的记忆上下文 (用于注入 Prompt)
-        同时搜索对话记忆和知识库
+        智能路由：同时搜索对话记忆、知识库、技能配方
         """
         results = self.search_all(query, n_results)
         
-        if not results:
-            return ""
-            
-        memory_lines = []
-        for mem in results:
-            memory_lines.append(f"- [{mem['category']}] {mem['content']}")
-            
-        memory_block = "\n".join(memory_lines)
+        # 同时检索技能配方（独立搜索，不混入通用结果排序）
+        recipe_text = self.recall_recipe(query, n_results=2)
         
-        return f"""
-【相关历史记忆】:
-{memory_block}
-(请参考这些记忆来辅助回答，但不要机械复述)
-"""
+        if not results and not recipe_text:
+            return ""
+        
+        sections = []
+        
+        # 技能配方优先展示（最高优先级，影响 AI 工具选择）
+        if recipe_text:
+            sections.append(f"【⚡ 最佳实践（务必优先遵循）】:\n{recipe_text}")
+        
+        # 通用记忆/知识
+        if results:
+            memory_lines = []
+            for mem in results:
+                memory_lines.append(f"- [{mem['category']}] {mem['content']}")
+            sections.append(f"【相关历史记忆】:\n" + "\n".join(memory_lines))
+        
+        context = "\n\n".join(sections)
+        return f"\n{context}\n(请参考这些记忆来辅助回答，优先遵循最佳实践)\n"
 
     # ========================
     # 统计与管理
@@ -244,10 +491,14 @@ class MemoryBank:
 
     def get_stats(self) -> dict:
         """获取记忆库统计信息"""
+        mem = self.memories.count()
+        know = self.knowledge.count()
+        rec = self.recipes.count()
         return {
-            "memories_count": self.memories.count(),
-            "knowledge_count": self.knowledge.count(),
-            "total": self.memories.count() + self.knowledge.count()
+            "memories_count": mem,
+            "knowledge_count": know,
+            "recipes_count": rec,
+            "total": mem + know + rec
         }
 
     def list_all_memories(self, limit: int = 50) -> list:
