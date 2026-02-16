@@ -3,6 +3,7 @@
 
 import json
 import time
+import os
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.request import CommonRequest
 try:
@@ -14,10 +15,13 @@ except ImportError:
 # =====================================================
 # 配置
 # =====================================================
-ACCESS_KEY_ID = "***REDACTED_ALI_KEY_ID***"
-ACCESS_KEY_SECRET = "***REDACTED_ALI_KEY_SECRET***"
-APPKEY = "***REDACTED_ALI_APPKEY***"
-REGION_ID = "cn-shanghai"
+ACCESS_KEY_ID = os.getenv("ALI_ACCESS_KEY_ID")
+ACCESS_KEY_SECRET = os.getenv("ALI_ACCESS_KEY_SECRET")
+APPKEY = os.getenv("ALI_APPKEY")
+REGION_ID = os.getenv("ALI_REGION_ID", "cn-shanghai")
+
+if not ACCESS_KEY_ID or not ACCESS_KEY_SECRET or not APPKEY:
+    raise RuntimeError("Missing Aliyun credentials. Set ALI_ACCESS_KEY_ID, ALI_ACCESS_KEY_SECRET, ALI_APPKEY.")
 
 # =====================================================
 # Token 缓存（避免重复获取）
