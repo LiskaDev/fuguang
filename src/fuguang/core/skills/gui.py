@@ -11,9 +11,10 @@ logger = logging.getLogger("fuguang.skills")
 
 # ---- Schema 定义 ----
 _GUI_TOOLS_SCHEMA = [
+    {"type":"function","function":{"name":"send_hotkey","description":"发送键盘快捷键，速度是点击菜单的50倍。\n\n⚡ 常用快捷键（必须优先使用，永远不要点菜单）：\n- 保存: ['ctrl', 's'] (0.1秒 vs 点菜单5秒)\n- 另存为: ['ctrl', 'shift', 's']\n- 复制: ['ctrl', 'c']\n- 粘贴: ['ctrl', 'v']\n- 全选: ['ctrl', 'a']\n- 撤销: ['ctrl', 'z']\n- 关闭窗口: ['alt', 'f4']\n- 查找: ['ctrl', 'f']\n\n❌ 永远禁止的行为：\n- 用click_screen_text点击'文件'菜单\n- 用click_screen_text点击'保存'按钮\n- 用click_screen_text点击'编辑'菜单\n\n💡 原则：快捷键0.1秒，点菜单5秒。你会选哪个？","parameters":{"type":"object","properties":{"keys":{"type":"array","items":{"type":"string"},"description":"按键列表，如['ctrl', 's']表示Ctrl+S。常用键：ctrl, shift, alt, enter, esc, tab, space, win"}},"required":["keys"]}}},
     {"type":"function","function":{"name":"open_application","description":"【应用启动】打开常用应用程序（记事本、浏览器、计算器等）。使用场景: 用户说\"打开记事本\"等。","parameters":{"type":"object","properties":{"app_name":{"type":"string","description":"应用名称"},"args":{"type":"string","description":"可选参数"}},"required":["app_name"]}}},
     {"type":"function","function":{"name":"click_screen_text","description":"【GUI控制】智能寻找屏幕上的指定文字并模拟鼠标点击。优先用 Windows UIA 控件树精确匹配，失败后用 OCR 识别文字坐标。⚠️ 重要：操作特定窗口时必须传 window_title 参数（如'记事本'），否则可能点到其他窗口！","parameters":{"type":"object","properties":{"target_text":{"type":"string","description":"要点击的文字内容"},"double_click":{"type":"boolean","description":"是否双击"},"window_title":{"type":"string","description":"【强烈建议】目标窗口标题关键词（如'记事本'、'Chrome'），防止点错窗口"}},"required":["target_text"]}}},
-    {"type":"function","function":{"name":"type_text","description":"【键盘输入】在当前光标位置输入文字。需要先点击输入框再调用此工具。","parameters":{"type":"object","properties":{"text":{"type":"string","description":"要输入的内容"},"press_enter":{"type":"boolean","description":"输入完是否按回车（默认True）"}},"required":["text"]}}},
+    {"type":"function","function":{"name":"type_text","description":"输入文字（自动选择最快方式）。\n\n⚡ 智能策略（工具自动判断）：\n- 长文本（>10字符）: 剪贴板粘贴（瞬间完成）\n- 短文本（≤10字符）: 逐字输入\n- 密码: 设置use_clipboard=False（安全）\n\n💡 你不需要担心速度，工具会自动优化。","parameters":{"type":"object","properties":{"text":{"type":"string","description":"要输入的内容"},"use_clipboard":{"type":"boolean","description":"是否允许用剪贴板（默认true，输入密码时用false）","default":true},"press_enter":{"type":"boolean","description":"输入完是否按回车（默认True）"}},"required":["text"]}}},
     {"type":"function","function":{"name":"click_by_description","description":"【智能视觉点击】通过自然语言描述(英文)来寻找并点击屏幕上的UI元素（图标、按钮、图片等）。description参数必须用英文！","parameters":{"type":"object","properties":{"description":{"type":"string","description":"物体的英文描述（如 'red button', 'chrome icon'）"},"double_click":{"type":"boolean","description":"是否双击"}},"required":["description"]}}},
     {"type":"function","function":{"name":"list_ui_elements","description":"【UI探测器】列出指定窗口的所有可交互控件（按钮、菜单、输入框等）。用于了解界面结构，辅助精准点击。","parameters":{"type":"object","properties":{"window_title":{"type":"string","description":"窗口标题关键词（如'记事本'、'Chrome'）"}},"required":["window_title"]}}},
 ]
@@ -22,6 +23,28 @@ _GUI_TOOLS_SCHEMA = [
 class GUISkills:
     """桌面 GUI 控制 Mixin"""
     _GUI_TOOLS = _GUI_TOOLS_SCHEMA
+
+    def send_hotkey(self, keys: list) -> str:
+        """
+        发送键盘快捷键，速度是点菜单的50倍
+        
+        Args:
+            keys: 按键组合，如 ["ctrl", "s"] 表示 Ctrl+S
+        """
+        if not self.config.ENABLE_GUI_CONTROL:
+            return "❌ GUI 控制功能未启用，请在配置中开启 ENABLE_GUI_CONTROL。"
+        
+        logger.info(f"⌨️ [快捷键] 正在发送: {'+'.join(keys)}")
+        self.mouth.speak("好~")
+        
+        try:
+            # 将列表转换为参数
+            pyautogui.hotkey(*keys)
+            keys_str = "+".join(keys)
+            return f"✅ 已发送快捷键: {keys_str}"
+        except Exception as e:
+            logger.error(f"快捷键发送失败: {e}")
+            return f"❌ 快捷键失败: {str(e)}"
 
     def open_application(self, app_name: str, args: str = None) -> str:
         logger.info(f"🚀 [GUI] 正在打开应用: {app_name}")
@@ -374,16 +397,50 @@ class GUISkills:
     # ⌨️ 键盘输入
     # ========================
 
-    def type_text(self, text: str, press_enter: bool = True) -> str:
-        if not self.config.ENABLE_GUI_CONTROL: return "❌ GUI 控制功能未启用。"
+    def type_text(self, text: str, use_clipboard: bool = True, press_enter: bool = True) -> str:
+        """
+        输入文字（自动选择最快方式）
+        
+        Args:
+            text: 要输入的内容
+            use_clipboard: 是否用剪贴板粘贴（默认True，长文本自动优化）
+            press_enter: 是否在输入后按回车
+        """
+        if not self.config.ENABLE_GUI_CONTROL:
+            return "❌ GUI 控制功能未启用。"
+        
         logger.info(f"⌨️ [GUI] 正在输入文字: {text[:20]}...")
         self.mouth.speak("正在输入...")
+        
         try:
-            import pyperclip; pyperclip.copy(text); pyautogui.hotkey('ctrl', 'v')
-            if press_enter: time.sleep(0.1); pyautogui.press('enter')
+            # 长文本用粘贴（快100倍）
+            if use_clipboard and len(text) > 10:
+                import pyperclip
+                pyperclip.copy(text)
+                time.sleep(0.1)
+                pyautogui.hotkey('ctrl', 'v')
+                result = f"✅ 已粘贴: {len(text)}字符"
+            else:
+                # 短文本或密码，逐字输入
+                for char in text:
+                    pyautogui.write(char if char.isascii() else '', interval=0.05)
+                    if not char.isascii():
+                        # 中文字符用剪贴板
+                        import pyperclip
+                        pyperclip.copy(char)
+                        pyautogui.hotkey('ctrl', 'v')
+                result = f"✅ 已输入: {text[:20]}..."
+            
+            if press_enter:
+                time.sleep(0.1)
+                pyautogui.press('enter')
+                result += " (已回车)"
+            
             action = "已发送" if press_enter else "已输入"
-            self.mouth.speak(f"{action}"); return f"✅ {action}: {text}"
+            self.mouth.speak(f"{action}")
+            return result
         except Exception as e:
+            logger.error(f"输入失败: {e}")
             return f"❌ 输入失败: {str(e)}"
 
     # ========================

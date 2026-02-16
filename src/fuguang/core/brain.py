@@ -193,7 +193,7 @@ class Brain:
         messages.append({"role": "user", "content": user_input})
         
         # [调整] 增加思考轮次上限，以支持复杂的连续任务 (如: 打开网页 -> 截图 -> 分析 -> 总结)
-        max_iterations = 6
+        max_iterations = 15
         iteration = 0
         ai_reply = ""
         
