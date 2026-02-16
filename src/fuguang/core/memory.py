@@ -460,11 +460,19 @@ class MemoryBank:
         """
         获取格式化的记忆上下文 (用于注入 Prompt)
         智能路由：同时搜索对话记忆、知识库、技能配方
+        v5.3: 增加重要度过滤，低价值记忆不污染上下文
         """
         results = self.search_all(query, n_results)
         
         # 同时检索技能配方（独立搜索，不混入通用结果排序）
         recipe_text = self.recall_recipe(query, n_results=2)
+        
+        # 过滤低重要度记忆（importance < 2 的琐碎信息不注入）
+        if results:
+            results = [
+                mem for mem in results
+                if mem.get('metadata', {}).get('importance', 3) >= 2
+            ]
         
         if not results and not recipe_text:
             return ""
@@ -475,15 +483,17 @@ class MemoryBank:
         if recipe_text:
             sections.append(f"【⚡ 最佳实践（务必优先遵循）】:\n{recipe_text}")
         
-        # 通用记忆/知识
+        # 通用记忆/知识（标注重要度，帮助 AI 判断权重）
         if results:
             memory_lines = []
             for mem in results:
-                memory_lines.append(f"- [{mem['category']}] {mem['content']}")
+                imp = mem.get('metadata', {}).get('importance', '')
+                imp_tag = f"★{imp}" if imp else ""
+                memory_lines.append(f"- [{mem['category']}{imp_tag}] {mem['content']}")
             sections.append(f"【相关历史记忆】:\n" + "\n".join(memory_lines))
         
         context = "\n\n".join(sections)
-        return f"\n{context}\n(请参考这些记忆来辅助回答，优先遵循最佳实践)\n"
+        return f"\n{context}\n(你记得这些！自然地引用，比如'对了你之前说过…'、'我记得你…'，不要生硬地列出来)\n"
 
     # ========================
     # 统计与管理

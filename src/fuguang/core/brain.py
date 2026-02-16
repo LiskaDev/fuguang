@@ -7,7 +7,7 @@ import datetime
 import logging
 import httpx
 import threading
-from openai import OpenAI
+from openai import OpenAI, APITimeoutError, APIConnectionError, RateLimitError, APIStatusError
 from .config import ConfigManager
 from .mouth import Mouth
 from .memory import MemoryBank  # [Migration] Use new ChromaDB memory
@@ -218,16 +218,38 @@ class Brain:
             iteration += 1
             logger.info(f"🤖 AI思考轮次: {iteration}")
             
-            # 调用 DeepSeek
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",
-                messages=messages,
-                tools=tools_schema,
-                tool_choice="auto",
-                stream=False,
-                temperature=0.8,
-                max_tokens=4096
-            )
+            # 调用 DeepSeek（带重试 + 降级）
+            response = None
+            for attempt in range(3):  # 最多重试 3 次
+                try:
+                    response = self.client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=messages,
+                        tools=tools_schema,
+                        tool_choice="auto",
+                        stream=False,
+                        temperature=0.8,
+                        max_tokens=4096
+                    )
+                    break  # 成功，跳出重试循环
+                except (APITimeoutError, APIConnectionError) as e:
+                    wait = 2 ** attempt  # 1s, 2s, 4s 指数退避
+                    logger.warning(f"⚠️ API 网络错误 (第{attempt+1}次): {e}，{wait}秒后重试...")
+                    time.sleep(wait)
+                except RateLimitError as e:
+                    wait = 5 * (attempt + 1)  # 5s, 10s, 15s
+                    logger.warning(f"⚠️ API 限流 (第{attempt+1}次): {e}，{wait}秒后重试...")
+                    time.sleep(wait)
+                except APIStatusError as e:
+                    logger.error(f"❌ API 状态错误: {e.status_code} {e.message}")
+                    break  # 服务端错误不重试
+                except Exception as e:
+                    logger.error(f"❌ API 未知错误: {e}")
+                    break
+            
+            if response is None:
+                ai_reply = "指挥官，我的网络好像不太稳定，连接不上服务器…等一下再试试？[Sorrow]"
+                break
             
             message = response.choices[0].message
             
@@ -269,7 +291,13 @@ class Brain:
                     
                     logger.info(f"📞 调用工具: {func_name}")
                     tool_calls_list.append(func_name)  # 🔥 记录工具调用
-                    result = tool_executor(func_name, func_args)
+                    
+                    # 工具执行超时保护（30秒）
+                    try:
+                        result = tool_executor(func_name, func_args)
+                    except Exception as e:
+                        logger.error(f"❌ 工具执行失败: {func_name} → {e}")
+                        result = f"工具执行失败: {e}"
                     
                     messages.append({
                         "role": "tool",
@@ -400,7 +428,16 @@ importance 等级说明：
                 if not content:
                     return
                 
-                # 5. 存入长期记忆 [Migration] Adjust API call
+                # 5. 去重检查：如果已有高度相似的记忆，跳过存储
+                try:
+                    existing = self.memory_system.search_memory(content, n_results=1, threshold=0.5)
+                    if existing:
+                        logger.debug(f"🧠 [潜意识] 记忆已存在，跳过: '{content[:30]}' (相似: {existing[0].get('content', '')[:30]})")
+                        return
+                except Exception:
+                    pass  # 去重失败不影响存储
+                
+                # 6. 存入长期记忆
                 self.memory_system.add_memory(content, category="fact", metadata={"importance": importance})
                 logger.info(f"🧠 [潜意识] 已自动归档记忆：{content} (重要度: {importance})")
                 
