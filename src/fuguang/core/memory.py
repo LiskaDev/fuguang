@@ -252,7 +252,15 @@ class MemoryBank:
             old_id = old.get('id', '')
             old_trigger = old.get('metadata', {}).get('trigger', '')
             logger.info(f"🔄 [配方] 发现相似配方(距离={old['distance']:.3f}): '{old_trigger[:30]}' → 用新版替换")
-            # 删除旧配方
+            # 删除旧配方 (增加保护机制)
+            old_source = old.get('metadata', {}).get('source', '')
+            old_importance = old.get('metadata', {}).get('importance', 0)
+            
+            # 如果旧配方是人工手动修复的，或者是高权重的，禁止被自动学习覆盖
+            if (old_source == 'manual_fix' or old_importance >= 5) and metadata.get('source') == 'auto_learn':
+                logger.warning(f"🛡️ [配方] 拒绝覆盖: 现有配方是人工/高权重 ({old_source})，新配方是自动学习")
+                return f"⚠️ 新配方被忽略，因为存在更高优先级的旧配方 ({old_source})"
+            
             try:
                 self.recipes.delete(ids=[old_id])
                 replaced_id = old_id
