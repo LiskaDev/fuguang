@@ -1,16 +1,23 @@
-# memory.py - 向量数据库双集合记忆系统 (海马体 v2.0)
+# memory.py - 向量数据库三集合记忆系统 (海马体 v2.1)
 """
 基于 ChromaDB 的 RAG (检索增强生成) 记忆系统
 
+v2.1 修复：
+- [BUG FIX] 去重逻辑从字符集合改为 difflib 序列相似度，防止误删不同配方
+- [BUG FIX] recall_recipe 阈值从 1.0 改为 1.2，修复配方召回率过低问题
+- [BUG FIX] add_recipe 元数据新增 success_count/fail_count 追踪配方有效性
+- [BUG FIX] get_memory_context 修复 recipes importance 过滤失效问题
+
 v2.0 新特性：
-- 分离集合：对话记忆 vs 知识库
+- 分离集合：对话记忆 vs 知识库 vs 技能配方
 - 独立管理：可以清空知识库而不影响对话记忆
-- 联合检索：RAG 时同时搜索两个集合
+- 联合检索：RAG 时同时搜索三个集合
 
 存储位置：[项目目录]/data/memory_db/
     ├── chroma.sqlite3          # ChromaDB 主数据库
     ├── [collection_uuid]/      # fuguang_memories (对话记忆)
-    └── [collection_uuid]/      # fuguang_knowledge (知识库)
+    ├── [collection_uuid]/      # fuguang_knowledge (知识库)
+    └── [collection_uuid]/      # fuguang_recipes (技能配方)
 """
 
 import chromadb
@@ -19,13 +26,14 @@ import os
 import uuid
 import datetime
 import logging
+import difflib  # v2.1 新增：用于配方去重的序列相似度计算
 from typing import Optional, List, Dict
 
 logger = logging.getLogger("Fuguang")
 
 
 class MemoryBank:
-    """扶光的海马体 v2.0 - 双集合长期记忆管理器"""
+    """扶光的海马体 v2.1 - 三集合长期记忆管理器（含配方去重修复）"""
     
     # 集合名称常量
     COLLECTION_MEMORIES = "fuguang_memories"   # 对话记忆
@@ -236,13 +244,22 @@ class MemoryBank:
             # 命中了，再验证 solution 是否足够相似（防止 trigger 相似但教训不同）
             old_solution = doc_match[0].get('metadata', {}).get('solution', '')
             if old_solution:
-                old_chars = set(old_solution)
-                new_chars = set(solution)
-                overlap = len(old_chars & new_chars) / max(len(old_chars | new_chars), 1)
-                if overlap > 0.4:  # 40% 字符重叠 = 同一教训
+                # v2.1 修复：从字符集合改为 difflib 序列相似度
+                # 原因：字符集合只看有哪些字符，不管顺序和结构
+                # 例如 "用 create_file 创建文件" 和 "用 run_code 执行代码"
+                # 字符集合重叠度可能超过 40%（都含'用','_'等字符）
+                # 导致完全不同的配方被误判为"同一条"并删除！
+                # difflib 按序列匹配，能更准确反映内容差异
+                similarity = difflib.SequenceMatcher(
+                    None,
+                    old_solution[:500],   # 对齐元数据截断长度
+                    solution[:500]
+                ).ratio()
+                if similarity > 0.6:  # 60% 序列相似 = 同一教训
                     existing = doc_match
+                    logger.debug(f"🔄 [配方] solution 高度相似(相似度={similarity:.2f})，判定为同一教训")
                 else:
-                    logger.debug(f"🔄 [配方] 整体相似但 solution 不同(重叠={overlap:.2f})，保留两条")
+                    logger.debug(f"🔄 [配方] 整体相似但 solution 不同(相似度={similarity:.2f})，保留两条")
             else:
                 existing = doc_match  # 旧配方没有 solution 字段，直接替换
         
@@ -271,7 +288,13 @@ class MemoryBank:
             "trigger": trigger[:200],
             "solution": solution[:500],
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source": metadata.get("source", "auto_learn")
+            "source": metadata.get("source", "auto_learn"),
+            # v2.1 新增：成功率追踪字段
+            # success_count 增加：调用 mark_recipe_result(recipe_id, success=True)
+            # fail_count 增加：调用 mark_recipe_result(recipe_id, success=False)
+            # 可用于识别"反复学但没用的配方" → 说明配方本身有问题
+            "success_count": metadata.get("success_count", 1),
+            "fail_count": metadata.get("fail_count", 0),
         })
         
         recipe_id = f"recipe_{uuid.uuid4().hex[:12]}"
@@ -305,7 +328,10 @@ class MemoryBank:
         Returns:
             格式化的配方提示文本，无匹配时返回空字符串
         """
-        results = self.search_recipes(query, n_results=n_results, threshold=1.0)
+        # v2.1 修复：阈值从 1.0 改为 1.2，与其他检索方法保持一致
+        # 原来 1.0 太严格，导致明明存了相关配方却召回不到
+        # 症状：AI 反复重复同样的错误，像没学过一样
+        results = self.search_recipes(query, n_results=n_results, threshold=1.2)
         
         if not results:
             return ""
@@ -316,6 +342,63 @@ class MemoryBank:
         
         return "\n".join(lines)
     
+    def mark_recipe_result(self, recipe_id: str, success: bool) -> str:
+        """
+        v2.1 新增：标记配方的执行结果，更新成功/失败计数
+        
+        用途：让系统识别"反复学但没用的配方" → 说明配方本身有问题需要修正
+        
+        Args:
+            recipe_id: 配方 ID（从 search_recipes 结果的 id 字段获取）
+            success: True = 执行成功，False = 执行失败
+            
+        Returns:
+            更新结果消息
+            
+        使用示例（在 brain.py 工具调用后）：
+            if 配方被应用 and 任务成功:
+                memory.mark_recipe_result(recipe_id, success=True)
+            elif 配方被应用 and 任务失败:
+                memory.mark_recipe_result(recipe_id, success=False)
+        """
+        try:
+            result = self.recipes.get(ids=[recipe_id])
+            if not result['ids']:
+                return f"❌ 找不到配方 {recipe_id[:16]}"
+            
+            meta = result['metadatas'][0]
+            success_count = meta.get('success_count', 0)
+            fail_count = meta.get('fail_count', 0)
+            
+            if success:
+                success_count += 1
+            else:
+                fail_count += 1
+            
+            meta['success_count'] = success_count
+            meta['fail_count'] = fail_count
+            
+            self.recipes.update(ids=[recipe_id], metadatas=[meta])
+            
+            total = success_count + fail_count
+            rate = success_count / total * 100
+            status = "✅" if success else "❌"
+            
+            logger.info(f"{status} [配方] 结果已记录: {recipe_id[:16]} → 成功率 {rate:.0f}% ({success_count}/{total})")
+            
+            # 如果失败率超过 60%，发出警告（配方可能需要修正）
+            if total >= 3 and rate < 40:
+                logger.warning(
+                    f"⚠️ [配方] 低效配方警告: {recipe_id[:16]} 成功率仅 {rate:.0f}%，"
+                    f"建议重新学习或手动修正"
+                )
+            
+            return f"{'✅ 成功' if success else '❌ 失败'} 已记录，当前成功率: {rate:.0f}% ({success_count}/{total})"
+            
+        except Exception as e:
+            logger.error(f"❌ [配方] 更新结果失败: {e}")
+            return f"❌ 更新失败: {str(e)}"
+
     # ========================
     # Obsidian 成长日记同步
     # ========================
@@ -486,12 +569,14 @@ class MemoryBank:
         """
         获取格式化的记忆上下文 (用于注入 Prompt)
         智能路由：同时搜索对话记忆、知识库、技能配方
+        v2.1 修复：recipes 独立走结构化检索，importance 过滤真正生效
         v5.3: 增加重要度过滤，低价值记忆不污染上下文
         """
         results = self.search_all(query, n_results)
         
-        # 同时检索技能配方（独立搜索，不混入通用结果排序）
-        recipe_text = self.recall_recipe(query, n_results=2)
+        # v2.1 修复：改用结构化检索 recipes（而非只取格式化文本）
+        # 原来 recall_recipe 只返回字符串，importance 过滤逻辑完全无效
+        raw_recipes = self.search_recipes(query, n_results=2, threshold=1.2)
         
         # 过滤低重要度记忆（importance < 2 的琐碎信息不注入）
         if results:
@@ -500,14 +585,30 @@ class MemoryBank:
                 if mem.get('metadata', {}).get('importance', 3) >= 2
             ]
         
-        if not results and not recipe_text:
+        # 同步过滤低重要度配方（现在真的生效了！）
+        if raw_recipes:
+            raw_recipes = [
+                r for r in raw_recipes
+                if r.get('metadata', {}).get('importance', 3) >= 2
+            ]
+        
+        if not results and not raw_recipes:
             return ""
         
         sections = []
         
         # 技能配方优先展示（最高优先级，影响 AI 工具选择）
-        if recipe_text:
-            sections.append(f"【⚡ 最佳实践（务必优先遵循）】:\n{recipe_text}")
+        # v2.1 新增：显示成功率，帮助 AI 判断配方可信度
+        if raw_recipes:
+            recipe_lines = []
+            for r in raw_recipes:
+                meta = r.get('metadata', {})
+                success = meta.get('success_count', 1)
+                fail = meta.get('fail_count', 0)
+                total = success + fail
+                rate = f"✅{success}/{total}" if total > 1 else ""
+                recipe_lines.append(f"- {r['content']} {rate}".strip())
+            sections.append(f"【⚡ 最佳实践（务必优先遵循）】:\n" + "\n".join(recipe_lines))
         
         # 通用记忆/知识（标注重要度，帮助 AI 判断权重）
         if results:

@@ -1,4 +1,3 @@
-
 import json
 import os
 import sys
@@ -49,6 +48,9 @@ class Brain:
         # 🔥 性能监控系统
         self.performance_log = []  # 记录每次任务的性能数据
         self.system_hints = []  # 存储给AI的系统提示（如性能警告）
+        
+        # v2.1 新增：启动时预埋关键配方（importance=5，不会被自动学习覆盖）
+        self._ensure_critical_recipes()
 
     def load_memory(self) -> dict:
         """加载短期记忆"""
@@ -202,12 +204,25 @@ class Brain:
         # 注入系统提示（如性能警告）
         if self.system_hints:
             hints_text = "\n".join(self.system_hints)
-            system_content += f"\n\n【⚠️ 系统提示】\n{hints_text}\n"
+            system_content += f"\n\n{hints_text}\n"
             self.system_hints.clear()  # 清空提示，只显示一次
+        
+        # v2.1 新增：把配方单独强化注入到 user_input 前面
+        # 原来配方混在 system_prompt 里容易被淹没
+        # 现在把配方作为独立的"任务前检查"注入到用户消息前
+        recipe_reminder = self.memory_system.recall_recipe(user_input, n_results=4)
+        if recipe_reminder:
+            user_input_with_recipe = f"""【⚡ 执行前必读配方 - 这是强制规范，不是建议】
+{recipe_reminder}
+
+---
+用户指令：{user_input}"""
+        else:
+            user_input_with_recipe = user_input
         
         messages = [{"role": "system", "content": system_content}]
         messages.extend(self.chat_history)
-        messages.append({"role": "user", "content": user_input})
+        messages.append({"role": "user", "content": user_input_with_recipe})
         
         # [调整] 增加思考轮次上限，以支持复杂的连续任务 (如: 打开网页 -> 截图 -> 分析 -> 总结)
         max_iterations = 15
@@ -334,26 +349,33 @@ class Brain:
         
         logger.info(f"⏱️ [性能] 本次任务耗时: {elapsed_time:.2f}秒，调用工具: {tool_count}个")
         
-        # 🔥 性能警告：如果太慢或调用太多工具，给AI发送优化建议
-        # [优化] 降低触发阈值：5秒 + 2个工具，更容易触发学习
+        # 🔥 性能警告：如果太慢或调用太多工具，下次强制执行优化规则
         if elapsed_time > 5 and tool_count > 2:
-            warning = f"""⚠️ 性能警告：上一个任务耗时 {elapsed_time:.1f}秒，调用了 {tool_count} 个工具。
+            # v2.1 修复：从"建议"改为"强制规则"
+            # 原来的措辞是"请反思"，AI 可以忽略
+            # 现在改为"禁止/必须"，强制约束行为
+            warning = f"""【🚨 强制执行规则 - 上次任务违规】
+上次任务耗时 {elapsed_time:.1f}秒，调用了 {tool_count} 个工具（超标）。
+违规工具链：{' → '.join(tool_calls_list[-8:])}
 
-请反思：
-- 是否有更快的方法？（如用 create_file_directly 代替打开记事本）
-- 是否可以用快捷键代替点击菜单？（如 Ctrl+S 保存）
-- 是否可以合并多个操作为一个工具调用？
+本次任务【禁止】重复以下行为：
+❌ 禁止连续调用超过 2 次相同工具（如重复 write_file / list_directory）
+❌ 禁止在写文件前先 list_directory 探索路径（直接使用已知路径）
+❌ 禁止多次尝试写同一个文件（一次写对）
 
-记住：用户要的是结果，不是过程。优先使用【工具优先级1-2】的方法。
+本次任务【必须】遵守：
+✅ Obsidian 写文件：直接用 mcp_obsidian_write_file，路径格式 "Notes/文件名.md"
+✅ GitHub 搜索：一次性搜索完所有结果，禁止循环调用 search_repositories
+✅ 创建文件：用 create_file_directly，禁止打开记事本
 
-最近调用的工具：{', '.join(tool_calls_list[-5:])}"""
-            self.system_hints.append(warning)  # 下次对话时自动注入
-            logger.warning(f"🐢 性能警告已生成，将在下次对话时提醒AI优化")
+违反以上规则视为执行失败。"""
+            self.system_hints.append(warning)
+            logger.warning(f"🚨 强制规则已生成，下次对话强制注入")
             
             # 🔥 自动学习：把性能教训保存到长期记忆（永久记住）
             self.learn_from_performance(user_input, tool_calls_list, elapsed_time)
         
-        # 更新对话历史
+        # 更新对话历史（保存原始输入，不含配方前缀，避免污染历史）
         self.chat_history.append({"role": "user", "content": user_input})
         self.chat_history.append({"role": "assistant", "content": ai_reply})
         self.trim_history()
@@ -507,10 +529,35 @@ importance 等级说明：
                     return
                 
                 # 5. 保存到 recipes 配方记忆（而非通用记忆池）
+                # v2.1 修复：trigger 不再用原始语音识别文本
+                # 原因：语音识别常出错（"get hardly" = "GitHub"），导致配方无法被匹配
+                # 改为：让 LLM 从 lesson 里提取语义化的触发关键词
+                trigger_prompt = f"""从以下性能优化教训中，提取【触发场景关键词】，用于下次匹配识别。
+
+教训内容：{lesson}
+
+要求：
+- 输出3-5个中文关键词，用逗号分隔
+- 关键词要语义化（不是原始语音），能代表这类任务
+- 例如："GitHub搜索,找项目,写到Obsidian"
+
+直接输出关键词，不要其他内容："""
+                
+                try:
+                    trigger_resp = self.client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[{"role": "user", "content": trigger_prompt}],
+                        max_tokens=50,
+                        temperature=0.1
+                    )
+                    semantic_trigger = trigger_resp.choices[0].message.content.strip()
+                except Exception:
+                    semantic_trigger = user_task  # 提取失败则退回原始文本
+                
                 self.memory_system.add_recipe(
-                    trigger=user_task,
+                    trigger=semantic_trigger,
                     solution=lesson,
-                    metadata={"source": "auto_learn", "elapsed": elapsed_time, "tools": ",".join(tools_used)}
+                    metadata={"source": "auto_learn", "elapsed": elapsed_time, "tools": ",".join(tools_used), "original_task": user_task[:100]}
                 )
                 logger.info(f"📚 [性能学习] 已存入配方记忆：{lesson}")
                 
@@ -522,3 +569,38 @@ importance 等级说明：
         # 后台线程运行，不阻塞对话
         thread = threading.Thread(target=_background_task, daemon=True)
         thread.start()
+
+    def _ensure_critical_recipes(self):
+        """
+        v2.1 新增：启动时预埋关键配方
+        这些是经过实战验证的最优方案，importance=5 不会被自动学习覆盖
+        解决"每次都学但每次都忘"的根本问题
+        """
+        critical_recipes = [
+            {
+                "trigger": "Obsidian写文件,写到黑曜石,保存到笔记,记录到Obsidian",
+                "solution": "直接调用 mcp_obsidian_write_file，路径格式：'Notes/文件名.md'。禁止先调用 list_directory 或 list_allowed_directories 探索路径。一次写入，禁止重复调用 write_file。",
+                "importance": 5
+            },
+            {
+                "trigger": "GitHub搜索,找项目,search repositories,在GitHub上找",
+                "solution": "调用一次 mcp_github_search_repositories，带上 language 和 sort 参数一次性获取所有结果。禁止循环多次调用 search_repositories。",
+                "importance": 5
+            },
+            {
+                "trigger": "创建文件,写文件,保存文件",
+                "solution": "使用 create_file_directly，禁止打开记事本或任何 GUI 应用。create_file_directly 速度是打开记事本的 600 倍。",
+                "importance": 5
+            },
+        ]
+        
+        for recipe in critical_recipes:
+            # 检查是否已存在（避免重复写入）
+            existing = self.memory_system.search_recipes(recipe["trigger"].split(",")[0], n_results=1, threshold=0.5)
+            if not existing:
+                self.memory_system.add_recipe(
+                    trigger=recipe["trigger"],
+                    solution=recipe["solution"],
+                    metadata={"source": "manual_fix", "importance": recipe["importance"]}
+                )
+                logger.info(f"🛡️ [关键配方] 已预埋: {recipe['trigger'][:30]}")
