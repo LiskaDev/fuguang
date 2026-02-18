@@ -56,6 +56,11 @@ class ConfigManager:
         self.GITHUB_TOKEN = GlobalConfig.GITHUB_TOKEN
         self.OBSIDIAN_VAULT_PATH = GlobalConfig.OBSIDIAN_VAULT_PATH
         
+        # 📧 邮件监控配置
+        self.EMAIL_QQ = GlobalConfig.EMAIL_QQ
+        self.EMAIL_AUTH_CODE = GlobalConfig.EMAIL_AUTH_CODE
+        self.EMAIL_CHECK_INTERVAL = GlobalConfig.EMAIL_CHECK_INTERVAL
+        
         # 视觉识别配置
         self.VISION_USE_FLASH = GlobalConfig.VISION_USE_FLASH
         self.VISION_QUALITY = GlobalConfig.VISION_QUALITY

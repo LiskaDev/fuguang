@@ -11,7 +11,8 @@ from .gui import GUISkills
 from .browser import BrowserSkills
 from .system import SystemSkills
 from .memory import MemorySkills
-from .mcp import MCPSkills
+from .skill_mcp import MCPSkills
+from .email import EmailSkills
 
 logger = logging.getLogger("fuguang.skills")
 
@@ -24,6 +25,7 @@ class SkillManager(
     SystemSkills,
     MemorySkills,
     MCPSkills,
+    EmailSkills,
 ):
     """
     技能管理器（协调器）
@@ -93,6 +95,7 @@ class SkillManager(
         all_tools.extend(getattr(self, '_SYSTEM_TOOLS', []))
         all_tools.extend(getattr(self, '_MEMORY_TOOLS', []))
         all_tools.extend(getattr(self, '_MCP_TOOLS', []))
+        all_tools.extend(getattr(self, '_EMAIL_TOOLS', []))
         all_tools.append(set_reminder_tool)
         return all_tools
 
@@ -187,6 +190,10 @@ class SkillManager(
             return self.recall_recipe(func_args.get("query", ""))
         elif func_name == "export_recipes_to_obsidian":
             return self.export_recipes_to_obsidian()
+
+        # --- Email ---
+        elif func_name == "check_email":
+            return self.check_email()
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):

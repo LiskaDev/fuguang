@@ -85,6 +85,11 @@ class ConfigManager:
     # === Obsidian (成长日记) ===
     OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH", "")
     
+    # === 📧 邮件监控 (QQ邮箱 IMAP) ===
+    EMAIL_QQ = os.getenv("EMAIL_QQ", "")
+    EMAIL_AUTH_CODE = os.getenv("EMAIL_AUTH_CODE", "")
+    EMAIL_CHECK_INTERVAL = int(os.getenv("EMAIL_CHECK_INTERVAL", "7200"))
+    
     # 视觉识别配置
     VISION_USE_FLASH = True   # True=极速模式(glm-4v-flash, 2秒), False=标准模式(glm-4v, 4秒)
     VISION_QUALITY = 85       # 图片压缩质量 (60-95，越高越清晰但越慢)

@@ -268,6 +268,13 @@ class BaseSkillMixin:
                 self._init_mcp()
             except Exception as e:
                 logger.warning(f"⚠️ [MCP] 初始化失败（不影响核心功能）: {e}")
+        
+        # [📧 邮件] 初始化邮件监控后台线程
+        if hasattr(self, '_init_email_monitor'):
+            try:
+                self._init_email_monitor()
+            except Exception as e:
+                logger.warning(f"⚠️ [邮件] 初始化失败（不影响核心功能）: {e}")
     
     # ------ 内部辅助方法 ------
     
