@@ -351,30 +351,178 @@ class _EmailMonitorWorker:
         return ''.join(result)
 
     @staticmethod
+    def _html_to_text(html_content: str) -> str:
+        """
+        轻量级 HTML → 可读文本转换（零依赖）
+        保留：链接 [text](url)、换行、列表项
+        移除：style/script 标签内容、HTML 实体、隐藏跟踪像素
+        """
+        from html.parser import HTMLParser
+        
+        class _HTMLToText(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.result = []
+                self._skip = False        # 跳过 style/script 内容
+                self._link_href = None    # 当前链接 URL
+                self._link_text = []      # 链接文字缓冲
+                self._in_link = False
+            
+            def handle_starttag(self, tag, attrs):
+                tag = tag.lower()
+                attrs_dict = dict(attrs)
+                
+                if tag in ('style', 'script', 'head'):
+                    self._skip = True
+                    return
+                
+                # 跟踪像素（1x1 隐藏图片），跳过
+                if tag == 'img':
+                    width = attrs_dict.get('width', '')
+                    height = attrs_dict.get('height', '')
+                    if width in ('1', '0') or height in ('1', '0'):
+                        return
+                    alt = attrs_dict.get('alt', '')
+                    if alt:
+                        self.result.append(f'[图片: {alt}]')
+                    return
+                
+                if tag == 'a':
+                    self._in_link = True
+                    self._link_href = attrs_dict.get('href', '')
+                    self._link_text = []
+                    return
+                
+                if tag == 'br':
+                    self.result.append('\n')
+                elif tag in ('p', 'div', 'h1', 'h2', 'h3', 'h4', 'tr'):
+                    self.result.append('\n')
+                elif tag == 'li':
+                    self.result.append('\n• ')
+                elif tag == 'td':
+                    self.result.append(' | ')
+            
+            def handle_endtag(self, tag):
+                tag = tag.lower()
+                if tag in ('style', 'script', 'head'):
+                    self._skip = False
+                    return
+                
+                if tag == 'a':
+                    link_text = ''.join(self._link_text).strip()
+                    if self._link_href and link_text:
+                        # 跳过 unsubscribe/tracking 链接
+                        href_lower = self._link_href.lower()
+                        if any(x in href_lower for x in ['unsubscribe', 'tracking', 'click.', 'open.']):
+                            pass
+                        else:
+                            self.result.append(f'[{link_text}]({self._link_href})')
+                    elif link_text:
+                        self.result.append(link_text)
+                    self._in_link = False
+                    self._link_href = None
+                    self._link_text = []
+                    return
+                
+                if tag in ('p', 'div', 'h1', 'h2', 'h3', 'h4'):
+                    self.result.append('\n')
+            
+            def handle_data(self, data):
+                if self._skip:
+                    return
+                if self._in_link:
+                    self._link_text.append(data)
+                else:
+                    self.result.append(data)
+            
+            def handle_entityref(self, name):
+                entity_map = {'nbsp': ' ', 'lt': '<', 'gt': '>', 'amp': '&', 'quot': '"'}
+                char = entity_map.get(name, f'&{name};')
+                if self._in_link:
+                    self._link_text.append(char)
+                else:
+                    self.result.append(char)
+            
+            def handle_charref(self, name):
+                try:
+                    if name.startswith('x'):
+                        char = chr(int(name[1:], 16))
+                    else:
+                        char = chr(int(name))
+                    if self._in_link:
+                        self._link_text.append(char)
+                    else:
+                        self.result.append(char)
+                except (ValueError, OverflowError):
+                    pass
+            
+            def get_text(self):
+                text = ''.join(self.result)
+                # 清理多余空行和空白
+                text = re.sub(r'\n{3,}', '\n\n', text)
+                text = re.sub(r' {2,}', ' ', text)
+                return text.strip()
+        
+        parser = _HTMLToText()
+        try:
+            parser.feed(html_content)
+            return parser.get_text()
+        except Exception:
+            # 解析失败时回退到简单正则
+            text = re.sub(r'<[^>]+>', '', html_content)
+            return re.sub(r'\s+', ' ', text).strip()
+
+    @staticmethod
     def _extract_body_preview(msg, max_length=200) -> str:
-        """提取邮件正文预览"""
-        body = ""
+        """
+        提取邮件正文预览
+        优先使用 text/plain，fallback 到 text/html（智能转换）
+        """
+        plain_body = ""
+        html_body = ""
+        
         if msg.is_multipart():
             for part in msg.walk():
-                if part.get_content_type() == 'text/plain':
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload:
-                            body = payload.decode('utf-8', errors='ignore')
-                            break
-                    except Exception:
+                content_type = part.get_content_type()
+                # 跳过附件
+                if part.get('Content-Disposition', '').startswith('attachment'):
+                    continue
+                try:
+                    payload = part.get_payload(decode=True)
+                    if not payload:
                         continue
+                    charset = part.get_content_charset() or 'utf-8'
+                    decoded = payload.decode(charset, errors='ignore')
+                    
+                    if content_type == 'text/plain' and not plain_body:
+                        plain_body = decoded
+                    elif content_type == 'text/html' and not html_body:
+                        html_body = decoded
+                except Exception:
+                    continue
         else:
             try:
                 payload = msg.get_payload(decode=True)
                 if payload:
-                    body = payload.decode('utf-8', errors='ignore')
+                    charset = msg.get_content_charset() or 'utf-8'
+                    decoded = payload.decode(charset, errors='ignore')
+                    if msg.get_content_type() == 'text/html':
+                        html_body = decoded
+                    else:
+                        plain_body = decoded
             except Exception:
                 pass
         
-        # 清理 HTML 标签和多余空白
-        body = re.sub(r'<[^>]+>', '', body)
-        body = re.sub(r'\s+', ' ', body).strip()
+        # 优先用纯文本，没有则转换 HTML
+        if plain_body:
+            body = plain_body
+        elif html_body:
+            body = _EmailMonitorWorker._html_to_text(html_body)
+        else:
+            return ""
+        
+        # 最终清理
+        body = re.sub(r'\s+', ' ', body).strip() if max_length <= 200 else body.strip()
         return body[:max_length]
 
     def _fetch_email(self, mail: imaplib.IMAP4_SSL, email_id) -> Optional[Dict]:
