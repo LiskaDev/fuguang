@@ -123,6 +123,7 @@ class _EmailMonitorWorker:
         # 缓存上次检查结果（含垃圾邮件），便于用户追问“刚才那封邮件内容是什么”
         self._last_check_results: List[Dict] = []
         self._last_check_time: Optional[datetime] = None
+        self._cache_file: Optional[Path] = None  # 缓存持久化文件
         
         # 运行标志
         self._running = False
@@ -156,6 +157,40 @@ class _EmailMonitorWorker:
                 )
             except Exception as e:
                 logger.warning(f"⚠️ [邮件] 保存已处理 ID 失败: {e}")
+
+    def set_cache_file(self, path: Path):
+        """设置邮件内容缓存的持久化路径，并加载已有缓存"""
+        self._cache_file = path
+        self._load_cache()
+
+    def _load_cache(self):
+        """从磁盘加载邮件内容缓存"""
+        if self._cache_file and self._cache_file.exists():
+            try:
+                data = json.loads(self._cache_file.read_text(encoding='utf-8'))
+                self._last_check_results = data.get("emails", [])
+                time_str = data.get("check_time")
+                if time_str:
+                    self._last_check_time = datetime.fromisoformat(time_str)
+                logger.info(f"📧 加载 {len(self._last_check_results)} 封缓存邮件")
+            except Exception as e:
+                logger.warning(f"⚠️ [邮件] 加载缓存失败: {e}")
+
+    def _save_cache(self):
+        """持久化邮件内容缓存（最多保留 20 封）"""
+        if self._cache_file:
+            try:
+                # 只保留最近 20 封，防止文件过大
+                emails_to_save = self._last_check_results[-20:]
+                data = {
+                    "check_time": self._last_check_time.isoformat() if self._last_check_time else None,
+                    "emails": emails_to_save,
+                }
+                self._cache_file.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8'
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ [邮件] 保存缓存失败: {e}")
 
     # ---- IMAP 操作 ----
 
@@ -494,6 +529,7 @@ class _EmailMonitorWorker:
             # ✅ 缓存本次检查的所有结果（含垃圾），便于用户追问
             self._last_check_results = results
             self._last_check_time = datetime.now()
+            self._save_cache()  # 持久化到磁盘
             
             non_spam = len(results) - (spam_count if include_spam else 0)
             logger.info(f"📧 [邮件] 检查完成: {non_spam} 封有效, {spam_count} 封垃圾已过滤")
@@ -685,7 +721,9 @@ class EmailSkills:
         
         # 设置持久化路径
         processed_file = self.config.DATA_DIR / "email_processed_ids.json"
+        cache_file = self.config.DATA_DIR / "email_cache.json"
         self._email_worker.set_processed_file(processed_file)
+        self._email_worker.set_cache_file(cache_file)
         
         # 启动后台线程
         email_thread = threading.Thread(
