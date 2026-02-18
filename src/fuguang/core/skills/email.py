@@ -224,7 +224,7 @@ class _EmailMonitorWorker:
         return body[:max_length]
 
     def _fetch_email(self, mail: imaplib.IMAP4_SSL, email_id) -> Optional[Dict]:
-        """获取单封邮件内容（含短预览 + 完整正文）"""
+        """获取单封邮件内容（含正文 + 附件信息）"""
         try:
             status, msg_data = mail.fetch(email_id, '(RFC822)')
             if status != 'OK':
@@ -239,16 +239,85 @@ class _EmailMonitorWorker:
             preview = self._extract_body_preview(msg, max_length=200)
             full_body = self._extract_body_preview(msg, max_length=2000)
             
+            # 提取附件信息
+            attachments = self._extract_attachments(msg)
+            
             return {
                 'from': from_addr,
                 'subject': subject,
                 'preview': preview,
                 'full_body': full_body,
                 'date': date_str,
+                'attachments': attachments,
             }
         except Exception as e:
             logger.warning(f"⚠️ [邮件] 解析失败: {e}")
             return None
+
+    @staticmethod
+    def _extract_attachments(msg) -> List[Dict]:
+        """
+        提取邮件中的附件信息（文件名、类型、大小）
+        
+        Returns:
+            附件列表 [{'filename': str, 'content_type': str, 'size': int}, ...]
+        """
+        attachments = []
+        if not msg.is_multipart():
+            return attachments
+        
+        for part in msg.walk():
+            content_disposition = str(part.get('Content-Disposition', ''))
+            
+            # 跳过非附件部分
+            if 'attachment' not in content_disposition and 'inline' not in content_disposition:
+                continue
+            
+            # 跳过纯文本和 HTML 部分（通常是正文，不是附件）
+            content_type = part.get_content_type()
+            if content_type in ('text/plain', 'text/html') and 'attachment' not in content_disposition:
+                continue
+            
+            filename = part.get_filename()
+            if filename:
+                filename = _EmailMonitorWorker._decode_header(filename)
+            else:
+                # 无文件名的附件，根据类型生成
+                ext_map = {
+                    'application/pdf': '.pdf',
+                    'application/msword': '.doc',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+                    'application/vnd.ms-excel': '.xls',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+                    'application/vnd.ms-powerpoint': '.ppt',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+                    'application/zip': '.zip',
+                    'image/png': '.png',
+                    'image/jpeg': '.jpg',
+                }
+                ext = ext_map.get(content_type, '')
+                filename = f'未命名附件{ext}'
+            
+            # 获取大小
+            payload = part.get_payload(decode=True)
+            size = len(payload) if payload else 0
+            
+            # 可读大小
+            if size < 1024:
+                size_str = f"{size} B"
+            elif size < 1024 * 1024:
+                size_str = f"{size / 1024:.1f} KB"
+            else:
+                size_str = f"{size / (1024*1024):.1f} MB"
+            
+            attachments.append({
+                'filename': filename,
+                'content_type': content_type,
+                'size': size,
+                'size_str': size_str,
+            })
+        
+        return attachments
 
     # ---- 分类逻辑 ----
 
@@ -664,6 +733,9 @@ class EmailSkills:
                     icon = level_icon.get(em['level'], '📧')
                     lines.append(f"{i}. {icon} [{em['level']}] {em['from']}")
                     lines.append(f"   标题: {em['subject'][:60]}")
+                    if em.get('attachments'):
+                        att_names = ', '.join(a['filename'] for a in em['attachments'])
+                        lines.append(f"   📎 附件: {att_names}")
                     if em['preview']:
                         lines.append(f"   预览: {em['preview'][:80]}")
                     lines.append("")
@@ -727,9 +799,20 @@ class EmailSkills:
             f"标  题: {em['subject']}",
             f"日  期: {em.get('date', '未知')}",
             f"分  级: {em['level']}",
-            f"",
-            f"--- 邮件正文 ---",
-            em.get('full_body', em.get('preview', '(无内容)')),
         ]
+        
+        # 附件信息
+        attachments = em.get('attachments', [])
+        if attachments:
+            lines.append(f"")
+            lines.append(f"📎 附件 ({len(attachments)} 个):")
+            for i, att in enumerate(attachments, 1):
+                lines.append(f"  {i}. {att['filename']} ({att['size_str']}, {att['content_type']})")
+        else:
+            lines.append(f"📎 附件: 无")
+        
+        lines.append(f"")
+        lines.append(f"--- 邮件正文 ---")
+        lines.append(em.get('full_body', em.get('preview', '(无内容)')))
         
         return "\n".join(lines)
