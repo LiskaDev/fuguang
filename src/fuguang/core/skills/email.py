@@ -120,6 +120,10 @@ class _EmailMonitorWorker:
         self._processed_file: Optional[Path] = None
         self._processed_ids: set = set()
         
+        # 缓存上次检查结果（含垃圾邮件），便于用户追问“刚才那封邮件内容是什么”
+        self._last_check_results: List[Dict] = []
+        self._last_check_time: Optional[datetime] = None
+        
         # 运行标志
         self._running = False
     
@@ -220,7 +224,7 @@ class _EmailMonitorWorker:
         return body[:max_length]
 
     def _fetch_email(self, mail: imaplib.IMAP4_SSL, email_id) -> Optional[Dict]:
-        """获取单封邮件内容"""
+        """获取单封邮件内容（含短预览 + 完整正文）"""
         try:
             status, msg_data = mail.fetch(email_id, '(RFC822)')
             if status != 'OK':
@@ -232,12 +236,14 @@ class _EmailMonitorWorker:
             subject = self._decode_header(msg.get('Subject', ''))
             from_addr = self._decode_header(msg.get('From', ''))
             date_str = msg.get('Date', '')
-            preview = self._extract_body_preview(msg)
+            preview = self._extract_body_preview(msg, max_length=200)
+            full_body = self._extract_body_preview(msg, max_length=2000)
             
             return {
                 'from': from_addr,
                 'subject': subject,
                 'preview': preview,
+                'full_body': full_body,
                 'date': date_str,
             }
         except Exception as e:
@@ -416,6 +422,10 @@ class _EmailMonitorWorker:
             # 持久化已处理 ID
             self._save_processed_ids()
             
+            # ✅ 缓存本次检查的所有结果（含垃圾），便于用户追问
+            self._last_check_results = results
+            self._last_check_time = datetime.now()
+            
             non_spam = len(results) - (spam_count if include_spam else 0)
             logger.info(f"📧 [邮件] 检查完成: {non_spam} 封有效, {spam_count} 封垃圾已过滤")
             
@@ -525,15 +535,35 @@ class EmailSkills:
                     "手动检查一次 QQ 邮箱的未读邮件。"
                     "默认会自动过滤垃圾邮件，只返回重要/普通邮件的摘要。"
                     "如果用户问「有没有新邮件」「查一下邮箱」等，使用此工具。"
-                    "如果用户想看垃圾邮件（如「看看垃圾邮件」「被过滤的邮件有哪些」），"
-                    "设置 include_spam=true。"
+                    "如果用户想看垃圾邮件，设置 include_spam=true。"
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "include_spam": {
                             "type": "boolean",
-                            "description": "是否包含被过滤的垃圾邮件。默认false，设为true可查看垃圾邮件内容。"
+                            "description": "是否包含被过滤的垃圾邮件。默认false。"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_email",
+                "description": (
+                    "查看上次检查到的某封邮件的完整内容。"
+                    "当用户问「刚才那封邮件内容是什么」「详细看看第X封」「邮件里面写了什么」时使用。"
+                    "不需要重新连接邮箱，直接读取缓存。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "index": {
+                            "type": "integer",
+                            "description": "邮件序号（从1开始）。默认1，表示最近一封。如果上次只检查到一封，直接用默认值。"
                         }
                     },
                     "required": []
@@ -598,15 +628,7 @@ class EmailSkills:
         logger.info(f"✅ [邮件] 后台监控已启动 ({qq_email}, 每{check_interval}秒检查)")
 
     def check_email(self, include_spam: bool = False) -> str:
-        """
-        手动触发一次邮件检查。
-
-        Args:
-            include_spam: 是否包含垃圾邮件（用户主动要求查看时设为 True）
-
-        Returns:
-            邮件检查结果摘要（文本）
-        """
+        """手动触发一次邮件检查。"""
         if not self._email_worker:
             return "❌ 邮件监控未启用（未配置 EMAIL_QQ 和 EMAIL_AUTH_CODE）"
         
@@ -614,6 +636,17 @@ class EmailSkills:
             new_emails = self._email_worker.check_once(include_spam=include_spam)
             
             if not new_emails:
+                # 没有新邮件，但有缓存 → 提示用户可以用 read_email 查看
+                cached = self._email_worker._last_check_results
+                if cached:
+                    cache_time = self._email_worker._last_check_time
+                    time_str = cache_time.strftime('%H:%M') if cache_time else '未知'
+                    non_spam = [e for e in cached if e['level'] != 'spam']
+                    hint = f"📭 没有新的未读邮件。\n\n上次检查（{time_str}）发现的 {len(non_spam)} 封邮件已缓存，"
+                    hint += "可以用 read_email 查看具体内容。\n"
+                    for i, em in enumerate(non_spam, 1):
+                        hint += f"  {i}. {em['from']} - {em['subject'][:40]}\n"
+                    return hint
                 if include_spam:
                     return "📭 没有未读的垃圾邮件（之前检查过的邮件已标记为已读）"
                 return "📭 没有新的重要邮件（垃圾邮件已自动过滤）"
@@ -634,6 +667,7 @@ class EmailSkills:
                     if em['preview']:
                         lines.append(f"   预览: {em['preview'][:80]}")
                     lines.append("")
+                lines.append("提示：可以用 read_email(序号) 查看某封邮件的完整内容。")
             
             if include_spam and spam_list:
                 lines.append(f"\n🗑️ {len(spam_list)} 封垃圾邮件：\n")
@@ -652,3 +686,50 @@ class EmailSkills:
         except Exception as e:
             logger.error(f"❌ [邮件] 手动检查失败: {e}")
             return f"❌ 邮件检查出错: {e}"
+
+    def read_email(self, index: int = 1) -> str:
+        """
+        查看上次检查到的某封邮件的完整内容。
+        从缓存读取，不需要重新连接邮箱。
+
+        Args:
+            index: 邮件序号（从1开始）
+
+        Returns:
+            邮件完整内容
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        cached = self._email_worker._last_check_results
+        if not cached:
+            return "❌ 没有缓存的邮件记录。请先使用 check_email 检查邮箱。"
+        
+        # 过滤非垃圾邮件（用户关心的是正常邮件）
+        non_spam = [e for e in cached if e['level'] != 'spam']
+        if not non_spam:
+            non_spam = cached  # 如果全是垃圾，也给看
+        
+        if index < 1 or index > len(non_spam):
+            return f"❌ 序号无效。缓存中共有 {len(non_spam)} 封邮件，请输入 1-{len(non_spam)}。"
+        
+        em = non_spam[index - 1]
+        cache_time = self._email_worker._last_check_time
+        time_str = cache_time.strftime('%H:%M') if cache_time else '未知'
+        
+        level_icon = {'urgent': '🚨', 'important': '⚠️', 'normal': '📨', 'spam': '🗑️'}
+        icon = level_icon.get(em['level'], '📧')
+        
+        lines = [
+            f"{icon} 邮件详情（缓存于 {time_str}）",
+            f"",
+            f"发件人: {em['from']}",
+            f"标  题: {em['subject']}",
+            f"日  期: {em.get('date', '未知')}",
+            f"分  级: {em['level']}",
+            f"",
+            f"--- 邮件正文 ---",
+            em.get('full_body', em.get('preview', '(无内容)')),
+        ]
+        
+        return "\n".join(lines)
