@@ -341,12 +341,15 @@ class _EmailMonitorWorker:
 
     # ---- 主逻辑 ----
 
-    def check_once(self) -> List[Dict]:
+    def check_once(self, include_spam: bool = False) -> List[Dict]:
         """
         执行一次邮箱检查
         
+        Args:
+            include_spam: 是否包含垃圾邮件在返回结果中（用于用户主动查看）
+        
         Returns:
-            非垃圾邮件列表（已分级）
+            邮件列表（已分级）
         """
         mail = self._connect()
         if not mail:
@@ -365,11 +368,17 @@ class _EmailMonitorWorker:
             
             logger.info(f"📬 [邮件] 发现 {len(email_ids)} 封未读邮件，开始分类...")
             
+            spam_count = 0
             for eid in email_ids:
                 eid_str = eid.decode()
                 
                 # 跳过已处理
                 if eid_str in self._processed_ids:
+                    # 已处理过但仍未读 → 标记为已读
+                    try:
+                        mail.store(eid, '+FLAGS', '\\Seen')
+                    except Exception:
+                        pass
                     continue
                 
                 email_data = self._fetch_email(mail, eid)
@@ -389,9 +398,17 @@ class _EmailMonitorWorker:
                 # 记录已处理
                 self._processed_ids.add(eid_str)
                 
-                # 垃圾邮件静默
+                # ✅ 处理完毕 → 在 IMAP 中标记为已读
+                try:
+                    mail.store(eid, '+FLAGS', '\\Seen')
+                except Exception as e:
+                    logger.debug(f"⚠️ [邮件] 标记已读失败: {e}")
+                
                 if level == 'spam':
+                    spam_count += 1
                     logger.debug(f"🗑️ [邮件] 垃圾过滤: {email_data['from']} - {email_data['subject'][:30]}")
+                    if include_spam:
+                        results.append(email_data)  # 用户要看垃圾邮件时也返回
                     continue
                 
                 results.append(email_data)
@@ -399,8 +416,8 @@ class _EmailMonitorWorker:
             # 持久化已处理 ID
             self._save_processed_ids()
             
-            spam_count = len(email_ids) - len(results)
-            logger.info(f"📧 [邮件] 检查完成: {len(results)} 封有效, {spam_count} 封垃圾已过滤")
+            non_spam = len(results) - (spam_count if include_spam else 0)
+            logger.info(f"📧 [邮件] 检查完成: {non_spam} 封有效, {spam_count} 封垃圾已过滤")
             
         except Exception as e:
             logger.error(f"❌ [邮件] 检查失败: {e}")
@@ -506,12 +523,19 @@ class EmailSkills:
                 "name": "check_email",
                 "description": (
                     "手动检查一次 QQ 邮箱的未读邮件。"
-                    "会自动过滤垃圾邮件，只返回重要/普通邮件的摘要。"
+                    "默认会自动过滤垃圾邮件，只返回重要/普通邮件的摘要。"
                     "如果用户问「有没有新邮件」「查一下邮箱」等，使用此工具。"
+                    "如果用户想看垃圾邮件（如「看看垃圾邮件」「被过滤的邮件有哪些」），"
+                    "设置 include_spam=true。"
                 ),
                 "parameters": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "include_spam": {
+                            "type": "boolean",
+                            "description": "是否包含被过滤的垃圾邮件。默认false，设为true可查看垃圾邮件内容。"
+                        }
+                    },
                     "required": []
                 }
             }
@@ -573,9 +597,12 @@ class EmailSkills:
         email_thread.start()
         logger.info(f"✅ [邮件] 后台监控已启动 ({qq_email}, 每{check_interval}秒检查)")
 
-    def check_email(self) -> str:
+    def check_email(self, include_spam: bool = False) -> str:
         """
         手动触发一次邮件检查。
+
+        Args:
+            include_spam: 是否包含垃圾邮件（用户主动要求查看时设为 True）
 
         Returns:
             邮件检查结果摘要（文本）
@@ -584,20 +611,41 @@ class EmailSkills:
             return "❌ 邮件监控未启用（未配置 EMAIL_QQ 和 EMAIL_AUTH_CODE）"
         
         try:
-            new_emails = self._email_worker.check_once()
+            new_emails = self._email_worker.check_once(include_spam=include_spam)
             
             if not new_emails:
+                if include_spam:
+                    return "📭 没有未读的垃圾邮件（之前检查过的邮件已标记为已读）"
                 return "📭 没有新的重要邮件（垃圾邮件已自动过滤）"
             
-            lines = [f"📬 发现 {len(new_emails)} 封新邮件：\n"]
-            for i, em in enumerate(new_emails, 1):
-                level_icon = {'urgent': '🚨', 'important': '⚠️', 'normal': '📨'}
-                icon = level_icon.get(em['level'], '📧')
-                lines.append(f"{i}. {icon} [{em['level']}] {em['from']}")
-                lines.append(f"   标题: {em['subject'][:60]}")
-                if em['preview']:
-                    lines.append(f"   预览: {em['preview'][:80]}")
-                lines.append("")
+            # 分离垃圾和非垃圾
+            spam_list = [e for e in new_emails if e['level'] == 'spam']
+            normal_list = [e for e in new_emails if e['level'] != 'spam']
+            
+            lines = []
+            
+            if normal_list:
+                lines.append(f"📬 {len(normal_list)} 封新邮件：\n")
+                for i, em in enumerate(normal_list, 1):
+                    level_icon = {'urgent': '🚨', 'important': '⚠️', 'normal': '📨'}
+                    icon = level_icon.get(em['level'], '📧')
+                    lines.append(f"{i}. {icon} [{em['level']}] {em['from']}")
+                    lines.append(f"   标题: {em['subject'][:60]}")
+                    if em['preview']:
+                        lines.append(f"   预览: {em['preview'][:80]}")
+                    lines.append("")
+            
+            if include_spam and spam_list:
+                lines.append(f"\n🗑️ {len(spam_list)} 封垃圾邮件：\n")
+                for i, em in enumerate(spam_list, 1):
+                    lines.append(f"{i}. 🗑️ {em['from']}")
+                    lines.append(f"   标题: {em['subject'][:60]}")
+                    if em['preview']:
+                        lines.append(f"   预览: {em['preview'][:80]}")
+                    lines.append("")
+            
+            if not lines:
+                return "📭 没有新邮件"
             
             return "\n".join(lines)
             
