@@ -196,6 +196,12 @@ class SkillManager(
             return self.check_email(include_spam=func_args.get("include_spam", False))
         elif func_name == "read_email":
             return self.read_email(index=func_args.get("index", 1))
+        elif func_name == "config_email_filter":
+            return self.config_email_filter(
+                action=func_args.get("action", "list"),
+                category=func_args.get("category", ""),
+                value=func_args.get("value", "")
+            )
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):

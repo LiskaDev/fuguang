@@ -125,6 +125,13 @@ class _EmailMonitorWorker:
         self._last_check_time: Optional[datetime] = None
         self._cache_file: Optional[Path] = None  # 缓存持久化文件
         
+        # 用户自定义过滤规则（通过对话动态添加，持久化到 JSON）
+        self._filter_config_file: Optional[Path] = None
+        self.user_vip_senders: List[str] = []
+        self.user_spam_keywords: List[str] = []
+        self.user_important_keywords: List[str] = []
+        self.user_spam_domains: List[str] = []
+        
         # 运行标志
         self._running = False
     
@@ -191,6 +198,118 @@ class _EmailMonitorWorker:
                 )
             except Exception as e:
                 logger.warning(f"⚠️ [邮件] 保存缓存失败: {e}")
+
+    # ---- 过滤规则配置 ----
+
+    def set_filter_config_file(self, path: Path):
+        """设置过滤规则配置文件路径，并加载已有配置"""
+        self._filter_config_file = path
+        self._load_filter_config()
+
+    def _load_filter_config(self):
+        """从磁盘加载用户自定义过滤规则"""
+        if self._filter_config_file and self._filter_config_file.exists():
+            try:
+                data = json.loads(self._filter_config_file.read_text(encoding='utf-8'))
+                self.user_vip_senders = data.get("vip_senders", [])
+                self.user_spam_keywords = data.get("spam_keywords", [])
+                self.user_important_keywords = data.get("important_keywords", [])
+                self.user_spam_domains = data.get("spam_domains", [])
+                total = (len(self.user_vip_senders) + len(self.user_spam_keywords) 
+                         + len(self.user_important_keywords) + len(self.user_spam_domains))
+                if total > 0:
+                    logger.info(f"📧 加载 {total} 条用户自定义过滤规则")
+            except Exception as e:
+                logger.warning(f"⚠️ [邮件] 加载过滤配置失败: {e}")
+
+    def _save_filter_config(self):
+        """持久化用户自定义过滤规则"""
+        if self._filter_config_file:
+            try:
+                data = {
+                    "vip_senders": self.user_vip_senders,
+                    "spam_keywords": self.user_spam_keywords,
+                    "important_keywords": self.user_important_keywords,
+                    "spam_domains": self.user_spam_domains,
+                }
+                self._filter_config_file.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8'
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ [邮件] 保存过滤配置失败: {e}")
+
+    def add_filter_rule(self, category: str, value: str) -> str:
+        """添加一条过滤规则"""
+        category_map = {
+            'vip': ('user_vip_senders', 'VIP 发件人'),
+            'spam_keyword': ('user_spam_keywords', '垃圾关键词'),
+            'important_keyword': ('user_important_keywords', '重要关键词'),
+            'spam_domain': ('user_spam_domains', '垃圾域名'),
+        }
+        if category not in category_map:
+            return f"❌ 无效类别: {category}。可选: vip, spam_keyword, important_keyword, spam_domain"
+        
+        attr_name, label = category_map[category]
+        target_list = getattr(self, attr_name)
+        
+        if value in target_list:
+            return f"⚠️ 「{value}」已在{label}列表中"
+        
+        target_list.append(value)
+        self._save_filter_config()
+        return f"✅ 已添加{label}: 「{value}」"
+
+    def remove_filter_rule(self, category: str, value: str) -> str:
+        """删除一条过滤规则"""
+        category_map = {
+            'vip': ('user_vip_senders', 'VIP 发件人'),
+            'spam_keyword': ('user_spam_keywords', '垃圾关键词'),
+            'important_keyword': ('user_important_keywords', '重要关键词'),
+            'spam_domain': ('user_spam_domains', '垃圾域名'),
+        }
+        if category not in category_map:
+            return f"❌ 无效类别: {category}"
+        
+        attr_name, label = category_map[category]
+        target_list = getattr(self, attr_name)
+        
+        if value not in target_list:
+            return f"⚠️ 「{value}」不在{label}列表中"
+        
+        target_list.remove(value)
+        self._save_filter_config()
+        return f"✅ 已删除{label}: 「{value}」"
+
+    def list_filter_rules(self) -> str:
+        """列出所有用户自定义的过滤规则"""
+        lines = ["📧 邮件过滤规则配置:\n"]
+        
+        lines.append(f"⭐ VIP 发件人（直接标记为重要）:")
+        if self.user_vip_senders:
+            for v in self.user_vip_senders:
+                lines.append(f"  - {v}")
+        else:
+            lines.append(f"  (未设置)")
+        
+        lines.append(f"\n🚨 重要关键词（命中即为重要）:")
+        builtin_imp = ', '.join(self.IMPORTANT_KEYWORDS[:5]) + '...'
+        lines.append(f"  内置: {builtin_imp}")
+        if self.user_important_keywords:
+            lines.append(f"  自定义: {', '.join(self.user_important_keywords)}")
+        
+        lines.append(f"\n🗑️ 垃圾关键词（命中 2 个以上即为垃圾）:")
+        builtin_spam = ', '.join(self.SPAM_KEYWORDS[:5]) + '...'
+        lines.append(f"  内置: {builtin_spam}")
+        if self.user_spam_keywords:
+            lines.append(f"  自定义: {', '.join(self.user_spam_keywords)}")
+        
+        lines.append(f"\n🚫 垃圾域名黑名单:")
+        builtin_domains = ', '.join(self.SPAM_SENDER_DOMAINS[:5]) + '...'
+        lines.append(f"  内置: {builtin_domains}")
+        if self.user_spam_domains:
+            lines.append(f"  自定义: {', '.join(self.user_spam_domains)}")
+        
+        return '\n'.join(lines)
 
     # ---- IMAP 操作 ----
 
@@ -359,6 +478,7 @@ class _EmailMonitorWorker:
     def _classify_rule_based(self, email_data: Dict) -> str:
         """
         第一层：基于规则的快速分类（0 Token 消耗）
+        合并内置规则 + 用户自定义规则
         
         Returns:
             'urgent' / 'important' / 'spam' / 'unknown'
@@ -368,13 +488,19 @@ class _EmailMonitorWorker:
         preview = email_data['preview'].lower()
         text = subject + " " + preview
         
+        # 合并内置 + 用户规则
+        all_vip = self.VIP_SENDERS + self.user_vip_senders
+        all_spam_domains = self.SPAM_SENDER_DOMAINS + self.user_spam_domains
+        all_important_kw = self.IMPORTANT_KEYWORDS + self.user_important_keywords
+        all_spam_kw = self.SPAM_KEYWORDS + self.user_spam_keywords
+        
         # 1. VIP 发件人 → important
-        for vip in self.VIP_SENDERS:
+        for vip in all_vip:
             if vip.lower() in sender:
                 return 'important'
         
         # 2. 发件人域名黑名单 → spam
-        for domain in self.SPAM_SENDER_DOMAINS:
+        for domain in all_spam_domains:
             if domain in sender:
                 return 'spam'
         
@@ -384,24 +510,21 @@ class _EmailMonitorWorker:
                 return 'spam'
         
         # 4. 主题行特征
-        #    纯验证码邮件 → normal（不是垃圾但也不重要到需要通知）
         if re.match(r'^.*验证码.*$', subject) and len(subject) < 30:
             return 'normal'
-        #    广告标记 → spam
         if re.match(r'^(AD|广告|推广)', subject):
             return 'spam'
         
-        # 5. 重要关键词 → important（优先于垃圾词判断）
-        important_count = sum(1 for kw in self.IMPORTANT_KEYWORDS if kw in text)
+        # 5. 重要关键词 → important
+        important_count = sum(1 for kw in all_important_kw if kw in text)
         if important_count >= 1:
             return 'important'
         
         # 6. 垃圾关键词（命中 2 个以上 → spam）
-        spam_count = sum(1 for kw in self.SPAM_KEYWORDS if kw in text)
+        spam_count = sum(1 for kw in all_spam_kw if kw in text)
         if spam_count >= 2:
             return 'spam'
         
-        # 无法判断 → 交给 AI
         return 'unknown'
 
     def _classify_ai(self, email_data: Dict) -> str:
@@ -675,6 +798,37 @@ class EmailSkills:
                 }
             }
         }
+    ] + [
+        {
+            "type": "function",
+            "function": {
+                "name": "config_email_filter",
+                "description": (
+                    "配置邮件过滤规则。可以添加/删除 VIP 发件人、垃圾关键词、重要关键词、垃圾域名。"
+                    "当用户说「把xxx添加为VIP」「把xxx加入垃圾名单」「查看过滤规则」等时使用。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["add", "remove", "list"],
+                            "description": "操作类型。add=添加规则, remove=删除规则, list=查看所有规则"
+                        },
+                        "category": {
+                            "type": "string",
+                            "enum": ["vip", "spam_keyword", "important_keyword", "spam_domain"],
+                            "description": "规则类别。vip=VIP发件人, spam_keyword=垃圾关键词, important_keyword=重要关键词, spam_domain=垃圾域名。list操作时可不填。"
+                        },
+                        "value": {
+                            "type": "string",
+                            "description": "要添加或删除的值（如邮箱地址、关键词、域名）。list操作时可不填。"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        }
     ]
 
     def _init_email_monitor(self):
@@ -722,8 +876,10 @@ class EmailSkills:
         # 设置持久化路径
         processed_file = self.config.DATA_DIR / "email_processed_ids.json"
         cache_file = self.config.DATA_DIR / "email_cache.json"
+        filter_config_file = self.config.DATA_DIR / "email_filter_config.json"
         self._email_worker.set_processed_file(processed_file)
         self._email_worker.set_cache_file(cache_file)
+        self._email_worker.set_filter_config_file(filter_config_file)
         
         # 启动后台线程
         email_thread = threading.Thread(
@@ -854,3 +1010,31 @@ class EmailSkills:
         lines.append(em.get('full_body', em.get('preview', '(无内容)')))
         
         return "\n".join(lines)
+
+    def config_email_filter(self, action: str, category: str = '', value: str = '') -> str:
+        """
+        配置邮件过滤规则（VIP/垃圾关键词/重要关键词/垃圾域名）。
+
+        Args:
+            action: 'add' / 'remove' / 'list'
+            category: 'vip' / 'spam_keyword' / 'important_keyword' / 'spam_domain'
+            value: 要添加或删除的值
+
+        Returns:
+            操作结果
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        if action == 'list':
+            return self._email_worker.list_filter_rules()
+        elif action == 'add':
+            if not category or not value:
+                return "❌ 添加规则需要指定 category 和 value"
+            return self._email_worker.add_filter_rule(category, value)
+        elif action == 'remove':
+            if not category or not value:
+                return "❌ 删除规则需要指定 category 和 value"
+            return self._email_worker.remove_filter_rule(category, value)
+        else:
+            return f"❌ 无效操作: {action}。可选: add, remove, list"
