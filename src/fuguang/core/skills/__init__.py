@@ -209,6 +209,11 @@ class SkillManager(
                 days_back=func_args.get("days_back", 7),
                 max_results=func_args.get("max_results", 10)
             )
+        elif func_name == "reply_email":
+            return self.reply_email(
+                index=func_args.get("index", 1),
+                content=func_args.get("content", "")
+            )
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):

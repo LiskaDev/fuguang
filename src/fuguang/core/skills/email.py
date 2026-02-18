@@ -550,6 +550,7 @@ class _EmailMonitorWorker:
                 'preview': preview,
                 'full_body': full_body,
                 'date': date_str,
+                'message_id': msg.get('Message-ID', ''),
                 'attachments': attachments,
             }
         except Exception as e:
@@ -953,6 +954,106 @@ class _EmailMonitorWorker:
         
         return results
 
+    # ---- SMTP 发送 ----
+
+    def send_reply(self, to_addr: str, subject: str, body: str,
+                   original_message_id: str = '') -> bool:
+        """
+        通过 QQ 邮箱 SMTP 发送回复邮件
+        
+        Args:
+            to_addr: 收件人邮箱
+            subject: 邮件标题
+            body: 邮件正文（纯文本）
+            original_message_id: 原邮件 Message-ID（用于回复线程）
+        
+        Returns:
+            是否发送成功
+        """
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from email.utils import formatdate, make_msgid
+        
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = self.qq_email
+            msg['To'] = to_addr
+            msg['Subject'] = subject
+            msg['Date'] = formatdate(localtime=True)
+            msg['Message-ID'] = make_msgid(domain=self.qq_email.split('@')[1])
+            
+            # 回复线程关联
+            if original_message_id:
+                msg['In-Reply-To'] = original_message_id
+                msg['References'] = original_message_id
+            
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # QQ 邮箱 SMTP SSL
+            with smtplib.SMTP_SSL('smtp.qq.com', 465) as smtp:
+                smtp.login(self.qq_email, self.auth_code)
+                smtp.send_message(msg)
+            
+            logger.info(f"✅ [邮件] 已发送回复到 {to_addr}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ [邮件] 发送失败: {e}")
+            return False
+
+    def reply_to_cached_email(self, index: int, reply_body: str) -> str:
+        """
+        回复缓存中的某封邮件
+        
+        Args:
+            index: 邮件序号（从1开始）
+            reply_body: 回复内容
+        
+        Returns:
+            操作结果消息
+        """
+        if not self._last_check_results:
+            return "❌ 没有缓存的邮件，请先检查或搜索邮箱"
+        
+        # 过滤非垃圾邮件
+        non_spam = [e for e in self._last_check_results if e['level'] != 'spam']
+        if not non_spam:
+            non_spam = self._last_check_results
+        
+        if index < 1 or index > len(non_spam):
+            return f"❌ 序号无效。缓存中共有 {len(non_spam)} 封邮件，请输入 1-{len(non_spam)}"
+        
+        em = non_spam[index - 1]
+        
+        # 提取回复地址（从 From 中提取纯邮箱地址）
+        from_addr = em['from']
+        # 处理 "Name <email@example.com>" 格式
+        import re
+        email_match = re.search(r'<([^>]+)>', from_addr)
+        to_addr = email_match.group(1) if email_match else from_addr
+        
+        # 构造回复标题
+        subject = em['subject']
+        if not subject.lower().startswith('re:'):
+            subject = f"Re: {subject}"
+        
+        # 构造回复正文（附上原文）
+        original_preview = em.get('preview', '')[:200]
+        full_reply = f"{reply_body}\n\n---\n原始邮件：\n发件人: {em['from']}\n日期: {em.get('date', '未知')}\n标题: {em['subject']}\n\n{original_preview}"
+        
+        success = self.send_reply(
+            to_addr=to_addr,
+            subject=subject,
+            body=full_reply,
+            original_message_id=em.get('message_id', '')
+        )
+        
+        if success:
+            return f"✅ 已回复邮件给 {to_addr}\n标题: {subject}"
+        else:
+            return f"❌ 回复发送失败，请检查网络和邮箱配置"
+
     def stop(self):
         """停止监控"""
         self._running = False
@@ -1078,6 +1179,32 @@ class EmailSkills:
                         }
                     },
                     "required": []
+                }
+            }
+        }
+    ] + [
+        {
+            "type": "function",
+            "function": {
+                "name": "reply_email",
+                "description": (
+                    "回复之前查看过的某封邮件。"
+                    "当用户说「回复那封邮件」「帮我回复说xxx」「给xx回个邮件」等时使用。"
+                    "需要先用 check_email 或 search_email 查看邮件，然后指定序号和回复内容。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "index": {
+                            "type": "integer",
+                            "description": "要回复的邮件序号（从1开始）。默认1，表示最近一封。"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "回复内容（纯文本）"
+                        }
+                    },
+                    "required": ["content"]
                 }
             }
         }
@@ -1344,3 +1471,22 @@ class EmailSkills:
         except Exception as e:
             logger.error(f"❌ [邮件] 搜索失败: {e}")
             return f"❌ 邮件搜索出错: {e}"
+
+    def reply_email(self, index: int = 1, content: str = '') -> str:
+        """
+        回复缓存中的某封邮件。
+
+        Args:
+            index: 邮件序号（从1开始）
+            content: 回复内容
+
+        Returns:
+            操作结果
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        if not content:
+            return "❌ 请提供回复内容"
+        
+        return self._email_worker.reply_to_cached_email(index=index, reply_body=content)
