@@ -883,6 +883,76 @@ class _EmailMonitorWorker:
         
         logger.info("⏹️ [邮件] 后台监控已停止")
 
+    def search_emails(self, sender: str = '', keyword: str = '',
+                      days_back: int = 7, max_results: int = 10) -> List[Dict]:
+        """
+        搜索邮件（支持按发件人/关键词/日期范围）
+        
+        Args:
+            sender: 发件人关键词（模糊匹配）
+            keyword: 标题关键词
+            days_back: 搜索最近几天（默认7天）
+            max_results: 最多返回几封（默认10）
+        
+        Returns:
+            匹配的邮件列表
+        """
+        mail = self._connect()
+        if not mail:
+            return []
+        
+        results = []
+        try:
+            # 构建 IMAP SEARCH 条件
+            criteria = []
+            
+            if sender:
+                criteria.append(f'FROM "{sender}"')
+            if keyword:
+                criteria.append(f'SUBJECT "{keyword}"')
+            if days_back > 0:
+                from datetime import timedelta
+                since_date = (datetime.now() - timedelta(days=days_back)).strftime('%d-%b-%Y')
+                criteria.append(f'SINCE {since_date}')
+            
+            # 默认搜索所有邮件（不限于未读）
+            search_str = ' '.join(criteria) if criteria else 'ALL'
+            
+            status, messages = mail.search(None, search_str)
+            if status != 'OK':
+                return []
+            
+            email_ids = messages[0].split()
+            if not email_ids:
+                return []
+            
+            # 只取最近的 max_results 封
+            email_ids = email_ids[-max_results:]
+            
+            logger.info(f"🔍 [邮件] 搜索到 {len(email_ids)} 封匹配邮件")
+            
+            for eid in email_ids:
+                email_data = self._fetch_email(mail, eid)
+                if not email_data:
+                    continue
+                
+                email_data['level'] = self._classify_rule_based(email_data)
+                email_data['id'] = eid.decode()
+                results.append(email_data)
+            
+            # 缓存搜索结果（可用 read_email 查看详情）
+            if results:
+                self._last_check_results = results
+                self._last_check_time = datetime.now()
+                self._save_cache()
+            
+        except Exception as e:
+            logger.error(f"❌ [邮件] 搜索失败: {e}")
+        finally:
+            self._disconnect(mail)
+        
+        return results
+
     def stop(self):
         """停止监控"""
         self._running = False
@@ -974,6 +1044,40 @@ class EmailSkills:
                         }
                     },
                     "required": ["action"]
+                }
+            }
+        }
+    ] + [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_email",
+                "description": (
+                    "搜索邮箱中的邮件。支持按发件人、标题关键词、日期范围搜索。"
+                    "当用户说「找一下xx发的邮件」「上周有什么邮件」「搜索关于xx的邮件」等时使用。"
+                    "搜索结果会替换缓存，可以用 read_email 查看详情。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sender": {
+                            "type": "string",
+                            "description": "发件人关键词（模糊匹配，如邮箱地址或名字）"
+                        },
+                        "keyword": {
+                            "type": "string",
+                            "description": "标题关键词"
+                        },
+                        "days_back": {
+                            "type": "integer",
+                            "description": "搜索最近几天的邮件。默认7（一周）。设为30搜索一个月。"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "最多返回几封。默认10。"
+                        }
+                    },
+                    "required": []
                 }
             }
         }
@@ -1186,3 +1290,57 @@ class EmailSkills:
             return self._email_worker.remove_filter_rule(category, value)
         else:
             return f"❌ 无效操作: {action}。可选: add, remove, list"
+
+    def search_email(self, sender: str = '', keyword: str = '',
+                     days_back: int = 7, max_results: int = 10) -> str:
+        """
+        搜索邮件（支持按发件人/关键词/日期范围）。
+
+        Args:
+            sender: 发件人关键词
+            keyword: 标题关键词
+            days_back: 搜索最近几天
+            max_results: 最多返回几封
+
+        Returns:
+            搜索结果摘要
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        if not sender and not keyword:
+            return "❌ 请至少提供发件人或关键词作为搜索条件"
+        
+        try:
+            results = self._email_worker.search_emails(
+                sender=sender, keyword=keyword,
+                days_back=days_back, max_results=max_results
+            )
+            
+            if not results:
+                conditions = []
+                if sender:
+                    conditions.append(f"发件人含「{sender}」")
+                if keyword:
+                    conditions.append(f"标题含「{keyword}」")
+                conditions.append(f"最近{days_back}天")
+                return f"📭 未找到匹配的邮件（条件: {', '.join(conditions)}）"
+            
+            lines = [f"🔍 搜索到 {len(results)} 封邮件：\n"]
+            for i, em in enumerate(results, 1):
+                level_icon = {'urgent': '🚨', 'important': '⚠️', 'normal': '📨', 'spam': '🗑️'}
+                icon = level_icon.get(em['level'], '📧')
+                lines.append(f"{i}. {icon} {em['from']}")
+                lines.append(f"   标题: {em['subject'][:60]}")
+                lines.append(f"   日期: {em.get('date', '未知')[:20]}")
+                if em.get('attachments'):
+                    att_names = ', '.join(a['filename'] for a in em['attachments'])
+                    lines.append(f"   📎 附件: {att_names}")
+                lines.append("")
+            
+            lines.append("提示：可以用 read_email(序号) 查看某封邮件的完整内容。")
+            return "\n".join(lines)
+            
+        except Exception as e:
+            logger.error(f"❌ [邮件] 搜索失败: {e}")
+            return f"❌ 邮件搜索出错: {e}"

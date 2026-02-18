@@ -202,6 +202,13 @@ class SkillManager(
                 category=func_args.get("category", ""),
                 value=func_args.get("value", "")
             )
+        elif func_name == "search_email":
+            return self.search_email(
+                sender=func_args.get("sender", ""),
+                keyword=func_args.get("keyword", ""),
+                days_back=func_args.get("days_back", 7),
+                max_results=func_args.get("max_results", 10)
+            )
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):
