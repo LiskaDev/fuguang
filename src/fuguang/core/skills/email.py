@@ -139,6 +139,10 @@ class _EmailMonitorWorker:
         # 附件下载目录
         self._attachment_dir: Optional[Path] = None
         
+        # AI 专属邮箱（可选，用于 AI 以自己身份发通知）
+        self.ai_qq_email: str = ''
+        self.ai_auth_code: str = ''
+        
         # 运行标志
         self._running = False
     
@@ -1090,6 +1094,45 @@ class _EmailMonitorWorker:
         else:
             return f"❌ 邮件发送失败，请检查网络和邮箱配置"
 
+    def send_as_ai(self, to_addr: str, subject: str, body: str) -> str:
+        """
+        以 AI 自己的身份发送邮件（使用扶光专属邮箱）
+        
+        Args:
+            to_addr: 收件人邮箱
+            subject: 标题
+            body: 正文
+        
+        Returns:
+            操作结果消息
+        """
+        if not self.ai_qq_email or not self.ai_auth_code:
+            return "❌ 扶光专属邮箱未配置（需要在 .env 中设置 EMAIL_AI_QQ 和 EMAIL_AI_AUTH_CODE）"
+        
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = self.ai_qq_email
+            msg['To'] = to_addr
+            msg['Subject'] = subject
+            msg['Date'] = formatdate(localtime=True)
+            msg['Message-ID'] = make_msgid(domain=self.ai_qq_email.split('@')[1])
+            
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            with smtplib.SMTP_SSL('smtp.qq.com', 465) as smtp:
+                smtp.login(self.ai_qq_email, self.ai_auth_code)
+                smtp.send_message(msg)
+            
+            logger.info(f"✅ [邮件] 扶光已以自己身份发送邮件到 {to_addr}")
+            return f"✅ 扶光已发送邮件\n发件人: {self.ai_qq_email}\n收件人: {to_addr}\n标题: {subject}"
+            
+        except smtplib.SMTPAuthenticationError:
+            logger.error("❌ [邮件] AI邮箱 SMTP 认证失败: 授权码无效或已过期")
+            return "❌ 扶光邮箱认证失败，请检查授权码"
+        except Exception as e:
+            logger.error(f"❌ [邮件] AI邮箱发送失败: {e}")
+            return f"❌ 发送失败: {e}"
+
     # ---- 附件下载与解析 ----
 
     MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024  # 10MB
@@ -1547,6 +1590,37 @@ class EmailSkills:
             }
         }
     ]
+    
+    # ✨ 扶光专属工具（需要 AI 邮箱配置）
+    _EMAIL_AI_TOOLS = [
+        {
+            "type": "function",
+            "function": {
+                "name": "notify_commander",
+                "description": (
+                    "扶光以自己的身份给指挥官（用户）发送一封邮件通知。"
+                    "仅在非常重要的事情时使用，例如："
+                    "紧急邮件提醒、重要任务完成通稍、系统异常报告、生日祝福等。"
+                    "这封邮件会从扶光自己的QQ邮箱发出，收件人是指挥官的邮箱。"
+                    "请不要滥用此功能，只在真正重要时才发。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "subject": {
+                            "type": "string",
+                            "description": "邮件标题"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "邮件正文内容"
+                        }
+                    },
+                    "required": ["subject", "content"]
+                }
+            }
+        }
+    ]
 
     def _init_email_monitor(self):
         """
@@ -1602,6 +1676,16 @@ class EmailSkills:
         attachment_dir = self.config.DATA_DIR / "attachments"
         self._email_worker.set_attachment_dir(attachment_dir)
         
+        # 设置 AI 专属邮箱（可选）
+        ai_email = getattr(self.config, 'EMAIL_AI_QQ', '')
+        ai_auth_code = getattr(self.config, 'EMAIL_AI_AUTH_CODE', '')
+        if ai_email and ai_auth_code:
+            self._email_worker.ai_qq_email = ai_email
+            self._email_worker.ai_auth_code = ai_auth_code
+            logger.info(f"✨ [邮件] 扶光专属邮箱已配置: {ai_email}")
+        else:
+            logger.info("✨ [邮件] 扶光专属邮箱未配置，notify_commander 功能已禁用")
+        
         # 启动后台线程
         email_thread = threading.Thread(
             target=self._email_worker.run_loop,
@@ -1609,6 +1693,12 @@ class EmailSkills:
             daemon=True
         )
         email_thread.start()
+        
+        # AI 邮箱工具动态注册
+        ai_email = getattr(self.config, 'EMAIL_AI_QQ', '')
+        if ai_email:
+            self._EMAIL_TOOLS = self._EMAIL_TOOLS + self._EMAIL_AI_TOOLS
+        
         logger.info(f"✅ [邮件] 后台监控已启动 ({qq_email}, 每{check_interval}秒检查)")
 
     def check_email(self, include_spam: bool = False) -> str:
@@ -2009,3 +2099,33 @@ class EmailSkills:
             lines.append(content)
         
         return "\n".join(lines)
+
+    def notify_commander(self, subject: str, content: str) -> str:
+        """
+        扶光以自己的身份给指挥官发邮件通知。
+        使用扶光专属邮箱发送，收件人是用户的邮箱。
+
+        Args:
+            subject: 邮件标题
+            content: 邮件正文
+
+        Returns:
+            操作结果
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        if not self._email_worker.ai_qq_email:
+            return "❌ 扶光专属邮箱未配置（需要在 .env 中设置 EMAIL_AI_QQ 和 EMAIL_AI_AUTH_CODE）"
+        
+        if not subject or not content:
+            return "❌ 请提供标题和内容"
+        
+        # 收件人是用户的邮箱
+        user_email = self._email_worker.qq_email
+        
+        return self._email_worker.send_as_ai(
+            to_addr=user_email,
+            subject=subject,
+            body=content
+        )

@@ -230,6 +230,11 @@ class SkillManager(
                 email_index=func_args.get("email_index", 1),
                 attachment_index=func_args.get("attachment_index", 1)
             )
+        elif func_name == "notify_commander":
+            return self.notify_commander(
+                subject=func_args.get("subject", ""),
+                content=func_args.get("content", "")
+            )
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):
