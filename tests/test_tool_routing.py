@@ -56,6 +56,15 @@ REQUIRED_TOOLS = [
     "remember_recipe",
     "recall_recipe",
     "export_recipes_to_obsidian",
+    # Email
+    "check_email",
+    "read_email",
+    "search_email",
+    "config_email_filter",
+    "reply_email",
+    "send_email",
+    "download_attachment",
+    "notify_commander",
 ]
 
 

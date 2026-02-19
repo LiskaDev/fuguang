@@ -5,9 +5,9 @@
 
 ---
 
-## 🎉 最新功能亮点 (v5.4.0)
+## 🎉 最新功能亮点 (v5.5.0)
 
-### 🧠 **智能记忆 + MCP 外部工具 + Obsidian 成长日记 + 📧 邮件监控**
+### 🧠 **智能记忆 + MCP 外部工具 + Obsidian 成长日记 + 📧 邮件监控 + 📎 邮件附件 + 🤖 AI 双重身份**
 
 扶光现在拥有完整的“学习 → 记忆 → 可视化”闭环：
 
@@ -481,6 +481,32 @@ python verify_config.py
 ## 📝 更新日志 (Changelog)
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v5.5.0 - 📎 邮件附件 + 🤖 AI 双重身份 + 🧪 测试覆盖扩展 (2026-02-19) 📧
+> **背景**：邮件系统功能扩展三大方向——带附件发送、AI 以独立身份发通知、测试覆盖率翻倍。
+
+**核心功能：**
+- **[新增]** 📎 **邮件附件发送**：`send_email` 工具新增 `attachment` 参数，支持带附件发送。
+  - MIMEBase 编码，支持中文文件名（RFC 2231 utf-8 编码）。
+  - 25MB 限制检查 + 文件存在性验证，预览阶段显示附件名和大小。
+  - AI 用 shell 搜索桌面文件 → 确认路径 → 发邮件，支持模糊文件名。
+- **[新增]** 🤖 **AI 双重身份（扶光专属邮箱）**：`notify_commander` 工具。
+  - 扶光以自己的邮箱 (435689823@qq.com) 向指挥官发通知邮件。
+  - 每月 2 封限制（频率计数持久化），动态注册（无 AI 邮箱时不显示此工具）。
+- **[新增]** 👤 **昵称/名字发邮件**：`_resolve_recipient` 从缓存邮件记录中按昵称模糊匹配收件人。
+- **[新增]** 🧪 **测试覆盖率翻倍**：43 → **84 个测试**（新增 41 个邮件专项测试）。
+  - 10 个测试类：规则分类(7) / 缓存(2) / 过滤规则(4) / AI频率限制(5) / SMTP发送(9) / 附件解析(6) / Schema(5) / HTML解析(4)。
+  - `REQUIRED_TOOLS` 新增 8 个邮件工具路由检查。
+
+**文件变更：**
+- 修改 `core/skills/email.py`（MIMEBase 导入 + `send_reply` 附件参数 + `send_as_ai` + `notify_commander` Schema/Mixin/路由）
+- 修改 `core/skills/__init__.py`（`attachment` 路由 + `notify_commander` 路由）
+- 修改 `config.py` + `core/config.py`（`EMAIL_AI_QQ` / `EMAIL_AI_AUTH_CODE`）
+- 修改 `.env`（扶光专属邮箱配置）
+- 新增 `tests/test_email.py`（41 个测试）
+- 修改 `tests/test_tool_routing.py`（`REQUIRED_TOOLS` 新增 8 个邮件工具）
+
+---
 
 ### v5.4.0 - 📧 邮件监控模块 Email Monitor (2026-02-19) 📧
 > **背景**：接入 QQ 邮箱 IMAP 监控，支持 Gmail 转发邮件的智能分级通知。
