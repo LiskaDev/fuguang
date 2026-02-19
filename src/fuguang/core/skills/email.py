@@ -2213,7 +2213,26 @@ class EmailSkills:
         ]
         
         content = result.get('content', '')
-        if content:
+        file_path = result.get('file_path', '')
+        
+        # 图片附件：自动调用 GLM-4V 分析
+        IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')
+        if file_path and Path(file_path).suffix.lower() in IMAGE_EXTS:
+            try:
+                logger.info(f"🖼️ [邮件] 检测到图片附件，自动调用 GLM-4V 分析...")
+                analysis = self.analyze_image_file(
+                    image_path=file_path,
+                    question="请描述这张图片的主要内容，如果有文字请提取出来。"
+                )
+                if analysis and '❌' not in analysis:
+                    lines.append("🖼️ 图片内容分析：")
+                    lines.append(analysis)
+                else:
+                    lines.append(f"[图片文件] 已保存，GLM-4V 分析失败: {analysis}")
+            except Exception as e:
+                logger.warning(f"图片附件 GLM-4V 分析失败: {e}")
+                lines.append(f"[图片文件] 已保存。如需分析内容，请告诉我。")
+        elif content:
             lines.append("--- 附件内容 ---")
             lines.append(content)
         
