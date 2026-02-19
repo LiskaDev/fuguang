@@ -136,6 +136,9 @@ class _EmailMonitorWorker:
         self.user_important_keywords: List[str] = []
         self.user_spam_domains: List[str] = []
         
+        # 附件下载目录
+        self._attachment_dir: Optional[Path] = None
+        
         # 运行标志
         self._running = False
     
@@ -1087,6 +1090,241 @@ class _EmailMonitorWorker:
         else:
             return f"❌ 邮件发送失败，请检查网络和邮箱配置"
 
+    # ---- 附件下载与解析 ----
+
+    MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024  # 10MB
+    MAX_ATTACHMENT_FILES = 20
+    MAX_ATTACHMENT_DIR_SIZE = 50 * 1024 * 1024  # 50MB
+
+    def set_attachment_dir(self, path: Path):
+        """设置附件下载目录"""
+        self._attachment_dir = path
+        self._attachment_dir.mkdir(parents=True, exist_ok=True)
+
+    def download_attachment(self, email_index: int, attachment_index: int = 1) -> dict:
+        """
+        下载并解析指定邮件的附件
+        
+        Args:
+            email_index: 邮件序号（从1开始）
+            attachment_index: 附件序号（从1开始）
+        
+        Returns:
+            {'success': bool, 'message': str, 'filename': str, 'content': str, 'file_path': str}
+        """
+        if not self._last_check_results:
+            return {'success': False, 'message': '❌ 没有缓存的邮件，请先检查或搜索邮箱'}
+        
+        # 定位邮件
+        non_spam = [e for e in self._last_check_results if e['level'] != 'spam']
+        if not non_spam:
+            non_spam = self._last_check_results
+        
+        if email_index < 1 or email_index > len(non_spam):
+            return {'success': False, 'message': f'❌ 邮件序号无效。缓存中共有 {len(non_spam)} 封邮件'}
+        
+        em = non_spam[email_index - 1]
+        attachments = em.get('attachments', [])
+        
+        if not attachments:
+            return {'success': False, 'message': '❌ 这封邮件没有附件'}
+        
+        if attachment_index < 1 or attachment_index > len(attachments):
+            att_list = '\n'.join(f'  {i+1}. {a["filename"]} ({a["size_str"]})' for i, a in enumerate(attachments))
+            return {'success': False, 'message': f'❌ 附件序号无效。该邮件有 {len(attachments)} 个附件：\n{att_list}'}
+        
+        att_meta = attachments[attachment_index - 1]
+        
+        # 大小检查
+        if att_meta['size'] > self.MAX_ATTACHMENT_SIZE:
+            return {'success': False, 'message': f'❌ 附件太大（{att_meta["size_str"]}），超过 10MB 限制'}
+        
+        # 需要 email_id 来重新从 IMAP 下载
+        email_id = em.get('id')
+        if not email_id:
+            return {'success': False, 'message': '❌ 缓存中没有邮件ID，无法下载附件。请重新检查邮箱。'}
+        
+        # 连接 IMAP 并下载
+        mail = self._connect()
+        if not mail:
+            return {'success': False, 'message': '❌ 连接邮箱失败'}
+        
+        try:
+            status, msg_data = mail.fetch(email_id.encode() if isinstance(email_id, str) else email_id, '(RFC822)')
+            if status != 'OK':
+                return {'success': False, 'message': '❌ 获取邮件失败'}
+            
+            raw_email = msg_data[0][1]
+            msg = email.message_from_bytes(raw_email)
+            
+            # 找到目标附件 part
+            att_count = 0
+            target_payload = None
+            target_filename = att_meta['filename']
+            
+            for part in msg.walk():
+                content_disposition = str(part.get('Content-Disposition', ''))
+                if 'attachment' not in content_disposition and 'inline' not in content_disposition:
+                    continue
+                
+                content_type = part.get_content_type()
+                if content_type in ('text/plain', 'text/html') and 'attachment' not in content_disposition:
+                    continue
+                
+                att_count += 1
+                if att_count == attachment_index:
+                    target_payload = part.get_payload(decode=True)
+                    # 尝试获取实际文件名
+                    fn = part.get_filename()
+                    if fn:
+                        target_filename = self._decode_header(fn)
+                    break
+            
+            if not target_payload:
+                return {'success': False, 'message': '❌ 附件数据为空或已被删除'}
+            
+            # 清理附件目录（空间/数量限制）
+            if self._attachment_dir:
+                self._manage_attachment_dir()
+            
+            # 保存文件
+            save_dir = self._attachment_dir or Path('.')
+            # 安全文件名：去掉路径分隔符等危险字符
+            safe_name = re.sub(r'[<>:"/\\|?*]', '_', target_filename)
+            save_path = save_dir / safe_name
+            
+            # 如果同名文件存在，加序号
+            if save_path.exists():
+                stem = save_path.stem
+                suffix = save_path.suffix
+                for i in range(1, 100):
+                    save_path = save_dir / f"{stem}_{i}{suffix}"
+                    if not save_path.exists():
+                        break
+            
+            save_path.write_bytes(target_payload)
+            logger.info(f"📎 [邮件] 附件已下载: {save_path}")
+            
+            # 尝试解析文件内容
+            parsed_content = self._parse_file_content(save_path)
+            
+            return {
+                'success': True,
+                'message': '✅ 附件下载成功',
+                'filename': target_filename,
+                'file_path': str(save_path),
+                'content': parsed_content,
+                'size_str': att_meta['size_str'],
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ [邮件] 附件下载失败: {e}")
+            return {'success': False, 'message': f'❌ 下载失败: {e}'}
+        finally:
+            self._disconnect(mail)
+
+    def _parse_file_content(self, file_path: Path) -> str:
+        """
+        根据文件类型提取文本内容
+        
+        Returns:
+            提取的文本，或无法解析的提示
+        """
+        suffix = file_path.suffix.lower()
+        
+        try:
+            # 纯文本类
+            if suffix in ('.txt', '.csv', '.json', '.md', '.log', '.xml', '.html', '.htm'):
+                text = file_path.read_text(encoding='utf-8', errors='ignore')
+                if len(text) > 5000:
+                    return text[:5000] + f"\n\n... (文件共 {len(text)} 字，已截取前 5000 字)"
+                return text
+            
+            # PDF
+            if suffix == '.pdf':
+                import pypdf
+                reader = pypdf.PdfReader(str(file_path))
+                text_parts = []
+                for page in reader.pages:
+                    text = page.extract_text()
+                    if text and text.strip():
+                        text_parts.append(text)
+                full_text = '\n'.join(text_parts)
+                if len(full_text) > 5000:
+                    return full_text[:5000] + f"\n\n... (PDF 共 {len(full_text)} 字，已截取前 5000 字)"
+                return full_text if full_text else "(PDF 无法提取文字，可能是扫描件或图片PDF)"
+            
+            # Word (.docx)
+            if suffix == '.docx':
+                from docx import Document
+                doc = Document(str(file_path))
+                text_parts = []
+                for para in doc.paragraphs:
+                    if para.text.strip():
+                        text_parts.append(para.text)
+                # 提取表格
+                for table in doc.tables:
+                    for row in table.rows:
+                        row_text = '\t'.join(cell.text for cell in row.cells)
+                        if row_text.strip():
+                            text_parts.append(row_text)
+                full_text = '\n'.join(text_parts)
+                if len(full_text) > 5000:
+                    return full_text[:5000] + f"\n\n... (文档共 {len(full_text)} 字，已截取前 5000 字)"
+                return full_text if full_text else "(Word 文档内容为空)"
+            
+            # Excel (.xlsx)
+            if suffix in ('.xlsx', '.xls'):
+                from openpyxl import load_workbook
+                wb = load_workbook(str(file_path), data_only=True, read_only=True)
+                text_parts = []
+                for sheet_name in wb.sheetnames:
+                    sheet = wb[sheet_name]
+                    text_parts.append(f"【工作表: {sheet_name}】")
+                    row_count = 0
+                    for row in sheet.iter_rows(values_only=True):
+                        row_data = [str(cell) if cell is not None else '' for cell in row]
+                        if any(row_data):
+                            text_parts.append('\t'.join(row_data))
+                            row_count += 1
+                        if row_count >= 100:  # 每个表最多100行
+                            text_parts.append(f"... (该工作表数据较多，只显示前100行)")
+                            break
+                wb.close()
+                full_text = '\n'.join(text_parts)
+                if len(full_text) > 5000:
+                    return full_text[:5000] + f"\n\n... (已截取前 5000 字)"
+                return full_text if full_text else "(Excel 文件内容为空)"
+            
+            # 图片
+            if suffix in ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'):
+                return f"[图片文件] 已保存到 {file_path}\n如需分析图片内容，请告诉我。"
+            
+            # 其他格式
+            return f"[{suffix} 文件] 已下载保存，暂不支持预览此格式。"
+            
+        except ImportError as e:
+            return f"[解析失败] 缺少依赖库: {e}"
+        except Exception as e:
+            return f"[解析失败] {e}"
+
+    def _manage_attachment_dir(self):
+        """管理附件目录：限制文件数和总大小"""
+        if not self._attachment_dir or not self._attachment_dir.exists():
+            return
+        
+        files = sorted(self._attachment_dir.iterdir(), key=lambda f: f.stat().st_mtime)
+        files = [f for f in files if f.is_file()]
+        
+        # 删除最旧的文件，直到满足限制
+        total_size = sum(f.stat().st_size for f in files)
+        
+        while files and (len(files) > self.MAX_ATTACHMENT_FILES or total_size > self.MAX_ATTACHMENT_DIR_SIZE):
+            oldest = files.pop(0)
+            total_size -= oldest.stat().st_size
+            oldest.unlink()
+            logger.debug(f"🗑️ [邮件] 清理旧附件: {oldest.name}")
+
     def stop(self):
         """停止监控"""
         self._running = False
@@ -1281,6 +1519,32 @@ class EmailSkills:
                     "required": ["to", "subject", "content"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "download_attachment",
+                "description": (
+                    "下载并查看邮件附件的内容。"
+                    "当用户说「看看那个附件」「下载附件」「打开那个PDF」等时使用。"
+                    "支持解析 PDF、Word(.docx)、Excel(.xlsx)、文本文件等格式。"
+                    "附件会下载到本地，并尝试提取文本内容。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "email_index": {
+                            "type": "integer",
+                            "description": "邮件序号（从1开始）。默认1。"
+                        },
+                        "attachment_index": {
+                            "type": "integer",
+                            "description": "附件序号（从1开始）。默认1。查看邮件时会显示附件列表。"
+                        }
+                    },
+                    "required": []
+                }
+            }
         }
     ]
 
@@ -1333,6 +1597,10 @@ class EmailSkills:
         self._email_worker.set_processed_file(processed_file)
         self._email_worker.set_cache_file(cache_file)
         self._email_worker.set_filter_config_file(filter_config_file)
+        
+        # 设置附件下载目录
+        attachment_dir = self.config.DATA_DIR / "attachments"
+        self._email_worker.set_attachment_dir(attachment_dir)
         
         # 启动后台线程
         email_thread = threading.Thread(
@@ -1706,3 +1974,38 @@ class EmailSkills:
                 return {'name': from_field, 'email': email_addr}
         
         return None
+
+    def download_attachment(self, email_index: int = 1, attachment_index: int = 1) -> str:
+        """
+        下载并解析邮件附件
+        
+        Args:
+            email_index: 邮件序号（从1开始）
+            attachment_index: 附件序号（从1开始）
+        
+        Returns:
+            附件内容或错误消息
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        result = self._email_worker.download_attachment(
+            email_index=email_index,
+            attachment_index=attachment_index
+        )
+        
+        if not result['success']:
+            return result['message']
+        
+        lines = [
+            f"📎 {result['filename']} ({result['size_str']})",
+            f"已保存到: {result['file_path']}",
+            f"",
+        ]
+        
+        content = result.get('content', '')
+        if content:
+            lines.append("--- 附件内容 ---")
+            lines.append(content)
+        
+        return "\n".join(lines)

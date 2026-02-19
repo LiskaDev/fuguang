@@ -225,6 +225,11 @@ class SkillManager(
                 content=func_args.get("content", ""),
                 confirm=func_args.get("confirm", False)
             )
+        elif func_name == "download_attachment":
+            return self.download_attachment(
+                email_index=func_args.get("email_index", 1),
+                attachment_index=func_args.get("attachment_index", 1)
+            )
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):
