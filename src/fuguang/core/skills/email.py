@@ -539,7 +539,7 @@ class _EmailMonitorWorker:
             from_addr = self._decode_header(msg.get('From', ''))
             date_str = msg.get('Date', '')
             preview = self._extract_body_preview(msg, max_length=200)
-            full_body = self._extract_body_preview(msg, max_length=2000)
+            full_body = self._extract_body_preview(msg, max_length=10000)
             
             # 提取附件信息
             attachments = self._extract_attachments(msg)
@@ -941,6 +941,15 @@ class _EmailMonitorWorker:
                 email_data['id'] = eid.decode()
                 results.append(email_data)
             
+            # 本地二次过滤：IMAP FROM 只匹配邮箱地址，这里额外匹配显示名称（昵称）
+            if sender and results:
+                sender_lower = sender.lower()
+                # 先检查是否所有结果都匹配（IMAP已匹配的情况）
+                # 如果 IMAP 没找到结果但我们有缓存，可以搜索缓存
+                filtered = [e for e in results if sender_lower in e['from'].lower()]
+                if filtered:
+                    results = filtered
+            
             # 缓存搜索结果（可用 read_email 查看详情）
             if results:
                 self._last_check_results = results
@@ -1101,16 +1110,21 @@ class EmailSkills:
             "function": {
                 "name": "read_email",
                 "description": (
-                    "查看上次检查到的某封邮件的完整内容。"
-                    "当用户问「刚才那封邮件内容是什么」「详细看看第X封」「邮件里面写了什么」时使用。"
-                    "不需要重新连接邮箱，直接读取缓存。"
+                    "查看上次检查到的某封邮件的内容。"
+                    "当用户问「邮件里面写了什么」「详细看看第X封」等时使用。"
+                    "对于较长的邮件，默认只显示摘要。"
+                    "如果用户明确要求看全文，设置 show_full=true。"
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "index": {
                             "type": "integer",
-                            "description": "邮件序号（从1开始）。默认1，表示最近一封。如果上次只检查到一封，直接用默认值。"
+                            "description": "邮件序号（从1开始）。默认1。"
+                        },
+                        "show_full": {
+                            "type": "boolean",
+                            "description": "是否显示完整正文。默认false，只显示摘要。用户明确说「给我看全文」「展示完整内容」时设为true。"
                         }
                     },
                     "required": []
@@ -1189,19 +1203,24 @@ class EmailSkills:
                 "name": "reply_email",
                 "description": (
                     "回复之前查看过的某封邮件。"
-                    "当用户说「回复那封邮件」「帮我回复说xxx」「给xx回个邮件」等时使用。"
-                    "需要先用 check_email 或 search_email 查看邮件，然后指定序号和回复内容。"
+                    "当用户说「回复那封邮件」「帮我回复说xxx」等时使用。"
+                    "默认只显示回复预览，不会直接发送。"
+                    "用户确认后，再次调用并设置 confirm=true 才会真正发送。"
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "index": {
                             "type": "integer",
-                            "description": "要回复的邮件序号（从1开始）。默认1，表示最近一封。"
+                            "description": "要回复的邮件序号（从1开始）。默认1。"
                         },
                         "content": {
                             "type": "string",
                             "description": "回复内容（纯文本）"
+                        },
+                        "confirm": {
+                            "type": "boolean",
+                            "description": "是否确认发送。默认false（只预览）。用户明确说「确认发送」「发吧」时设为true。"
                         }
                     },
                     "required": ["content"]
@@ -1332,16 +1351,17 @@ class EmailSkills:
             logger.error(f"❌ [邮件] 手动检查失败: {e}")
             return f"❌ 邮件检查出错: {e}"
 
-    def read_email(self, index: int = 1) -> str:
+    def read_email(self, index: int = 1, show_full: bool = False) -> str:
         """
-        查看上次检查到的某封邮件的完整内容。
-        从缓存读取，不需要重新连接邮箱。
+        查看上次检查到的某封邮件的内容。
+        短邮件（≤500字）直接显示全文，长邮件默认只显示摘要。
 
         Args:
             index: 邮件序号（从1开始）
+            show_full: 是否强制显示完整正文
 
         Returns:
-            邮件完整内容
+            邮件内容
         """
         if not self._email_worker:
             return "❌ 邮件监控未启用"
@@ -1350,10 +1370,10 @@ class EmailSkills:
         if not cached:
             return "❌ 没有缓存的邮件记录。请先使用 check_email 检查邮箱。"
         
-        # 过滤非垃圾邮件（用户关心的是正常邮件）
+        # 过滤非垃圾邮件
         non_spam = [e for e in cached if e['level'] != 'spam']
         if not non_spam:
-            non_spam = cached  # 如果全是垃圾，也给看
+            non_spam = cached
         
         if index < 1 or index > len(non_spam):
             return f"❌ 序号无效。缓存中共有 {len(non_spam)} 封邮件，请输入 1-{len(non_spam)}。"
@@ -1384,9 +1404,23 @@ class EmailSkills:
         else:
             lines.append(f"📎 附件: 无")
         
-        lines.append(f"")
-        lines.append(f"--- 邮件正文 ---")
-        lines.append(em.get('full_body', em.get('preview', '(无内容)')))
+        # 智能显示正文
+        full_body = em.get('full_body', em.get('preview', '(无内容)'))
+        body_length = len(full_body)
+        
+        if show_full or body_length <= 500:
+            # 短邮件或用户要求全文 → 直接显示
+            lines.append(f"")
+            lines.append(f"--- 邮件正文 ({body_length}字) ---")
+            lines.append(full_body)
+        else:
+            # 长邮件 → 只显示预览
+            preview = em.get('preview', full_body[:200])
+            lines.append(f"")
+            lines.append(f"--- 邮件摘要 (全文{body_length}字) ---")
+            lines.append(preview)
+            lines.append(f"")
+            lines.append(f"📝 邮件较长（{body_length}字），已显示摘要。如需查看全文，请说「给我看全文」。")
         
         return "\n".join(lines)
 
@@ -1472,13 +1506,15 @@ class EmailSkills:
             logger.error(f"❌ [邮件] 搜索失败: {e}")
             return f"❌ 邮件搜索出错: {e}"
 
-    def reply_email(self, index: int = 1, content: str = '') -> str:
+    def reply_email(self, index: int = 1, content: str = '', confirm: bool = False) -> str:
         """
         回复缓存中的某封邮件。
+        默认只显示预览，confirm=True 时才真正发送。
 
         Args:
             index: 邮件序号（从1开始）
             content: 回复内容
+            confirm: 是否确认发送
 
         Returns:
             操作结果
@@ -1489,4 +1525,43 @@ class EmailSkills:
         if not content:
             return "❌ 请提供回复内容"
         
-        return self._email_worker.reply_to_cached_email(index=index, reply_body=content)
+        if confirm:
+            # 用户确认 → 真正发送
+            return self._email_worker.reply_to_cached_email(index=index, reply_body=content)
+        else:
+            # 预览模式 → 显示回复内容，等待确认
+            cached = self._email_worker._last_check_results
+            if not cached:
+                return "❌ 没有缓存的邮件，请先检查邮箱"
+            
+            non_spam = [e for e in cached if e['level'] != 'spam']
+            if not non_spam:
+                non_spam = cached
+            
+            if index < 1 or index > len(non_spam):
+                return f"❌ 序号无效。缓存中共有 {len(non_spam)} 封邮件"
+            
+            em = non_spam[index - 1]
+            
+            # 提取收件人地址
+            from_addr = em['from']
+            email_match = re.search(r'<([^>]+)>', from_addr)
+            to_addr = email_match.group(1) if email_match else from_addr
+            
+            subject = em['subject']
+            if not subject.lower().startswith('re:'):
+                subject = f"Re: {subject}"
+            
+            lines = [
+                "📧 回复预览（尚未发送）",
+                "",
+                f"收件人: {to_addr}",
+                f"标  题: {subject}",
+                f"",
+                f"--- 回复内容 ---",
+                content,
+                f"",
+                f"⚠️ 请确认以上内容无误。说「确认发送」或「发吧」将真正发出邮件。",
+            ]
+            return "\n".join(lines)
+
