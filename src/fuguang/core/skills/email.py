@@ -19,13 +19,17 @@
 
 import imaplib
 import email
+import smtplib
 import time
 import logging
 import re
 import json
 import threading
 from email.header import decode_header
-from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate, make_msgid
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from pathlib import Path
 
@@ -912,7 +916,6 @@ class _EmailMonitorWorker:
             if keyword:
                 criteria.append(f'SUBJECT "{keyword}"')
             if days_back > 0:
-                from datetime import timedelta
                 since_date = (datetime.now() - timedelta(days=days_back)).strftime('%d-%b-%Y')
                 criteria.append(f'SINCE {since_date}')
             
@@ -979,11 +982,6 @@ class _EmailMonitorWorker:
         Returns:
             是否发送成功
         """
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        from email.utils import formatdate, make_msgid
-        
         try:
             msg = MIMEMultipart()
             msg['From'] = self.qq_email
@@ -1007,8 +1005,17 @@ class _EmailMonitorWorker:
             logger.info(f"✅ [邮件] 已发送回复到 {to_addr}")
             return True
             
+        except smtplib.SMTPAuthenticationError:
+            logger.error("❌ [邮件] SMTP 认证失败: 授权码无效或已过期")
+            return False
+        except smtplib.SMTPRecipientsRefused:
+            logger.error(f"❌ [邮件] 收件人地址无效: {to_addr}")
+            return False
+        except (smtplib.SMTPConnectError, ConnectionError, OSError) as e:
+            logger.error(f"❌ [邮件] 连接 SMTP 服务器失败: {e}")
+            return False
         except Exception as e:
-            logger.error(f"❌ [邮件] 发送失败: {e}")
+            logger.error(f"❌ [邮件] 发送失败（未知错误）: {e}")
             return False
 
     def reply_to_cached_email(self, index: int, reply_body: str) -> str:
@@ -1038,7 +1045,6 @@ class _EmailMonitorWorker:
         # 提取回复地址（从 From 中提取纯邮箱地址）
         from_addr = em['from']
         # 处理 "Name <email@example.com>" 格式
-        import re
         email_match = re.search(r'<([^>]+)>', from_addr)
         to_addr = email_match.group(1) if email_match else from_addr
         
@@ -1130,8 +1136,7 @@ class EmailSkills:
                     "required": []
                 }
             }
-        }
-    ] + [
+        },
         {
             "type": "function",
             "function": {
@@ -1161,8 +1166,7 @@ class EmailSkills:
                     "required": ["action"]
                 }
             }
-        }
-    ] + [
+        },
         {
             "type": "function",
             "function": {
@@ -1195,8 +1199,7 @@ class EmailSkills:
                     "required": []
                 }
             }
-        }
-    ] + [
+        },
         {
             "type": "function",
             "function": {
