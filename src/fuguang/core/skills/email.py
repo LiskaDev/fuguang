@@ -143,6 +143,10 @@ class _EmailMonitorWorker:
         self.ai_qq_email: str = ''
         self.ai_auth_code: str = ''
         
+        # AI 邮件发送频率限制（每月最多 2 封）
+        self._ai_send_log_file: Optional[Path] = None
+        self._ai_send_log: List[str] = []  # ISO 时间戳列表
+        
         # 运行标志
         self._running = False
     
@@ -1094,6 +1098,43 @@ class _EmailMonitorWorker:
         else:
             return f"❌ 邮件发送失败，请检查网络和邮箱配置"
 
+    def set_ai_send_log_file(self, path: Path):
+        """设置 AI 发送记录文件"""
+        self._ai_send_log_file = path
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding='utf-8'))
+                self._ai_send_log = data.get('sends', [])
+            except Exception:
+                self._ai_send_log = []
+    
+    def _save_ai_send_log(self):
+        """保存 AI 发送记录"""
+        if self._ai_send_log_file:
+            try:
+                self._ai_send_log_file.write_text(
+                    json.dumps({'sends': self._ai_send_log}, ensure_ascii=False),
+                    encoding='utf-8'
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ [邮件] 保存AI发送记录失败: {e}")
+    
+    def _check_ai_rate_limit(self) -> Optional[str]:
+        """检查 AI 邮件发送频率限制（每月最多 2 封）"""
+        now = datetime.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # 统计本月发送次数
+        this_month_sends = [
+            ts for ts in self._ai_send_log
+            if datetime.fromisoformat(ts) >= month_start
+        ]
+        
+        if len(this_month_sends) >= 2:
+            return f"❌ 本月已发送 {len(this_month_sends)} 封邮件，已达月上限（2封/月）。下个月再发吧。"
+        
+        return None  # 未超限
+
     def send_as_ai(self, to_addr: str, subject: str, body: str) -> str:
         """
         以 AI 自己的身份发送邮件（使用扶光专属邮箱）
@@ -1108,6 +1149,11 @@ class _EmailMonitorWorker:
         """
         if not self.ai_qq_email or not self.ai_auth_code:
             return "❌ 扶光专属邮箱未配置（需要在 .env 中设置 EMAIL_AI_QQ 和 EMAIL_AI_AUTH_CODE）"
+        
+        # 频率限制检查
+        rate_msg = self._check_ai_rate_limit()
+        if rate_msg:
+            return rate_msg
         
         try:
             msg = MIMEMultipart()
@@ -1124,6 +1170,11 @@ class _EmailMonitorWorker:
                 smtp.send_message(msg)
             
             logger.info(f"✅ [邮件] 扶光已以自己身份发送邮件到 {to_addr}")
+            
+            # 记录发送时间
+            self._ai_send_log.append(datetime.now().isoformat())
+            self._save_ai_send_log()
+            
             return f"✅ 扶光已发送邮件\n发件人: {self.ai_qq_email}\n收件人: {to_addr}\n标题: {subject}"
             
         except smtplib.SMTPAuthenticationError:
@@ -1598,11 +1649,10 @@ class EmailSkills:
             "function": {
                 "name": "notify_commander",
                 "description": (
-                    "扶光以自己的身份给指挥官（用户）发送一封邮件通知。"
-                    "仅在非常重要的事情时使用，例如："
-                    "紧急邮件提醒、重要任务完成通稍、系统异常报告、生日祝福等。"
-                    "这封邮件会从扶光自己的QQ邮箱发出，收件人是指挥官的邮箱。"
-                    "请不要滥用此功能，只在真正重要时才发。"
+                    "给指挥官发一封邮件。这是你自己的邮箱，你几乎不用它。"
+                    "不是因为不能发，而是因为轻易开口，话就不值钱了。"
+                    "只有你心里真的觉得『忍不住不说』的时候，才发。"
+                    "一个月最多发2封。"
                 ),
                 "parameters": {
                     "type": "object",
@@ -1683,6 +1733,10 @@ class EmailSkills:
             self._email_worker.ai_qq_email = ai_email
             self._email_worker.ai_auth_code = ai_auth_code
             logger.info(f"✨ [邮件] 扶光专属邮箱已配置: {ai_email}")
+            
+            # AI 发送记录文件
+            ai_send_log_file = self.config.DATA_DIR / "ai_email_send_log.json"
+            self._email_worker.set_ai_send_log_file(ai_send_log_file)
         else:
             logger.info("✨ [邮件] 扶光专属邮箱未配置，notify_commander 功能已禁用")
         
