@@ -28,6 +28,8 @@ import threading
 from email.header import decode_header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from email.utils import formatdate, make_msgid
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
@@ -979,8 +981,11 @@ class _EmailMonitorWorker:
 
     # ---- SMTP 发送 ----
 
+    MAX_ATTACHMENT_SEND_SIZE = 25 * 1024 * 1024  # 25MB (QQ邮箱限制)
+
     def send_reply(self, to_addr: str, subject: str, body: str,
-                   original_message_id: str = '') -> bool:
+                   original_message_id: str = '',
+                   attachment_path: str = '') -> bool:
         """
         通过 QQ 邮箱 SMTP 发送回复邮件
         
@@ -1007,6 +1012,30 @@ class _EmailMonitorWorker:
                 msg['References'] = original_message_id
             
             msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # 添加附件
+            if attachment_path:
+                file_path = Path(attachment_path)
+                if not file_path.exists():
+                    logger.error(f"❌ [邮件] 附件不存在: {attachment_path}")
+                    return False
+                if file_path.stat().st_size > self.MAX_ATTACHMENT_SEND_SIZE:
+                    logger.error(f"❌ [邮件] 附件太大，超过 25MB 限制")
+                    return False
+                
+                with open(file_path, 'rb') as f:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(f.read())
+                encoders.encode_base64(part)
+                # 处理中文文件名
+                filename = file_path.name
+                part.add_header(
+                    'Content-Disposition',
+                    'attachment',
+                    filename=('utf-8', '', filename)
+                )
+                msg.attach(part)
+                logger.info(f"📎 [邮件] 已添加附件: {filename}")
             
             # QQ 邮箱 SMTP SSL
             with smtplib.SMTP_SSL('smtp.qq.com', 465) as smtp:
@@ -1080,7 +1109,8 @@ class _EmailMonitorWorker:
         else:
             return f"❌ 回复发送失败，请检查网络和邮箱配置"
 
-    def send_new_email(self, to_addr: str, subject: str, body: str) -> str:
+    def send_new_email(self, to_addr: str, subject: str, body: str,
+                       attachment_path: str = '') -> str:
         """
         发送一封新邮件（非回复）
         
@@ -1088,13 +1118,20 @@ class _EmailMonitorWorker:
             to_addr: 收件人邮箱
             subject: 邮件标题
             body: 邮件正文
+            attachment_path: 附件文件路径（可选）
         
         Returns:
             操作结果消息
         """
-        success = self.send_reply(to_addr=to_addr, subject=subject, body=body)
+        success = self.send_reply(
+            to_addr=to_addr, subject=subject, body=body,
+            attachment_path=attachment_path
+        )
         if success:
-            return f"✅ 邮件已发送\n收件人: {to_addr}\n标题: {subject}"
+            result = f"✅ 邮件已发送\n收件人: {to_addr}\n标题: {subject}"
+            if attachment_path:
+                result += f"\n📎 附件: {Path(attachment_path).name}"
+            return result
         else:
             return f"❌ 邮件发送失败，请检查网络和邮箱配置"
 
@@ -1608,6 +1645,10 @@ class EmailSkills:
                         "confirm": {
                             "type": "boolean",
                             "description": "是否确认发送。默认false（只预览）。用户确认后设为true。"
+                        },
+                        "attachment": {
+                            "type": "string",
+                            "description": "附件文件的完整路径（可选）。如用户要求带附件，先用 shell 搜索文件确认路径，再填入此参数。限制 25MB。"
                         }
                     },
                     "required": ["to", "subject", "content"]
@@ -2032,10 +2073,12 @@ class EmailSkills:
             ]
             return "\n".join(lines)
 
-    def send_email(self, to: str, subject: str, content: str, confirm: bool = False) -> str:
+    def send_email(self, to: str, subject: str, content: str,
+                   confirm: bool = False, attachment: str = '') -> str:
         """
         发送一封新邮件。
         支持昵称/名字发送（自动从邮件记录中查找对应邮箱）。
+        支持添加附件（先用 shell 确认文件路径）。
         默认只显示预览，confirm=True 时才真正发送。
 
         Args:
@@ -2043,6 +2086,7 @@ class EmailSkills:
             subject: 标题
             content: 正文
             confirm: 是否确认发送
+            attachment: 附件文件路径（可选）
 
         Returns:
             操作结果
@@ -2053,7 +2097,7 @@ class EmailSkills:
         if not to or not subject or not content:
             return "❌ 请提供收件人、标题和正文"
         
-        # 智能解析收件人：如果不含 @，尝试从邮件记录中匹配
+        # 智能解析收件人
         resolved_to = to
         resolved_note = ""
         
@@ -2070,9 +2114,28 @@ class EmailSkills:
                     f"  2. 先搜索邮件找到这个人，再发送"
                 )
         
+        # 附件验证
+        attachment_note = ""
+        if attachment:
+            att_path = Path(attachment)
+            if not att_path.exists():
+                return f"❌ 附件文件不存在: {attachment}"
+            att_size = att_path.stat().st_size
+            if att_size > 25 * 1024 * 1024:
+                return f"❌ 附件太大（{att_size / 1024 / 1024:.1f}MB），超过 25MB 限制"
+            # 可读大小
+            if att_size < 1024:
+                size_str = f"{att_size} B"
+            elif att_size < 1024 * 1024:
+                size_str = f"{att_size / 1024:.1f} KB"
+            else:
+                size_str = f"{att_size / (1024*1024):.1f} MB"
+            attachment_note = f"\n📎 附件: {att_path.name} ({size_str})"
+        
         if confirm:
             return self._email_worker.send_new_email(
-                to_addr=resolved_to, subject=subject, body=content
+                to_addr=resolved_to, subject=subject, body=content,
+                attachment_path=attachment
             )
         else:
             lines = [
@@ -2081,10 +2144,12 @@ class EmailSkills:
                 f"发件人: {self._email_worker.qq_email}",
                 f"收件人: {resolved_to}",
                 f"标  题: {subject}",
-                f"",
-                f"--- 邮件正文 ---",
-                content,
             ]
+            if attachment_note:
+                lines.append(attachment_note)
+            lines.append(f"")
+            lines.append(f"--- 邮件正文 ---")
+            lines.append(content)
             if resolved_note:
                 lines.append(resolved_note)
             lines.append(f"")

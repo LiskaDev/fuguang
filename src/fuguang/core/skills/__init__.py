@@ -223,7 +223,8 @@ class SkillManager(
                 to=func_args.get("to", ""),
                 subject=func_args.get("subject", ""),
                 content=func_args.get("content", ""),
-                confirm=func_args.get("confirm", False)
+                confirm=func_args.get("confirm", False),
+                attachment=func_args.get("attachment", "")
             )
         elif func_name == "download_attachment":
             return self.download_attachment(
