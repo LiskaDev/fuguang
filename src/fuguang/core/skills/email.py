@@ -1263,7 +1263,7 @@ class EmailSkills:
                     "properties": {
                         "to": {
                             "type": "string",
-                            "description": "收件人邮箱地址"
+                            "description": "收件人邮箱地址，或发件人昵称/名字（会自动从邮件记录中查找对应邮箱）"
                         },
                         "subject": {
                             "type": "string",
@@ -1623,10 +1623,11 @@ class EmailSkills:
     def send_email(self, to: str, subject: str, content: str, confirm: bool = False) -> str:
         """
         发送一封新邮件。
+        支持昵称/名字发送（自动从邮件记录中查找对应邮箱）。
         默认只显示预览，confirm=True 时才真正发送。
 
         Args:
-            to: 收件人邮箱
+            to: 收件人邮箱或昵称/名字
             subject: 标题
             content: 正文
             confirm: 是否确认发送
@@ -1640,20 +1641,68 @@ class EmailSkills:
         if not to or not subject or not content:
             return "❌ 请提供收件人、标题和正文"
         
+        # 智能解析收件人：如果不含 @，尝试从邮件记录中匹配
+        resolved_to = to
+        resolved_note = ""
+        
+        if '@' not in to:
+            match = self._resolve_recipient(to)
+            if match:
+                resolved_to = match['email']
+                resolved_note = f"\n💡 已识别「{to}」→ {match['name']} <{match['email']}>"
+            else:
+                return (
+                    f"❌ 找不到「{to}」的邮箱地址。\n"
+                    f"💡 可以尝试：\n"
+                    f"  1. 直接提供邮箱地址（如 xxx@qq.com）\n"
+                    f"  2. 先搜索邮件找到这个人，再发送"
+                )
+        
         if confirm:
-            return self._email_worker.send_new_email(to_addr=to, subject=subject, body=content)
+            return self._email_worker.send_new_email(
+                to_addr=resolved_to, subject=subject, body=content
+            )
         else:
             lines = [
                 "✉️ 新邮件预览（尚未发送）",
                 "",
                 f"发件人: {self._email_worker.qq_email}",
-                f"收件人: {to}",
+                f"收件人: {resolved_to}",
                 f"标  题: {subject}",
                 f"",
                 f"--- 邮件正文 ---",
                 content,
-                f"",
-                f"⚠️ 请确认以上内容无误。说「确认发送」或「发吧」将真正发出邮件。",
             ]
+            if resolved_note:
+                lines.append(resolved_note)
+            lines.append(f"")
+            lines.append(f"⚠️ 请确认以上内容无误。说「确认发送」或「发吧」将真正发出邮件。")
             return "\n".join(lines)
 
+    def _resolve_recipient(self, name: str) -> Optional[dict]:
+        """
+        通过昵称/名字从邮件缓存中查找对应的邮箱地址。
+        
+        Args:
+            name: 昵称或名字关键词
+        
+        Returns:
+            {'name': 显示名, 'email': 邮箱地址} 或 None
+        """
+        if not self._email_worker:
+            return None
+        
+        name_lower = name.lower()
+        
+        # 搜索缓存的邮件
+        cached = self._email_worker._last_check_results or []
+        
+        for em in cached:
+            from_field = em.get('from', '')
+            if name_lower in from_field.lower():
+                # 提取纯邮箱地址
+                email_match = re.search(r'<([^>]+)>', from_field)
+                email_addr = email_match.group(1) if email_match else from_field
+                return {'name': from_field, 'email': email_addr}
+        
+        return None
