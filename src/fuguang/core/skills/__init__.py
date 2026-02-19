@@ -218,6 +218,13 @@ class SkillManager(
                 content=func_args.get("content", ""),
                 confirm=func_args.get("confirm", False)
             )
+        elif func_name == "send_email":
+            return self.send_email(
+                to=func_args.get("to", ""),
+                subject=func_args.get("subject", ""),
+                content=func_args.get("content", ""),
+                confirm=func_args.get("confirm", False)
+            )
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):

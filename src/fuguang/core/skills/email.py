@@ -1069,6 +1069,24 @@ class _EmailMonitorWorker:
         else:
             return f"❌ 回复发送失败，请检查网络和邮箱配置"
 
+    def send_new_email(self, to_addr: str, subject: str, body: str) -> str:
+        """
+        发送一封新邮件（非回复）
+        
+        Args:
+            to_addr: 收件人邮箱
+            subject: 邮件标题
+            body: 邮件正文
+        
+        Returns:
+            操作结果消息
+        """
+        success = self.send_reply(to_addr=to_addr, subject=subject, body=body)
+        if success:
+            return f"✅ 邮件已发送\n收件人: {to_addr}\n标题: {subject}"
+        else:
+            return f"❌ 邮件发送失败，请检查网络和邮箱配置"
+
     def stop(self):
         """停止监控"""
         self._running = False
@@ -1227,6 +1245,40 @@ class EmailSkills:
                         }
                     },
                     "required": ["content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_email",
+                "description": (
+                    "发送一封新邮件（不是回复，是全新的邮件）。"
+                    "当用户说「给xx发封邮件」「帮我写封邮件发给xx」「发个邮件」等时使用。"
+                    "默认只显示发送预览，不会直接发送。"
+                    "用户确认后，再次调用并设置 confirm=true 才会真正发送。"
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "to": {
+                            "type": "string",
+                            "description": "收件人邮箱地址"
+                        },
+                        "subject": {
+                            "type": "string",
+                            "description": "邮件标题"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "邮件正文内容（纯文本）"
+                        },
+                        "confirm": {
+                            "type": "boolean",
+                            "description": "是否确认发送。默认false（只预览）。用户确认后设为true。"
+                        }
+                    },
+                    "required": ["to", "subject", "content"]
                 }
             }
         }
@@ -1562,6 +1614,43 @@ class EmailSkills:
                 f"标  题: {subject}",
                 f"",
                 f"--- 回复内容 ---",
+                content,
+                f"",
+                f"⚠️ 请确认以上内容无误。说「确认发送」或「发吧」将真正发出邮件。",
+            ]
+            return "\n".join(lines)
+
+    def send_email(self, to: str, subject: str, content: str, confirm: bool = False) -> str:
+        """
+        发送一封新邮件。
+        默认只显示预览，confirm=True 时才真正发送。
+
+        Args:
+            to: 收件人邮箱
+            subject: 标题
+            content: 正文
+            confirm: 是否确认发送
+
+        Returns:
+            操作结果
+        """
+        if not self._email_worker:
+            return "❌ 邮件监控未启用"
+        
+        if not to or not subject or not content:
+            return "❌ 请提供收件人、标题和正文"
+        
+        if confirm:
+            return self._email_worker.send_new_email(to_addr=to, subject=subject, body=content)
+        else:
+            lines = [
+                "✉️ 新邮件预览（尚未发送）",
+                "",
+                f"发件人: {self._email_worker.qq_email}",
+                f"收件人: {to}",
+                f"标  题: {subject}",
+                f"",
+                f"--- 邮件正文 ---",
                 content,
                 f"",
                 f"⚠️ 请确认以上内容无误。说「确认发送」或「发吧」将真正发出邮件。",
