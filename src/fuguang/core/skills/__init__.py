@@ -13,6 +13,7 @@ from .system import SystemSkills
 from .memory import MemorySkills
 from .skill_mcp import MCPSkills
 from .email import EmailSkills
+from .bilibili import BilibiliSkills
 
 logger = logging.getLogger("fuguang.skills")
 
@@ -26,6 +27,7 @@ class SkillManager(
     MemorySkills,
     MCPSkills,
     EmailSkills,
+    BilibiliSkills,
 ):
     """
     技能管理器（协调器）
@@ -96,6 +98,7 @@ class SkillManager(
         all_tools.extend(getattr(self, '_MEMORY_TOOLS', []))
         all_tools.extend(getattr(self, '_MCP_TOOLS', []))
         all_tools.extend(getattr(self, '_EMAIL_TOOLS', []))
+        all_tools.extend(getattr(self, '_BILIBILI_TOOLS', []))
         all_tools.append(set_reminder_tool)
         return all_tools
 
@@ -235,6 +238,19 @@ class SkillManager(
             return self.notify_commander(
                 subject=func_args.get("subject", ""),
                 content=func_args.get("content", "")
+            )
+
+        # --- Bilibili ---
+        elif func_name == "search_bilibili":
+            return self.search_bilibili(
+                keyword=func_args.get("keyword", ""),
+                page=func_args.get("page", 1)
+            )
+        elif func_name == "play_bilibili":
+            return self.play_bilibili(
+                keyword=func_args.get("keyword", ""),
+                bvid=func_args.get("bvid", ""),
+                time=func_args.get("time", "")
             )
 
         # --- MCP (外部工具服务器) ---
