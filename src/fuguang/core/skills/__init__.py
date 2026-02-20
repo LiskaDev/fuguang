@@ -244,6 +244,7 @@ class SkillManager(
         elif func_name == "search_bilibili":
             return self.search_bilibili(
                 keyword=func_args.get("keyword", ""),
+                search_type=func_args.get("search_type", "video"),
                 page=func_args.get("page", 1)
             )
         elif func_name == "play_bilibili":
@@ -251,6 +252,11 @@ class SkillManager(
                 keyword=func_args.get("keyword", ""),
                 bvid=func_args.get("bvid", ""),
                 time=func_args.get("time", "")
+            )
+        elif func_name == "get_bilibili_subtitle":
+            return self.get_bilibili_subtitle(
+                bvid=func_args.get("bvid", ""),
+                page=func_args.get("page", 1)
             )
 
         # --- MCP (外部工具服务器) ---
