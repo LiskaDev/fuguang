@@ -136,5 +136,7 @@ class ConfigManager:
     # === 📱 QQ 接入 (NapCat OneBot) ===
     QQ_ENABLED = os.getenv("QQ_ENABLED", "false").lower() == "true"
     NAPCAT_WS_PORT = int(os.getenv("NAPCAT_WS_PORT", "8080"))
+    ADMIN_QQ = os.getenv("ADMIN_QQ", "")
+    QQ_GROUP_MODE = os.getenv("QQ_GROUP_MODE", "admin_only")  # admin_only / chat_only / open
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")

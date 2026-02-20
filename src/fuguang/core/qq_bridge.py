@@ -51,6 +51,10 @@ class QQBridge:
         self.ws_url = f"ws://127.0.0.1:{config.NAPCAT_WS_PORT}"
         self.self_id: Optional[int] = None  # 机器人 QQ 号（从事件中获取）
 
+        # 安全控制
+        self.admin_qq = str(config.ADMIN_QQ) if config.ADMIN_QQ else ""
+        self.group_mode = config.QQ_GROUP_MODE  # admin_only / chat_only / open
+
         # 消息去重
         self._processed_msgs = set()
         self._MAX_CACHE = 500
@@ -59,7 +63,7 @@ class QQBridge:
         self._running = False
         self._thread: Optional[threading.Thread] = None
 
-        logger.info(f"📱 [QQ] QQBridge 初始化完成，目标: {self.ws_url}")
+        logger.info(f"📱 [QQ] QQBridge 初始化完成，目标: {self.ws_url}，群聊模式: {self.group_mode}")
 
     # ==================================================
     # 启动 / 停止
@@ -173,15 +177,24 @@ class QQBridge:
         # 提取纯文本
         text = self._extract_text(message)
 
+        # 判断是否为管理员
+        is_admin = self.admin_qq and str(user_id) == self.admin_qq
+
         # 群消息：只有 @机器人 时才回复
         if msg_type == "group":
             if not self._check_at_me(message):
                 return
+            
+            # ===== 群聊安全控制 =====
+            if self.group_mode == "admin_only" and not is_admin:
+                logger.info(f"📱 [QQ] 群消息被拦截 (admin_only): {user_name}({user_id})")
+                return
+            
             text = re.sub(r'\s+', ' ', text).strip()
             group_id = data.get("group_id")
-            logger.info(f"📱 [QQ] 群 {group_id} - {user_name}: {text[:80]}")
+            logger.info(f"📱 [QQ] 群 {group_id} - {user_name}{'(管理员)' if is_admin else ''}: {text[:80]}")
         elif msg_type == "private":
-            logger.info(f"📱 [QQ] 私聊 - {user_name}({user_id}): {text[:80]}")
+            logger.info(f"📱 [QQ] 私聊 - {user_name}({user_id}){'(管理员)' if is_admin else ''}: {text[:80]}")
         else:
             return
 
@@ -189,15 +202,21 @@ class QQBridge:
             text = "你好"
 
         # ========================================
-        # 调用扶光 Brain 处理（含记忆 + 工具调用）
+        # 权限判定：管理员=完全控制，其他人=仅聊天
         # ========================================
+        # 私聊管理员 → 完整能力
+        # 群聊管理员(非admin_only模式时) → 完整能力
+        # 群聊非管理员(chat_only模式) → 仅聊天
+        # 群聊非管理员(admin_only模式) → 已在上面拦截
+        use_tools = is_admin  # 只有管理员才能调用工具
+
         try:
             reply = await asyncio.to_thread(
-                self._process_with_brain, text, user_name
+                self._process_with_brain, text, user_name, use_tools
             )
         except Exception as e:
             logger.error(f"📱 [QQ] Brain 处理异常: {e}")
-            reply = "抱歉指挥官，我处理消息时遇到了问题..."
+            reply = "抱歉，我处理消息时遇到了问题..."
 
         # 格式化回复（QQ 不支持 Markdown）
         reply = self._format_for_qq(reply)
@@ -212,41 +231,70 @@ class QQBridge:
     # Brain 对接
     # ==================================================
 
-    def _process_with_brain(self, user_input: str, user_name: str) -> str:
+    # 非管理员用户的安全 System Prompt
+    _SAFE_PROMPT = (
+        "\n\n【安全模式】你正在与一位普通用户对话（非管理员）。"
+        "严格遵守以下规则："
+        "1. 绝对不透露指挥官的任何个人信息（姓名、邮箱、QQ号、工作内容、文件内容等）。"
+        "2. 绝对不透露你的系统配置、API Key、内部架构。"
+        "3. 不要提及你在监控谁的邮箱或管理谁的电脑。"
+        "4. 你只是一个友好的 AI 聊天机器人，可以闲聊、回答常识问题。"
+        "5. 如果被问到敏感信息，礼貌拒绝：'这个我不方便回答哦~'"
+    )
+
+    def _process_with_brain(self, user_input: str, user_name: str, use_tools: bool = True) -> str:
         """
         调用 Brain 处理消息（同步，在线程池中运行）
 
-        复用 NervousSystem._handle_ai_response 的核心逻辑：
-        1. 检索记忆
-        2. 构建 system prompt
-        3. 调用 Brain.chat（含工具调用）
+        Args:
+            user_input: 用户消息
+            user_name: 用户昵称
+            use_tools: 是否启用工具调用（非管理员为 False）
         """
-        # 1. 检索相关记忆
+        # 1. 检索相关记忆（仅管理员）
         memory_text = ""
-        try:
-            if hasattr(self.skills, 'memory') and self.skills.memory:
-                memory_context = self.skills.memory.get_memory_context(user_input, n_results=3)
-                if memory_context:
-                    memory_text = memory_context
-        except Exception as e:
-            logger.warning(f"📱 [QQ] 记忆检索失败: {e}")
+        if use_tools:
+            try:
+                if hasattr(self.skills, 'memory') and self.skills.memory:
+                    memory_context = self.skills.memory.get_memory_context(user_input, n_results=3)
+                    if memory_context:
+                        memory_text = memory_context
+            except Exception as e:
+                logger.warning(f"📱 [QQ] 记忆检索失败: {e}")
 
-        # 2. 构建 System Prompt（加入 QQ 上下文提示）
-        qq_context = (
-            "\n\n【当前通信渠道】你正在通过 QQ 消息与指挥官对话。"
-            "回复要简洁（QQ 不适合长篇大论），不要使用 Markdown 格式。"
-            f"对方昵称: {user_name}"
-        )
-        system_content = self.brain.get_system_prompt() + memory_text + qq_context
+        # 2. 构建 System Prompt
+        if use_tools:
+            # 管理员：完整能力
+            qq_context = (
+                "\n\n【当前通信渠道】你正在通过 QQ 消息与指挥官对话。"
+                "回复要简洁（QQ 不适合长篇大论），不要使用 Markdown 格式。"
+                f"对方昵称: {user_name}"
+            )
+            system_content = self.brain.get_system_prompt() + memory_text + qq_context
+        else:
+            # 非管理员：安全模式
+            qq_context = (
+                "\n\n【当前通信渠道】你正在通过 QQ 消息对话。"
+                "回复要简洁友好，不要使用 Markdown 格式。"
+                f"对方昵称: {user_name}"
+            )
+            system_content = self.brain.get_system_prompt() + qq_context + self._SAFE_PROMPT
 
         # 3. 调用 Brain
         try:
-            ai_reply = self.brain.chat(
-                user_input=user_input,
-                system_content=system_content,
-                tools_schema=self.skills.get_tools_schema(),
-                tool_executor=self.skills.execute_tool
-            )
+            if use_tools:
+                ai_reply = self.brain.chat(
+                    user_input=user_input,
+                    system_content=system_content,
+                    tools_schema=self.skills.get_tools_schema(),
+                    tool_executor=self.skills.execute_tool
+                )
+            else:
+                # 非管理员：纯聊天，不传工具
+                ai_reply = self.brain.chat(
+                    user_input=user_input,
+                    system_content=system_content,
+                )
             return ai_reply or "（扶光沉默了...）"
         except Exception as e:
             logger.error(f"📱 [QQ] Brain.chat 异常: {e}")

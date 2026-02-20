@@ -99,6 +99,8 @@ class ConfigManager:
         # 📱 QQ 接入 (NapCat)
         self.QQ_ENABLED = GlobalConfig.QQ_ENABLED
         self.NAPCAT_WS_PORT = GlobalConfig.NAPCAT_WS_PORT
+        self.ADMIN_QQ = GlobalConfig.ADMIN_QQ
+        self.QQ_GROUP_MODE = GlobalConfig.QQ_GROUP_MODE
         
         # 🔍 验证关键文件是否存在
         self._validate_paths()
