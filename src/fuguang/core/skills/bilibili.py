@@ -3,22 +3,21 @@
 通过 bilibili-api-python 搜索视频/番剧，构建带时间戳的 URL 打开浏览器
 
 工具列表：
-  - search_bilibili:       搜索 B站 视频或番剧，返回链接列表
-  - play_bilibili:         精确播放番剧/视频（支持集数+时间戳跳转）
-  - get_bilibili_subtitle: 提取视频字幕/CC 文本，用于内容分析和总结
+  - search_bilibili:  搜索 B站 视频或番剧，返回链接列表
+  - play_bilibili:    播放视频/番剧（支持集数 + 时间戳跳转）
 """
 
 import asyncio
+import re
 import webbrowser
 import logging
-import httpx
 from typing import Optional
 
 logger = logging.getLogger("Fuguang.Bilibili")
 
 # bilibili-api 可选导入
 try:
-    from bilibili_api import search, video
+    from bilibili_api import search, video, bangumi
     BILIBILI_AVAILABLE = True
 except ImportError:
     BILIBILI_AVAILABLE = False
@@ -67,20 +66,26 @@ _BILIBILI_TOOLS_SCHEMA = [
         "function": {
             "name": "play_bilibili",
             "description": (
-                "在浏览器中打开B站视频并跳转到指定时间。"
-                "可通过BV号精确打开，也可通过关键词搜索并打开第一个结果。"
-                "支持时间戳跳转。"
+                "在浏览器中打开B站视频或番剧。"
+                "可通过BV号打开视频，或通过关键词搜索打开。"
+                "番剧支持指定集数（如episode=156打开第156集）。"
+                "支持时间戳跳转（如time='13:26'跳到13分26秒）。"
+                "优先搜索番剧，如果没找到番剧则搜索普通视频。"
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "keyword": {
                         "type": "string",
-                        "description": "搜索关键词（与bvid二选一），如'凡人修仙传 第156集'"
+                        "description": "搜索关键词（与bvid二选一），如'凡人修仙传'"
                     },
                     "bvid": {
                         "type": "string",
                         "description": "B站视频BV号（与keyword二选一），如'BV1xx411c7mD'"
+                    },
+                    "episode": {
+                        "type": "integer",
+                        "description": "番剧集数（从1开始），如156表示第156集。仅对番剧有效"
                     },
                     "time": {
                         "type": "string",
@@ -88,32 +93,6 @@ _BILIBILI_TOOLS_SCHEMA = [
                     }
                 },
                 "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_bilibili_subtitle",
-            "description": (
-                "提取B站视频的字幕/CC文本。可用于视频内容分析、总结、翻译等。"
-                "需要提供BV号。返回字幕纯文本内容。"
-                "注意：并非所有视频都有字幕，部分视频需要 AI 自动字幕已开启。"
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "bvid": {
-                        "type": "string",
-                        "description": "B站视频BV号，如'BV17x411w7KC'"
-                    },
-                    "page": {
-                        "type": "integer",
-                        "description": "分P编号（从1开始），默认第1P",
-                        "default": 1
-                    }
-                },
-                "required": ["bvid"]
             }
         }
     }
@@ -133,14 +112,7 @@ class BilibiliSkills:
     # 搜索
     # ------------------------------------------
     def search_bilibili(self, keyword: str, search_type: str = "video", page: int = 1) -> str:
-        """
-        搜索B站视频或番剧
-
-        Args:
-            keyword: 搜索关键词
-            search_type: "video" 或 "bangumi"
-            page: 页码
-        """
+        """搜索B站视频或番剧"""
         if not BILIBILI_AVAILABLE:
             return "❌ bilibili-api 未安装，请运行: pip install bilibili-api-python"
 
@@ -180,7 +152,7 @@ class BilibiliSkills:
                 lines.append(f"   BV号: {bvid} | 链接: {url}")
             lines.append("")
 
-        lines.append("💡 说\"打开第X个\"或用 play_bilibili 播放")
+        lines.append("💡 说\"打开第X个\"或用 play_bilibili(bvid='BVxxx') 播放")
         return "\n".join(lines)
 
     def _search_bangumi(self, keyword: str, page: int = 1) -> str:
@@ -197,12 +169,9 @@ class BilibiliSkills:
         for i, item in enumerate(items[:5], 1):
             title = self._clean_html(item.get("title", ""))
             season_id = item.get("season_id", "")
-            media_id = item.get("media_id", "")
             areas = item.get("areas", "")
-            styles = item.get("styles", "")
             eps_count = item.get("eps", [])
             total_eps = len(eps_count) if isinstance(eps_count, list) else "?"
-            cv = item.get("cv", "未知")
             desc = item.get("desc", "")[:80]
 
             url = f"https://www.bilibili.com/bangumi/play/ss{season_id}" if season_id else ""
@@ -216,21 +185,30 @@ class BilibiliSkills:
                 lines.append(f"   链接: {url}")
             lines.append("")
 
-        lines.append("💡 说\"打开第X个番剧\"即可观看")
+        lines.append("💡 说\"打开第X个番剧第Y集\"即可观看指定集数")
         return "\n".join(lines)
 
     # ------------------------------------------
     # 播放
     # ------------------------------------------
-    def play_bilibili(self, keyword: str = "", bvid: str = "", time: str = "") -> str:
-        """在浏览器中打开B站视频，支持时间戳跳转"""
+    def play_bilibili(self, keyword: str = "", bvid: str = "",
+                      episode: int = 0, time: str = "") -> str:
+        """
+        在浏览器中打开B站视频/番剧，支持集数和时间戳跳转
+
+        Args:
+            keyword: 搜索关键词
+            bvid: BV号
+            episode: 番剧集数（从1开始）
+            time: 跳转时间 '分:秒'
+        """
         if not BILIBILI_AVAILABLE:
             return "❌ bilibili-api 未安装"
 
         seconds = self._parse_time_to_seconds(time) if time else 0
 
         try:
-            # 直接用 BV 号打开
+            # ===== 1. 直接用 BV 号打开 =====
             if bvid:
                 url = f"https://www.bilibili.com/video/{bvid}"
                 if seconds > 0:
@@ -242,8 +220,11 @@ class BilibiliSkills:
             if not keyword:
                 return "请提供搜索关键词或BV号"
 
-            # ===== 智能搜索：先搜番剧，没有再搜视频 =====
-            # 1. 先尝试番剧搜索
+            # ===== 2. 从关键词中提取集数（如果没有明确传 episode） =====
+            if not episode:
+                episode = self._extract_episode_number(keyword)
+
+            # ===== 3. 先搜番剧 =====
             try:
                 bangumi_result = asyncio.run(
                     search.search_by_type(keyword, search_type=search.SearchObjectType.BANGUMI, page=1)
@@ -253,11 +234,15 @@ class BilibiliSkills:
                 bangumi_items = []
 
             if bangumi_items:
-                # 找到官方番剧
                 first = bangumi_items[0]
                 title = self._clean_html(first.get("title", ""))
                 season_id = first.get("season_id", "")
-                if season_id:
+
+                if season_id and episode:
+                    # 获取具体集数的 ep_id
+                    return self._open_bangumi_episode(season_id, title, episode, seconds, time)
+                elif season_id:
+                    # 没指定集数，直接打开番剧首页
                     url = f"https://www.bilibili.com/bangumi/play/ss{season_id}"
                     if seconds > 0:
                         url += f"?t={seconds}"
@@ -265,7 +250,7 @@ class BilibiliSkills:
                     time_info = f"，跳转到 {time}" if time else ""
                     return f"✅ 已打开番剧「{title}」{time_info}\n链接: {url}"
 
-            # 2. 番剧没找到，搜普通视频
+            # ===== 4. 番剧没找到，搜普通视频 =====
             result = asyncio.run(
                 search.search_by_type(keyword, search_type=search.SearchObjectType.VIDEO, page=1)
             )
@@ -293,91 +278,47 @@ class BilibiliSkills:
             logger.error(f"🎬 [B站] 播放失败: {e}")
             return f"打开B站视频时出错: {str(e)[:200]}"
 
-    # ------------------------------------------
-    # 字幕提取
-    # ------------------------------------------
-    def get_bilibili_subtitle(self, bvid: str, page: int = 1) -> str:
+    def _open_bangumi_episode(self, season_id: int, title: str,
+                              episode: int, seconds: int, time_str: str) -> str:
         """
-        提取B站视频字幕文本
+        获取番剧指定集数的 ep_id 并打开
 
         Args:
-            bvid: BV号
-            page: 分P编号（从1开始）
-
-        Returns:
-            字幕纯文本或错误信息
+            season_id: 番剧 season ID
+            title: 番剧标题
+            episode: 集数（从1开始）
+            seconds: 跳转秒数
+            time_str: 原始时间字符串
         """
-        if not BILIBILI_AVAILABLE:
-            return "❌ bilibili-api 未安装"
-
         try:
-            v = video.Video(bvid=bvid)
+            b = bangumi.Bangumi(ssid=season_id)
+            episodes = asyncio.run(b.get_episodes())
 
-            # 1. 获取视频信息（拿 cid）
-            info = asyncio.run(v.get_info())
-            pages = info.get("pages", [])
-            title = info.get("title", "未知视频")
+            if not episodes:
+                return f"番剧「{title}」没有可用集数"
 
-            if not pages:
-                return f"视频 {bvid} 没有分P信息"
+            total = len(episodes)
 
-            page_idx = max(0, min(page - 1, len(pages) - 1))
-            cid = pages[page_idx]["cid"]
-            page_title = pages[page_idx].get("part", "")
+            if episode < 1 or episode > total:
+                return f"番剧「{title}」共 {total} 集，没有第 {episode} 集"
 
-            # 2. 获取字幕列表
-            subtitle_info = asyncio.run(v.get_subtitle(cid=cid))
-            subtitles = subtitle_info.get("subtitles", [])
+            ep = episodes[episode - 1]
+            ep_id = ep.get_epid()
 
-            if not subtitles:
-                return f"视频「{title}」没有可用字幕（可能未开启AI字幕或UP主未上传字幕）"
+            url = f"https://www.bilibili.com/bangumi/play/ep{ep_id}"
+            if seconds > 0:
+                url += f"?t={seconds}"
 
-            # 3. 选择中文字幕（优先）
-            chosen = None
-            for sub in subtitles:
-                lang = sub.get("lan", "")
-                if "zh" in lang or "cn" in lang or "ai-zh" in lang:
-                    chosen = sub
-                    break
-            if not chosen:
-                chosen = subtitles[0]  # 没有中文就用第一个
-
-            subtitle_url = chosen.get("subtitle_url", "")
-            if not subtitle_url:
-                return f"字幕URL为空"
-
-            # 确保 URL 有协议头
-            if subtitle_url.startswith("//"):
-                subtitle_url = "https:" + subtitle_url
-
-            # 4. 下载字幕 JSON
-            resp = httpx.get(subtitle_url, timeout=10)
-            resp.raise_for_status()
-            subtitle_data = resp.json()
-
-            # 5. 提取纯文本
-            body = subtitle_data.get("body", [])
-            if not body:
-                return f"字幕文件为空"
-
-            text_lines = [item.get("content", "") for item in body if item.get("content")]
-            full_text = "\n".join(text_lines)
-
-            # 6. 截断（避免太长）
-            if len(full_text) > 8000:
-                full_text = full_text[:8000] + "\n\n... (字幕内容过长，已截断)"
-
-            header = f"📝 视频「{title}」"
-            if page_title:
-                header += f" - {page_title}"
-            header += f" 的字幕内容（{chosen.get('lan_doc', '未知语言')}）：\n"
-            header += f"共 {len(text_lines)} 句\n\n"
-
-            return header + full_text
+            webbrowser.open(url)
+            time_info = f"，跳转到 {time_str}" if time_str else ""
+            return f"✅ 已打开番剧「{title}」第 {episode} 集 (共{total}集){time_info}\n链接: {url}"
 
         except Exception as e:
-            logger.error(f"🎬 [B站] 字幕提取失败: {e}")
-            return f"提取字幕时出错: {str(e)[:200]}"
+            logger.error(f"🎬 [B站] 获取番剧集数失败: {e}")
+            # 降级：打开番剧首页
+            url = f"https://www.bilibili.com/bangumi/play/ss{season_id}"
+            webbrowser.open(url)
+            return f"⚠️ 获取第 {episode} 集失败({str(e)[:50]})，已打开番剧首页\n链接: {url}"
 
     # ------------------------------------------
     # 工具方法
@@ -401,6 +342,31 @@ class BilibiliSkills:
                 return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
         except ValueError:
             pass
+        return 0
+
+    @staticmethod
+    def _extract_episode_number(text: str) -> int:
+        """
+        从文本中提取集数
+
+        '凡人修仙传 第156集' → 156
+        '凡人修仙传 156集'   → 156
+        '凡人修仙传 第156话' → 156
+        '凡人修仙传 ep156'   → 156
+        '凡人修仙传'         → 0 (未识别)
+        """
+        if not text:
+            return 0
+        # 尝试匹配多种中文集数格式
+        patterns = [
+            r'第\s*(\d+)\s*[集话]',      # 第156集 / 第156话
+            r'(\d+)\s*[集话]',            # 156集 / 156话
+            r'[Ee][Pp]?\s*(\d+)',          # EP156 / ep156 / E156
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return int(match.group(1))
         return 0
 
     @staticmethod
