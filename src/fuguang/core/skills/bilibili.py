@@ -230,6 +230,7 @@ class BilibiliSkills:
         seconds = self._parse_time_to_seconds(time) if time else 0
 
         try:
+            # 直接用 BV 号打开
             if bvid:
                 url = f"https://www.bilibili.com/video/{bvid}"
                 if seconds > 0:
@@ -241,13 +242,36 @@ class BilibiliSkills:
             if not keyword:
                 return "请提供搜索关键词或BV号"
 
+            # ===== 智能搜索：先搜番剧，没有再搜视频 =====
+            # 1. 先尝试番剧搜索
+            try:
+                bangumi_result = asyncio.run(
+                    search.search_by_type(keyword, search_type=search.SearchObjectType.BANGUMI, page=1)
+                )
+                bangumi_items = bangumi_result.get("result", [])
+            except Exception:
+                bangumi_items = []
+
+            if bangumi_items:
+                # 找到官方番剧
+                first = bangumi_items[0]
+                title = self._clean_html(first.get("title", ""))
+                season_id = first.get("season_id", "")
+                if season_id:
+                    url = f"https://www.bilibili.com/bangumi/play/ss{season_id}"
+                    if seconds > 0:
+                        url += f"?t={seconds}"
+                    webbrowser.open(url)
+                    time_info = f"，跳转到 {time}" if time else ""
+                    return f"✅ 已打开番剧「{title}」{time_info}\n链接: {url}"
+
+            # 2. 番剧没找到，搜普通视频
             result = asyncio.run(
                 search.search_by_type(keyword, search_type=search.SearchObjectType.VIDEO, page=1)
             )
-
             videos = result.get("result", [])
             if not videos:
-                return f"未找到与 '{keyword}' 相关的B站视频"
+                return f"未找到与 '{keyword}' 相关的B站内容"
 
             first = videos[0]
             title = self._clean_html(first.get("title", ""))
