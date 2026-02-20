@@ -96,6 +96,10 @@ class ConfigManager:
         # 心跳系统配置
         self.HEARTBEAT_IDLE_TIMEOUT = GlobalConfig.HEARTBEAT_IDLE_TIMEOUT
         
+        # 📱 QQ 接入 (NapCat)
+        self.QQ_ENABLED = GlobalConfig.QQ_ENABLED
+        self.NAPCAT_WS_PORT = GlobalConfig.NAPCAT_WS_PORT
+        
         # 🔍 验证关键文件是否存在
         self._validate_paths()
     

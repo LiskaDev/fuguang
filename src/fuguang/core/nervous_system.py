@@ -18,6 +18,7 @@ from .ears import Ears
 from .brain import Brain
 from .skills import SkillManager
 from .eyes import Eyes
+from .qq_bridge import QQBridge
 
 logger = logging.getLogger("Fuguang")
 
@@ -89,6 +90,23 @@ class NervousSystem:
         self._gui_recording_active = False   # 是否正在 GUI 录音
         self._gui_stop_event = threading.Event()  # 停止录音信号
         self._gui_record_thread = None
+
+        # ========================================
+        # [新增] QQ 消息桥接（NapCat OneBot）
+        # ========================================
+        self.qq_bridge = None
+        if self.config.QQ_ENABLED:
+            try:
+                self.qq_bridge = QQBridge(
+                    config=self.config,
+                    brain=self.brain,
+                    skills=self.skills,
+                    mouth=self.mouth
+                )
+                self.qq_bridge.start()
+                logger.info("📱 [QQ] QQ 消息桥接已启动")
+            except Exception as e:
+                logger.error(f"📱 [QQ] QQ 桥接启动失败（不影响其他功能）: {e}")
 
         # 注册按键监听
         keyboard.hook(self._on_key_event)

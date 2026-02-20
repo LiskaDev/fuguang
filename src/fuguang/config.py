@@ -132,5 +132,9 @@ class ConfigManager:
     BIOCLOCK_HEALTH_CHECK = False         # 是否启用系统健康监控
     BIOCLOCK_HEALTH_INTERVAL = 10        # 健康检查间隔（分钟）
     BIOCLOCK_CPU_WARNING_THRESHOLD = 80  # CPU 报警阈值（百分比）
+    
+    # === 📱 QQ 接入 (NapCat OneBot) ===
+    QQ_ENABLED = os.getenv("QQ_ENABLED", "false").lower() == "true"
+    NAPCAT_WS_PORT = int(os.getenv("NAPCAT_WS_PORT", "8080"))
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")
