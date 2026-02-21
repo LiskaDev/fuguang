@@ -138,5 +138,11 @@ class ConfigManager:
     NAPCAT_WS_PORT = int(os.getenv("NAPCAT_WS_PORT", "8080"))
     ADMIN_QQ = os.getenv("ADMIN_QQ", "")
     QQ_GROUP_MODE = os.getenv("QQ_GROUP_MODE", "admin_only")  # admin_only / chat_only / open
+    
+    # === 🌐 Web UI (FastAPI + WebSocket) ===
+    WEB_UI_ENABLED = os.getenv("WEB_UI_ENABLED", "false").lower() == "true"
+    WEB_UI_PORT = int(os.getenv("WEB_UI_PORT", "7860"))
+    WEB_UI_PASSWORD = os.getenv("WEB_UI_PASSWORD", "fuguang")
+    WEB_UI_JWT_SECRET = os.getenv("WEB_UI_JWT_SECRET", "")
 
 print(f"✅ [PathManager] Root: {PROJECT_ROOT}")

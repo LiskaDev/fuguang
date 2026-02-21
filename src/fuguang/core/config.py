@@ -102,6 +102,12 @@ class ConfigManager:
         self.ADMIN_QQ = GlobalConfig.ADMIN_QQ
         self.QQ_GROUP_MODE = GlobalConfig.QQ_GROUP_MODE
         
+        # 🌐 Web UI (FastAPI + WebSocket)
+        self.WEB_UI_ENABLED = GlobalConfig.WEB_UI_ENABLED
+        self.WEB_UI_PORT = GlobalConfig.WEB_UI_PORT
+        self.WEB_UI_PASSWORD = GlobalConfig.WEB_UI_PASSWORD
+        self.WEB_UI_JWT_SECRET = GlobalConfig.WEB_UI_JWT_SECRET
+        
         # 🔍 验证关键文件是否存在
         self._validate_paths()
     

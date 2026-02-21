@@ -220,6 +220,9 @@ class VisionSkills:
         start_time = time.time()
         
         try:
+            if not image_path:
+                return "❌ 图片路径为空，请提供有效的 image_path。"
+
             # 1. 处理路径（支持相对路径）
             if not os.path.isabs(image_path):
                 # 相对于项目根目录

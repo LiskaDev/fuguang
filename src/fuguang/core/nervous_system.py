@@ -19,6 +19,7 @@ from .brain import Brain
 from .skills import SkillManager
 from .eyes import Eyes
 from .qq_bridge import QQBridge
+from .web_bridge import WebBridge
 
 logger = logging.getLogger("Fuguang")
 
@@ -107,6 +108,22 @@ class NervousSystem:
                 logger.info("📱 [QQ] QQ 消息桥接已启动")
             except Exception as e:
                 logger.error(f"📱 [QQ] QQ 桥接启动失败（不影响其他功能）: {e}")
+
+        # ========================================
+        # [新增] Web UI 桥接（FastAPI + WebSocket）
+        # ========================================
+        self.web_bridge = None
+        if getattr(self.config, 'WEB_UI_ENABLED', False):
+            try:
+                self.web_bridge = WebBridge(
+                    config=self.config,
+                    brain=self.brain,
+                    skills=self.skills
+                )
+                self.web_bridge.start()
+                logger.info(f"🌐 [Web] Web UI 已启动: http://0.0.0.0:{self.web_bridge.port}")
+            except Exception as e:
+                logger.error(f"🌐 [Web] Web UI 启动失败（不影响其他功能）: {e}")
 
         # 注册按键监听
         keyboard.hook(self._on_key_event)
@@ -958,8 +975,8 @@ class NervousSystem:
                                 self.mouth.speak("我在。")
                                 if clean_text:
                                     self._process_command(clean_text)
-                            elif self.brain.should_auto_respond(text):
-                                self._process_command(text)
+                            # [修复] 移除 should_auto_respond：待机模式下只响应唤醒词
+                            # 之前"时间""日期"等关键词会跳过唤醒词直接触发回复
                         else:
                             self.LAST_ACTIVE_TIME = time.time()
                             self._process_command(text)

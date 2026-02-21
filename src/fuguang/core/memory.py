@@ -61,9 +61,12 @@ class MemoryBank:
         self.client = chromadb.PersistentClient(path=persist_dir)
         
         # 3. 使用多语言嵌入模型 (支持中文！)
+        # 设置离线模式：模型已缓存时跳过 HuggingFace 联网检查，避免无 VPN 时启动失败
+        model_name = "paraphrase-multilingual-MiniLM-L12-v2"
+        self._setup_hf_offline(model_name)
         try:
             self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name="paraphrase-multilingual-MiniLM-L12-v2"
+                model_name=model_name
             )
             logger.info("✅ [记忆] 多语言嵌入模型加载成功")
         except Exception as e:
@@ -82,6 +85,28 @@ class MemoryBank:
         know_count = self.knowledge.count()
         recipe_count = self.recipes.count()
         logger.info(f"✅ [记忆] 三集合加载完成: 对话记忆 {mem_count} 条 | 知识库 {know_count} 条 | 技能配方 {recipe_count} 条")
+
+    @staticmethod
+    def _setup_hf_offline(model_name: str):
+        """如果模型已缓存在本地，设置 HuggingFace 离线模式，跳过联网检查"""
+        if os.environ.get("HF_HUB_OFFLINE") == "1":
+            return  # 已由用户手动设置
+        
+        # 检查模型缓存是否存在（sentence-transformers 缓存路径）
+        cache_dirs = [
+            os.path.join(os.path.expanduser("~"), ".cache", "torch", "sentence_transformers",
+                         f"sentence-transformers_{model_name}"),
+            os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub",
+                         f"models--sentence-transformers--{model_name}"),
+        ]
+        
+        for cache_dir in cache_dirs:
+            if os.path.isdir(cache_dir):
+                os.environ["HF_HUB_OFFLINE"] = "1"
+                logger.info(f"🔒 [记忆] 检测到本地模型缓存，已启用离线模式 (无需 VPN)")
+                return
+        
+        logger.info("🌐 [记忆] 未检测到本地模型缓存，首次运行需联网下载模型")
 
     def _safe_get_collection(self, name: str, description: str):
         """安全获取集合，HNSW索引损坏时自动重建"""

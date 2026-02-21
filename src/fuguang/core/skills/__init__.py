@@ -123,7 +123,9 @@ class SkillManager(
         elif func_name == "analyze_screen_content":
             return self.analyze_screen_content(func_args.get("question", ""))
         elif func_name == "analyze_image_file":
-            return self.analyze_image_file(func_args.get("image_path", ""), func_args.get("question", ""))
+            image_path = func_args.get("image_path") or func_args.get("file_path") or ""
+            question = func_args.get("question", "")
+            return self.analyze_image_file(image_path, question)
         elif func_name == "get_vision_history":
             return self.get_vision_history()
 

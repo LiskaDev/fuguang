@@ -5,9 +5,26 @@
 
 ---
 
-## 🎉 最新功能亮点 (v5.6.0)
+## 🎉 最新功能亮点 (v6.1.0)
 
-### 🧠 **智能记忆 + MCP 外部工具 + Obsidian 成长日记 + 📧 邮件监控 + 📎 邮件附件 + 🤖 AI 双重身份 + 📱 QQ 消息接入**
+### 🗂️ **Web UI 聊天历史 + 本地工具过滤 + 体验优化**
+
+Web UI 迎来 Phase 3 重大更新——对话历史持久化：
+
+```
+用户发消息 → 后端自动创建对话 → SQLite 持久存储
+     ↓
+第一条消息 → 自动生成标题（截取前20字）
+     ↓
+侧边栏实时更新 → 点击切换对话 → 刷新后恢复历史
+```
+
+**核心能力：**
+- 🗂️ **SQLite 聊天存储** — 对话和消息永久保存到 `data/web_chat.db`
+- 📋 **侧边栏历史列表** — 实时显示最近50条对话，悬停显示🗑删除按钮
+- 🔄 **对话切换与恢复** — 点击侧边栏切换，刷新后通过历史恢复
+- 🛡️ **本地工具过滤** — Web 端禁用 14 个本地工具（GUI/音量/浏览器/应用启动）
+- 🐛 **新对话 Bug 修复** — 修复点击"新对话"后消息仍存入旧对话的问题
 
 扶光现在拥有完整的“学习 → 记忆 → 可视化”闭环：
 
@@ -481,6 +498,37 @@ python verify_config.py
 ## 📝 更新日志 (Changelog)
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v6.1.0 - 🗂️ Web UI 聊天历史持久化 + 本地工具过滤 (2026-02-22) 💾
+> **背景**：Web UI Phase 3——实现 SQLite 对话历史持久化，侧边栏历史列表，刷新恢复，本地工具过滤。
+
+**核心功能：**
+- **[新增]** 💾 **SQLite 聊天存储** (`chat_store.py`)：新建 `ChatStore` 类，双表结构 `conversations` + `messages`。
+  - 线程安全（`threading.local`）、WAL 模式、CASCADE 删除。
+  - 完整 CRUD：创建/列表/删除对话，添加/查询消息，自动生成标题。
+  - 数据库位于 `data/web_chat.db`。
+- **[新增]** 🌐 **对话管理 API** (`web_bridge.py`)：5 个 REST 端点。
+  - `GET /api/conversations` — 列出最近 50 条对话
+  - `POST /api/conversations` — 创建新对话
+  - `DELETE /api/conversations/{id}` — 删除对话
+  - `PUT /api/conversations/{id}/title` — 重命名对话
+  - `GET /api/conversations/{id}/messages` — 获取消息列表
+- **[新增]** 💬 **WebSocket 消息持久化**：发送消息自动创建/关联对话，保存用户和 AI 消息。
+  - 第一条消息自动生成标题（截取前 20 字）。
+  - `conversation_created` / `title_updated` 事件通知前端。
+  - `switch_conversation` 消息支持对话切换。
+- **[新增]** 📋 **侧边栏历史列表** (`index.html`)：实时渲染对话列表，点击切换，悬停显示🗑删除。
+- **[修复]** 🐛 **新对话 Bug**：`newChat()` 现在通过 WebSocket 通知后端重置 `current_conv_id`。
+- **[优化]** 🛡️ **本地工具过滤**：Web 端从 2 个扩展到 **14 个**过滤工具（GUI/音量/浏览器/应用启动）。
+  - System prompt 明确告知 AI "网页端无法控制桌面/音量/浏览器"。
+- **[修复]** 🎨 **CSS 警告**：添加标准 `background-clip: text` 属性。
+
+**文件变更：**
+- 新增 `core/chat_store.py`（SQLite 存储层，~150 行）
+- 修改 `core/web_bridge.py`（ChatStore 集成 + REST API + WebSocket 持久化 + 工具过滤扩展）
+- 修改 `static/index.html`（侧边栏渲染/对话切换/历史加载/CSS 修复）
+
+---
 
 ### v5.6.0 - 📱 QQ 消息接入 (NapCat OneBot) (2026-02-20) 🤖
 > **背景**：通过 NapCat OneBot v11 协议接入 QQ，实现手机 QQ 远程控制扶光。
