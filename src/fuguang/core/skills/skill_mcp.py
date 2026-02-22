@@ -36,6 +36,26 @@ try:
 except ImportError:
     MCP_HTTP_AVAILABLE = False
 
+# ── 抑制 MCP 传输层线程级异常 ──────────────────────────
+# anyio/streamablehttp 在关闭时会从内存流抛出 WouldBlock，
+# 这个异常逃逸到线程顶层导致 "Exception in thread" 输出。
+# 用 threading.excepthook 在 MCP 线程中静默这些非致命异常。
+_orig_threading_excepthook = threading.excepthook
+
+def _mcp_threading_excepthook(args):
+    """在 MCP 线程中抑制传输层非致命异常"""
+    if (args.thread
+        and args.thread.name
+        and args.thread.name.startswith("mcp-")
+        and args.exc_type
+        and args.exc_type.__name__ in ("WouldBlock", "CancelledError", "ClosedResourceError", "EndOfStream")):
+        # 这些是 streamablehttp 传输层关闭时的正常信号，静默处理
+        logger.debug(f"[MCP] 已静默线程 {args.thread.name} 的 {args.exc_type.__name__} 异常")
+        return
+    _orig_threading_excepthook(args)
+
+threading.excepthook = _mcp_threading_excepthook
+
 
 class MCPClient:
     """
@@ -88,13 +108,24 @@ class MCPClient:
             
             def _run_loop():
                 asyncio.set_event_loop(self._loop)
+                # 抑制传输层非致命异常
+                def _exc_handler(loop, context):
+                    exc = context.get("exception")
+                    if exc and type(exc).__name__ in ("WouldBlock", "CancelledError", "ClosedResourceError", "EndOfStream"):
+                        return
+                    logger.warning(f"[MCP:{self.server_name}] 事件循环异常: {context.get('message', '')} {type(exc).__name__ if exc else ''}")
+                self._loop.set_exception_handler(_exc_handler)
                 try:
                     self._loop.run_until_complete(self._async_connect(connect_ready, connect_result))
-                    # 连接建立后，保持事件循环运行以处理后续的工具调用
-                    self._loop.run_forever()
+                    if connect_result["success"]:
+                        # 连接建立后，保持事件循环运行以处理后续的工具调用
+                        self._loop.run_forever()
                 except Exception as e:
-                    connect_result["error"] = str(e)
-                    connect_ready.set()
+                    if not connect_ready.is_set():
+                        connect_result["error"] = str(e)
+                        connect_ready.set()
+                    else:
+                        logger.debug(f"[MCP:{self.server_name}] 事件循环退出: {e}")
             
             self._thread = threading.Thread(target=_run_loop, daemon=True, name=f"mcp-{self.server_name}")
             self._thread.start()
@@ -314,17 +345,37 @@ class MCPHttpClient:
         
         try:
             self._loop = asyncio.new_event_loop()
+            self._disconnect_event = None  # will be created in the loop's thread
             connect_ready = threading.Event()
             connect_result = {"success": False, "error": None}
             
+            def _mcp_exception_handler(loop, context):
+                """抑制 MCP 传输层的非致命异常（WouldBlock / CancelledError）"""
+                exc = context.get("exception")
+                if exc is None:
+                    return
+                exc_name = type(exc).__name__
+                # anyio.WouldBlock / CancelledError 是 streamablehttp 传输层正常的关闭信号
+                if exc_name in ("WouldBlock", "CancelledError", "ClosedResourceError", "EndOfStream"):
+                    logger.debug(f"[MCP:{self.server_name}] 忽略传输层异常: {exc_name}")
+                    return
+                # 其他异常照常记录
+                logger.warning(f"[MCP:{self.server_name}] 事件循环异常: {context.get('message', '')} {exc_name}")
+            
             def _run_loop():
                 asyncio.set_event_loop(self._loop)
+                self._loop.set_exception_handler(_mcp_exception_handler)
                 try:
                     self._loop.run_until_complete(self._async_connect(connect_ready, connect_result))
-                    self._loop.run_forever()
+                    if connect_result["success"]:
+                        # 保持事件循环运行，直到 disconnect() 被调用
+                        self._loop.run_forever()
                 except Exception as e:
-                    connect_result["error"] = str(e)
-                    connect_ready.set()
+                    if not connect_ready.is_set():
+                        connect_result["error"] = str(e)
+                        connect_ready.set()
+                    else:
+                        logger.debug(f"[MCP:{self.server_name}] 事件循环退出: {e}")
             
             self._thread = threading.Thread(target=_run_loop, daemon=True, name=f"mcp-http-{self.server_name}")
             self._thread.start()
@@ -345,13 +396,17 @@ class MCPHttpClient:
     
     async def _async_connect(self, ready_event: threading.Event, result: dict):
         """异步 HTTP 连接实现"""
+        http_entered = False
+        session_entered = False
         try:
             self._http_cm = streamablehttp_client(self.url)
             streams = await self._http_cm.__aenter__()
+            http_entered = True
             read_stream, write_stream = streams[0], streams[1]
             
             self._session_cm = ClientSession(read_stream, write_stream)
             self._session = await self._session_cm.__aenter__()
+            session_entered = True
             
             await self._session.initialize()
             
@@ -364,7 +419,22 @@ class MCPHttpClient:
             
             result["success"] = True
             ready_event.set()
+            
+            # 保持协程活跃以维持 streamablehttp 上下文管理器的生命周期
+            # disconnect() 会调用 loop.stop() 来结束 run_forever()
+            
         except Exception as e:
+            # 连接失败时显式清理上下文管理器，避免悬挂的后台任务
+            if session_entered:
+                try:
+                    await self._session_cm.__aexit__(None, None, None)
+                except Exception:
+                    pass
+            if http_entered:
+                try:
+                    await self._http_cm.__aexit__(None, None, None)
+                except Exception:
+                    pass
             result["error"] = str(e)
             ready_event.set()
     

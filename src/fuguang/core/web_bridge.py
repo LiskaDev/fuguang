@@ -190,6 +190,7 @@ class WebBridge:
 
             # 当前会话 ID（客户端通过消息指定或自动创建）
             current_conv_id = None
+            cancel_event = None  # 取消标志（每次请求重建）
 
             # 聊天循环
             try:
@@ -241,24 +242,106 @@ class WebBridge:
 
                         # 在线程池中运行 Brain.chat（避免阻塞事件循环）
                         await ws.send_json({"type": "thinking", "content": ""})
+                        
+                        # 创建取消标志
+                        import threading as _threading
+                        cancel_event = _threading.Event()
+                        
+                        # 进度回调：从 Brain 线程通过 WebSocket 发送实时工具状态
+                        main_loop = asyncio.get_event_loop()
+                        def _progress_cb(info: dict):
+                            """Brain 线程回调 → 异步 WebSocket 发送"""
+                            try:
+                                msg_type = info.get("type", "")
+                                if msg_type == "tool_call":
+                                    tool_name = info.get("tool", "")
+                                    coro = ws.send_json({
+                                        "type": "tool_progress",
+                                        "content": f"🔧 正在调用: {tool_name}"
+                                    })
+                                    asyncio.run_coroutine_threadsafe(coro, main_loop)
+                                elif msg_type == "thinking":
+                                    iteration = info.get("iteration", 1)
+                                    if iteration > 1:
+                                        coro = ws.send_json({
+                                            "type": "tool_progress",
+                                            "content": f"🤔 思考中 (第{iteration}轮)..."
+                                        })
+                                        asyncio.run_coroutine_threadsafe(coro, main_loop)
+                            except Exception:
+                                pass
+                        
+                        # 并发执行：Brain 处理 + WebSocket 监听取消
+                        cancelled = False  # 是否已取消
+                        brain_task = asyncio.create_task(
+                            asyncio.to_thread(
+                                self._process_with_brain, content, _progress_cb, cancel_event
+                            )
+                        )
+
+                        # 在 Brain 处理期间监听 cancel/ping 消息
                         try:
-                            reply = await asyncio.to_thread(
-                                self._process_with_brain, content
-                            )
-                            # 保存 AI 回复
-                            await asyncio.to_thread(
-                                self.chat_store.add_message, current_conv_id, "ai", reply
-                            )
-                            await ws.send_json({
-                                "type": "reply",
-                                "content": reply
-                            })
-                        except Exception as e:
-                            logger.error(f"🌐 [Web] Brain 处理异常: {e}")
-                            await ws.send_json({
-                                "type": "error",
-                                "content": f"处理出错了: {str(e)[:200]}"
-                            })
+                            while not brain_task.done():
+                                # 等待消息或 brain 完成，先到先处理
+                                listen_task = asyncio.create_task(ws.receive_json())
+                                done, pending = await asyncio.wait(
+                                    {brain_task, listen_task},
+                                    return_when=asyncio.FIRST_COMPLETED
+                                )
+                                
+                                if listen_task in done:
+                                    # 收到 WebSocket 消息
+                                    try:
+                                        msg = listen_task.result()
+                                        if msg.get("type") == "cancel":
+                                            logger.info("🛑 [Web] 用户请求取消")
+                                            cancel_event.set()
+                                            cancelled = True
+                                            # 立即回复客户端，不等 brain 结束
+                                            hideThinking_msg = "好的指挥官，已停止当前操作。有什么需要可以随时告诉我~ [OK]"
+                                            await asyncio.to_thread(
+                                                self.chat_store.add_message, current_conv_id, "ai", hideThinking_msg
+                                            )
+                                            await ws.send_json({
+                                                "type": "reply",
+                                                "content": hideThinking_msg
+                                            })
+                                            # brain 线程会在后台自行结束，不阻塞
+                                            break
+                                        elif msg.get("type") == "ping":
+                                            await ws.send_json({"type": "pong"})
+                                    except Exception:
+                                        pass
+                                else:
+                                    # brain 先完成了，取消监听
+                                    listen_task.cancel()
+                                    try:
+                                        await listen_task
+                                    except (asyncio.CancelledError, Exception):
+                                        pass
+                        except Exception:
+                            pass
+
+                        # 获取结果（如果没被取消）
+                        if not cancelled:
+                            try:
+                                reply = brain_task.result()
+                                # 保存 AI 回复
+                                await asyncio.to_thread(
+                                    self.chat_store.add_message, current_conv_id, "ai", reply
+                                )
+                                await ws.send_json({
+                                    "type": "reply",
+                                    "content": reply
+                                })
+                            except Exception as e:
+                                logger.error(f"🌐 [Web] Brain 处理异常: {e}")
+                                await ws.send_json({
+                                    "type": "error",
+                                    "content": f"处理出错了: {str(e)[:200]}"
+                                })
+                        
+                        cancel_event = None
 
                     elif msg_type == "switch_conversation":
                         # 切换到指定对话
@@ -266,6 +349,11 @@ class WebBridge:
 
                     elif msg_type == "ping":
                         await ws.send_json({"type": "pong"})
+                    
+                    elif msg_type == "cancel":
+                        # Brain 没在运行时收到 cancel，忽略
+                        if cancel_event:
+                            cancel_event.set()
 
             except WebSocketDisconnect:
                 logger.info("🌐 [Web] WebSocket 断开")
@@ -375,7 +463,7 @@ class WebBridge:
     # Brain 对接
     # ==================================================
 
-    def _process_with_brain(self, user_input: str) -> str:
+    def _process_with_brain(self, user_input: str, progress_callback=None, cancel_event=None) -> str:
         """调用 Brain 处理消息（同步方法，在线程池中运行）"""
 
         # 1. 检索相关记忆
@@ -402,10 +490,6 @@ class WebBridge:
         system_content = self.brain.get_system_prompt() + memory_text + web_context
 
         # 3. 调用 Brain（带工具，但排除 Web 端不适用的本地工具）
-        # - 视觉工具：依赖本地屏幕/摄像头，Web 无法使用
-        # - GUI 工具：操作服务器桌面，不是用户桌面
-        # - 系统工具：控制服务器音量/启动服务器应用，对 Web 用户无意义
-        # - 浏览器工具：打开服务器浏览器，不是用户浏览器
         _web_excluded = {
             # 视觉
             "analyze_screen_content", "analyze_image_file",
@@ -425,7 +509,9 @@ class WebBridge:
                 user_input=user_input,
                 system_content=system_content,
                 tools_schema=web_tools,
-                tool_executor=self.skills.execute_tool
+                tool_executor=self.skills.execute_tool,
+                progress_callback=progress_callback,
+                cancel_event=cancel_event
             )
             return ai_reply or "（扶光沉默了...）"
         except Exception as e:

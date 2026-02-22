@@ -762,6 +762,24 @@
             cursor: not-allowed;
         }
 
+        .stop-btn {
+            background: #e74c3c;
+            color: #fff;
+            display: none;
+            font-size: 0.85rem;
+            padding: 0 12px;
+            width: auto;
+            white-space: nowrap;
+        }
+
+        .stop-btn:hover {
+            background: #c0392b;
+        }
+
+        .stop-btn.visible {
+            display: flex;
+        }
+
         /* ========== Login Modal ========== */
         .modal-overlay {
             position: fixed;
@@ -1000,6 +1018,8 @@
                                 title="上传文件">📎</button>
                             <button class="action-btn send-btn" id="sendBtn" onclick="sendMessage()"
                                 title="发送">➤</button>
+                            <button class="action-btn stop-btn" id="stopBtn" onclick="stopGeneration()" title="停止生成">⏹
+                                停止</button>
                         </div>
                     </div>
                 </div>
@@ -1095,6 +1115,13 @@
 
                 if (msg.type === 'thinking') {
                     showThinking();
+                    return;
+                }
+
+                // 工具调用进度更新（实时显示正在干什么）
+                if (msg.type === 'tool_progress') {
+                    const textEl = document.getElementById('thinkingText');
+                    if (textEl) textEl.textContent = msg.content || '思考中...';
                     return;
                 }
 
@@ -1371,7 +1398,7 @@
         </div>
         <div class="thinking">
             <div class="thinking-dots"><span></span><span></span><span></span></div>
-            <span>思考中...</span>
+            <span id="thinkingText">思考中...</span>
         </div>`;
             container.appendChild(div);
             scrollToBottom();
@@ -1441,7 +1468,17 @@
         }
 
         function updateSendBtn() {
-            document.getElementById('sendBtn').disabled = isSending;
+            const sendBtn = document.getElementById('sendBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            sendBtn.disabled = isSending;
+            sendBtn.style.display = isSending ? 'none' : 'flex';
+            stopBtn.classList.toggle('visible', isSending);
+        }
+
+        function stopGeneration() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'cancel' }));
+            }
         }
 
         function newChat() {

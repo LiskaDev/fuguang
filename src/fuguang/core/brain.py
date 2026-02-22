@@ -185,7 +185,7 @@ class Brain:
     # ========================
     # 🧠 核心对话方法 (Function Calling)
     # ========================
-    def chat(self, user_input: str, system_content: str, tools_schema: list, tool_executor) -> str:
+    def chat(self, user_input: str, system_content: str, tools_schema: list, tool_executor, progress_callback=None, cancel_event=None) -> str:
         """
         核心对话方法：支持 Function Calling (工具调用)
         
@@ -194,10 +194,22 @@ class Brain:
             system_content: 完整的 System Prompt（包含记忆）
             tools_schema: 工具定义列表
             tool_executor: 工具执行函数 (func_name, func_args) -> result
+            progress_callback: 可选的进度回调 (dict) -> None，用于实时通知调用状态
+            cancel_event: 可选的 threading.Event，外部设置后中断执行
             
         Returns:
             AI 的最终回复文本
         """
+        def _notify(msg_type: str, **kwargs):
+            if progress_callback:
+                try:
+                    progress_callback({"type": msg_type, **kwargs})
+                except Exception:
+                    pass
+        
+        def _is_cancelled():
+            return cancel_event is not None and cancel_event.is_set()
+
         # 🔥 性能监控：记录开始时间
         start_time = time.time()
         tool_calls_list = []   # 记录本次调用的所有工具
@@ -233,8 +245,15 @@ class Brain:
         ai_reply = ""
         
         while iteration < max_iterations:
+            # 🛑 检查取消标志
+            if _is_cancelled():
+                logger.info("🛑 用户取消了当前操作")
+                ai_reply = "好的指挥官，已停止当前操作。有什么需要可以随时告诉我~ [OK]"
+                break
+            
             iteration += 1
             logger.info(f"🤖 AI思考轮次: {iteration}")
+            _notify("thinking", iteration=iteration)
             
             # 调用 DeepSeek（带重试 + 降级）
             response = None
@@ -247,7 +266,7 @@ class Brain:
                         tool_choice="auto",
                         stream=False,
                         temperature=0.8,
-                        max_tokens=4096
+                        max_tokens=8192
                     )
                     break  # 成功，跳出重试循环
                 except (APITimeoutError, APIConnectionError) as e:
@@ -274,6 +293,7 @@ class Brain:
             # 检查是否需要调用工具
             if message.tool_calls:
                 logger.info(f"🔧 AI请求使用工具: {len(message.tool_calls)} 个")
+                _notify("tool_start", count=len(message.tool_calls))
                 
                 # 把 AI 的工具调用意图加入对话历史
                 messages.append({
@@ -299,12 +319,13 @@ class Brain:
                     try:
                         func_args = json.loads(tool_call.function.arguments)
                     except (json.JSONDecodeError, TypeError) as e:
-                        # [修复] DeepSeek 有时输出不合规 JSON（如 Cube 没有引号）
-                        # 尝试修复：给裸字标识符加引号
+                        # 多层修复策略
+                        func_args = None
+                        raw = tool_call.function.arguments or ""
+                        
+                        # 策略1: 给裸字标识符加引号
                         try:
                             import re
-                            raw = tool_call.function.arguments
-                            # 匹配 ": 后面跟着不带引号的标识符（非数字/bool/null/对象/数组）
                             fixed = re.sub(
                                 r':\s*([A-Za-z_][A-Za-z0-9_]*)\s*([,}\]])',
                                 lambda m: ': "' + m.group(1) + '"' + m.group(2)
@@ -313,18 +334,88 @@ class Brain:
                                 raw
                             )
                             func_args = json.loads(fixed)
-                            logger.warning(f"⚠️ 工具参数 JSON 已自动修复: {func_name}")
+                            logger.warning(f"⚠️ 工具参数 JSON 已自动修复（裸标识符）: {func_name}")
                         except Exception:
-                            logger.error(f"工具参数解析失败: {func_name}, 原始参数: {tool_call.function.arguments}, 错误: {e}")
+                            pass
+                        
+                        # 策略1.5: 对 create_file_directly 直接正则提取（不依赖 JSON 解析）
+                        if func_args is None and func_name == "create_file_directly":
+                            try:
+                                import re as _re
+                                fp_match = _re.search(r'"file_path"\s*:\s*"([^"]+)"', raw)
+                                ct_match = _re.search(r'"content"\s*:\s*"', raw)
+                                if fp_match and ct_match:
+                                    file_path = fp_match.group(1)
+                                    # content 从匹配结束位置取到字符串末尾
+                                    content_start = ct_match.end()
+                                    content_raw = raw[content_start:]
+                                    # 去掉尾部可能的 "} 或未闭合的部分
+                                    content_raw = content_raw.rstrip()
+                                    if content_raw.endswith('"}'):
+                                        content_raw = content_raw[:-2]
+                                    elif content_raw.endswith('"'):
+                                        content_raw = content_raw[:-1]
+                                    # 反转义 JSON 字符串中的转义字符
+                                    content_text = content_raw.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"').replace('\\\\', '\\')
+                                    func_args = {"file_path": file_path, "content": content_text}
+                                    logger.warning(f"⚠️ 工具参数 JSON 已自动修复（正则提取）: {func_name}")
+                            except Exception:
+                                pass
+                        
+                        # 策略2: 截断修复（改进版：字符串感知的括号计数）
+                        if func_args is None:
+                            try:
+                                repair = raw.rstrip()
+                                # 字符串感知：遍历时跟踪是否在引号内
+                                in_str = False
+                                open_braces = 0
+                                open_brackets = 0
+                                for i, ch in enumerate(repair):
+                                    if ch == '"' and (i == 0 or repair[i-1] != '\\'):
+                                        in_str = not in_str
+                                    elif not in_str:
+                                        if ch == '{': open_braces += 1
+                                        elif ch == '}': open_braces -= 1
+                                        elif ch == '[': open_brackets += 1
+                                        elif ch == ']': open_brackets -= 1
+                                # 补全
+                                if in_str:
+                                    repair += '"'
+                                repair += '}' * max(0, open_braces)
+                                repair += ']' * max(0, open_brackets)
+                                func_args = json.loads(repair)
+                                logger.warning(f"⚠️ 工具参数 JSON 已自动修复（截断补全）: {func_name}")
+                            except Exception:
+                                pass
+                        
+                        # 所有策略失败
+                        if func_args is None:
+                            logger.error(f"工具参数解析失败: {func_name}, 原始参数: {raw[:500]}..., 错误: {e}")
+                            # 给 AI 清晰的错误回馈，避免重试死循环
                             messages.append({
                                 "role": "tool",
                                 "tool_call_id": tool_call.id,
-                                "content": f"参数解析错误: {e}"
+                                "content": (
+                                    f"❌ JSON 参数解析失败（可能是内容太长被截断）。"
+                                    f"请不要重试相同内容！建议对用户说明情况，或将内容拆分为更小的部分。"
+                                )
                             })
+                            consecutive_errors += 1
+                            if consecutive_errors >= 2:
+                                ai_reply = "指挥官，文件内容太长导致工具调用失败了，我重新换个方式试试或者你来配合一下？[Worry]"
+                                break
                             continue
                     
                     # 修复风险3+日志增强：显示工具参数，方便调试路径问题
                     logger.info(f"📞 调用工具: {func_name} | 参数: {json.dumps(func_args, ensure_ascii=False)[:200]}")
+                    _notify("tool_call", tool=func_name)
+                    
+                    # 🛑 工具执行前再次检查取消
+                    if _is_cancelled():
+                        logger.info("🛑 用户在工具调用前取消了操作")
+                        ai_reply = "好的指挥官，已停止当前操作。有什么需要可以随时告诉我~ [OK]"
+                        break
+                    
                     tool_calls_list.append(func_name)
 
                     # 工具执行（带连续错误截断）
@@ -349,6 +440,9 @@ class Brain:
                 
                 # 修复风险3：连续错误截断后退出主循环
                 if consecutive_errors >= 3:
+                    break
+                # 🛑 取消后退出主循环
+                if _is_cancelled():
                     break
 
                 # 继续下一轮，让 AI 根据工具结果生成回复
