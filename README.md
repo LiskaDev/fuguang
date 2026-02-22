@@ -5,67 +5,42 @@
 
 ---
 
-## 🎉 最新功能亮点 (v6.1.0)
+## 🎉 最新功能亮点 (v6.2.0)
 
-### 🗂️ **Web UI 聊天历史 + 本地工具过滤 + 体验优化**
+### 🎮 **Unity MCP 接入 — AI 直控 Unity Editor**
 
-Web UI 迎来 Phase 3 重大更新——对话历史持久化：
-
-```
-用户发消息 → 后端自动创建对话 → SQLite 持久存储
-     ↓
-第一条消息 → 自动生成标题（截取前20字）
-     ↓
-侧边栏实时更新 → 点击切换对话 → 刷新后恢复历史
-```
-
-**核心能力：**
-- 🗂️ **SQLite 聊天存储** — 对话和消息永久保存到 `data/web_chat.db`
-- 📋 **侧边栏历史列表** — 实时显示最近50条对话，悬停显示🗑删除按钮
-- 🔄 **对话切换与恢复** — 点击侧边栏切换，刷新后通过历史恢复
-- 🛡️ **本地工具过滤** — Web 端禁用 14 个本地工具（GUI/音量/浏览器/应用启动）
-- 🐛 **新对话 Bug 修复** — 修复点击"新对话"后消息仍存入旧对话的问题
-
-扶光现在拥有完整的“学习 → 记忆 → 可视化”闭环：
+扶光接入 **Unity MCP (AI Game Developer)** 插件，通过 HTTP Streamable 协议直连 Unity Editor，获得 **60+ 个 Unity 操作工具**：
 
 ```
-用户下达任务 → 扶光执行 (通过 40 个 MCP 工具)
+用户："在 Unity 里创建一个红色球体"
      ↓
-性能自监控 → 自动提取经验教训
+扶光调用 unity_create_object(name="RedSphere", shape="球体", color="红色")
      ↓
-配方去重 → 存入 ChromaDB (用旧替新，不节省)
+内部自动完成：创建物体 → 创建材质 → 设颜色 → 赋材质
      ↓
-实时同步 → Obsidian 成长日记 (Markdown)
-     ↓
-下次同类任务 → 自动召回配方，提速 60 倍
+Unity Editor 实时出现红色球体 ✅
 ```
 
 **核心能力：**
+- 🎮 **Unity MCP (HTTP 直连)** — 60+ 个工具（场景/物体/材质/脚本/Prefab/截图等）
 - 🐙 **GitHub MCP** — 26 个工具（搜索/读文件/创建 Issue & PR）
 - 📓 **Obsidian MCP** — 14 个工具（读写笔记/目录管理/搜索）
 - ⚡ **配方记忆** — 自动去重、进化替换、Obsidian 日记同步
 - 🔄 **MCP 断线重连** — Server 崩溃自动恢复，不用重启
-- � **邮件监控** — 后台监控 QQ 邮箱，智能过滤垃圾邮件，重要邮件语音通知
-- �📊 **WebUI 状态面板** — 一眨看到记忆/MCP/Obsidian 状态
+- 📧 **邮件监控** — 后台监控 QQ 邮箱，智能过滤垃圾邮件，重要邮件语音通知
+- 📊 **WebUI 状态面板** — 一眨看到记忆/MCP/Obsidian 状态
 
-**🛠️ GitHub 能力（26 个工具自动发现）：**
-- 搜索仓库 / 搜索代码 / 搜索 Issue & PR
-- 查看文件内容 / 获取 Commit 历史 / 查看 Release
-- 创建 Issue / 创建 PR / Fork 仓库
-- 创建/更新文件 / 推送代码 / 创建分支
-
-**📁 涉及文件：**
-
-| 文件 | 改动内容 |
-|:---|:---|
-| `src/fuguang/core/skills/skill_mcp.py` | 从占位模块重写为完整 MCP Client（MCPClient 类 + MCPSkills Mixin），含连接管理/工具发现/Schema 转换/异步调用桥接 |
-| `src/fuguang/core/skills/base.py` | `__init__` 末尾调用 `_init_mcp()` 启动 MCP 服务器 |
-| `src/fuguang/core/skills/__init__.py` | `execute_tool` 新增 `mcp_` 前缀路由，所有 MCP 工具自动桥接 |
-| `src/fuguang/config.py` + `core/config.py` | 新增 `GITHUB_TOKEN` 配置项 |
-| `.env` | 新增 `GITHUB_TOKEN` |
+**🎮 Unity 能力亮点：**
+- 🏗️ **场景操作** — 创建/查找/修改/删除 GameObject,管理场景层级
+- 🎨 **材质系统** — 创建材质、设置颜色/Shader、赋材质给物体
+- 📦 **Prefab 管理** — 创建/实例化/编辑 Prefab
+- 📝 **脚本操作** — 读写 C# 脚本、执行 C# 代码、运行测试
+- 📸 **截图能力** — 从 Scene View / Game View / Camera 截图
+- 🔧 **一键便捷工具** — `unity_create_object` 中英文创建带颜色物体
+- 🛡️ **DeepSeek 参数自动修正** — 自动纠正 AI 常犯的 fields/props/颜色格式错误
 
 **💡 扩展方式：**
-> 未来要接入更多 MCP Server（如 Obsidian、Notion），只需在 `_init_mcp()` 中注册新的 `MCPClient` 即可，无需修改其他文件。这就是 MCP 的"插拔式"价值。
+> MCP 架构已验证"插拔式"价值——接入新 Server 只需在 `_init_mcp()` 注册即可。目前已接入 3 个 MCP Server（GitHub + Obsidian + Unity）。
 
 ---
 
@@ -498,6 +473,35 @@ python verify_config.py
 ## 📝 更新日志 (Changelog)
 
 **规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v6.2.0 - 🎮 Unity MCP 接入 — AI 直控 Unity Editor (2026-02-23) 🎮
+> **背景**：接入 Unity MCP (AI Game Developer) 插件，通过 HTTP Streamable 协议直连 Unity Editor，
+> 扶光获得 60+ 个 Unity 操作能力，可语音/文字指令控制 Unity 场景编辑。
+
+**核心功能：**
+- **[新增]** 🌐 **MCPHttpClient 客户端**：全新 HTTP 传输层（`streamablehttp_client`），直连 Unity 插件。
+  - 独立于 stdio 的 `MCPClient`，专为 HTTP MCP Server 设计。
+  - 异步事件循环 + 线程桥接，60s 超时（Unity 操作较慢），8000 字符输出截断。
+  - 自动重连机制：连接断开后自动 disconnect → connect 重试。
+- **[新增]** 🎮 **Unity MCP Server 注册** (`_init_mcp()`)：通过 `UNITY_MCP_PORT` 配置连接。
+  - 工具命名规则：`mcp_ai-game-developer_{tool_name}`，自动路由到 `execute_mcp_tool()`。
+  - 60+ 个工具自动发现：场景/物体/材质/脚本/Prefab/截图/包管理等。
+- **[新增]** 🔧 **`unity_create_object` 便捷工具**：一键创建带颜色的 Unity 物体。
+  - 支持 6 种形状（中英文映射：Cube/球体/圆柱体/胶囊体/平面/面片）。
+  - 支持 13 种颜色（中英文映射：red/绿/蓝色/yellow 等）。
+  - 内部自动完成 4 步：创建物体 → 创建材质 → 设颜色 → 赋材质（含三重 fallback）。
+- **[新增]** 🛡️ **DeepSeek 参数自动修正** (`_autocorrect_unity_params()`)。
+  - 自动修正 `_Color` fields→props 错位、`color`→`_Color` 命名错误、缺少 alpha 通道。
+  - 自动修正 `material` fields→props 错位、`m_Materials`→`sharedMaterial` 字段名。
+- **[配置]** `.env` 新增 `UNITY_MCP_PORT` + `UNITY_MCP_PROJECT_PATH`。
+
+**文件变更：**
+- 修改 `core/skills/skill_mcp.py`（新增 `MCPHttpClient` 类 + Unity 注册 + 便捷工具 + 自动修正，+400 行）
+- 修改 `core/skills/__init__.py`（新增 `unity_create_object` 路由）
+- 修改 `config.py` + `core/config.py`（新增 `UNITY_MCP_PORT` / `UNITY_MCP_PROJECT_PATH`）
+- 修改 `.env`（新增 Unity MCP 配置项）
+
+---
 
 ### v6.1.0 - 🗂️ Web UI 聊天历史持久化 + 本地工具过滤 (2026-02-22) 💾
 > **背景**：Web UI Phase 3——实现 SQLite 对话历史持久化，侧边栏历史列表，刷新恢复，本地工具过滤。

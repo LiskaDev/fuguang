@@ -102,6 +102,10 @@ class ConfigManager:
     UNITY_IP = os.getenv("UNITY_IP", "127.0.0.1")
     UNITY_PORT = int(os.getenv("UNITY_PORT", "5005"))
     
+    # === 🎮 Unity MCP (AI Game Developer) ===
+    UNITY_MCP_PROJECT_PATH = os.getenv("UNITY_MCP_PROJECT_PATH", "")  # Unity 项目根目录
+    UNITY_MCP_PORT = int(os.getenv("UNITY_MCP_PORT", "8090"))         # Unity MCP 插件端口
+    
     # 摄像头配置（人脸检测）
     CAMERA_ENABLED = True  # 是否启用摄像头检测用户是否在座
     CAMERA_INDEX = 0       # 摄像头索引，0 通常是默认摄像头

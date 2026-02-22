@@ -73,6 +73,8 @@ class ConfigManager:
         # Unity 通信配置
         self.UNITY_IP = GlobalConfig.UNITY_IP
         self.UNITY_PORT = GlobalConfig.UNITY_PORT
+        self.UNITY_MCP_PORT = GlobalConfig.UNITY_MCP_PORT
+        self.UNITY_MCP_PROJECT_PATH = GlobalConfig.UNITY_MCP_PROJECT_PATH
         
         # 摄像头配置
         self.CAMERA_ENABLED = GlobalConfig.CAMERA_ENABLED

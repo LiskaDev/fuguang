@@ -97,6 +97,7 @@ class SkillManager(
         all_tools.extend(getattr(self, '_SYSTEM_TOOLS', []))
         all_tools.extend(getattr(self, '_MEMORY_TOOLS', []))
         all_tools.extend(getattr(self, '_MCP_TOOLS', []))
+        all_tools.extend(getattr(self, '_UNITY_CONVENIENCE_TOOLS', []))
         all_tools.extend(getattr(self, '_EMAIL_TOOLS', []))
         all_tools.extend(getattr(self, '_BILIBILI_TOOLS', []))
         all_tools.append(set_reminder_tool)
@@ -255,6 +256,15 @@ class SkillManager(
                 bvid=func_args.get("bvid", ""),
                 episode=func_args.get("episode", 0),
                 time=func_args.get("time", "")
+            )
+
+        # --- Unity 便捷工具 ---
+        elif func_name == "unity_create_object":
+            return self.unity_create_object(
+                name=func_args.get("name", "NewObject"),
+                shape=func_args.get("shape", "Cube"),
+                color=func_args.get("color", "white"),
+                position=func_args.get("position")
             )
 
         # --- MCP (外部工具服务器) ---

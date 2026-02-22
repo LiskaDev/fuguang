@@ -299,13 +299,29 @@ class Brain:
                     try:
                         func_args = json.loads(tool_call.function.arguments)
                     except (json.JSONDecodeError, TypeError) as e:
-                        logger.error(f"工具参数解析失败: {func_name}, 原始参数: {tool_call.function.arguments}, 错误: {e}")
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": f"参数解析错误: {e}"
-                        })
-                        continue
+                        # [修复] DeepSeek 有时输出不合规 JSON（如 Cube 没有引号）
+                        # 尝试修复：给裸字标识符加引号
+                        try:
+                            import re
+                            raw = tool_call.function.arguments
+                            # 匹配 ": 后面跟着不带引号的标识符（非数字/bool/null/对象/数组）
+                            fixed = re.sub(
+                                r':\s*([A-Za-z_][A-Za-z0-9_]*)\s*([,}\]])',
+                                lambda m: ': "' + m.group(1) + '"' + m.group(2)
+                                    if m.group(1) not in ('true', 'false', 'null')
+                                    else m.group(0),
+                                raw
+                            )
+                            func_args = json.loads(fixed)
+                            logger.warning(f"⚠️ 工具参数 JSON 已自动修复: {func_name}")
+                        except Exception:
+                            logger.error(f"工具参数解析失败: {func_name}, 原始参数: {tool_call.function.arguments}, 错误: {e}")
+                            messages.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": f"参数解析错误: {e}"
+                            })
+                            continue
                     
                     # 修复风险3+日志增强：显示工具参数，方便调试路径问题
                     logger.info(f"📞 调用工具: {func_name} | 参数: {json.dumps(func_args, ensure_ascii=False)[:200]}")

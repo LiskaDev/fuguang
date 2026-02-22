@@ -1,0 +1,661 @@
+﻿2026-02-06 00:23:28,426 - Fuguang - INFO - 👀 用户已离开
+2026-02-07 22:23:24,579 - Fuguang - INFO - 👀 用户已离开
+2026-02-07 22:23:25,160 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:23:25,414 - Fuguang - INFO - 👂 听到了: 你想我了吗？
+2026-02-11 23:24:04,217 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:24:06,158 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:24:06,368 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:24:20,678 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:24:31,164 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:24:33,625 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:24:33,762 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:24:35,844 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:24:43,926 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:24:47,288 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:25:00,624 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:25:04,789 - Fuguang - WARNING - 🚨 陌生人: distance=0.489 >= 0.4
+2026-02-11 23:25:05,984 - Fuguang - WARNING - 🚨 警告：检测到未授权人员！系统锁定。
+2026-02-11 23:25:13,301 - Fuguang - WARNING - 🚨 陌生人: distance=0.440 >= 0.4
+2026-02-11 23:25:15,375 - Fuguang - INFO - ✅ 身份确认：指挥官。警报解除。
+2026-02-11 23:25:32,268 - Fuguang - INFO - 😳 被盯得不好意思了...
+2026-02-11 23:25:40,619 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:25:41,641 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:25:42,728 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:25:44,742 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:25:45,006 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:25:46,159 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:25:46,228 - Fuguang - INFO - 🎤 录制完成，共 47104 字节
+2026-02-11 23:25:47,201 - Fuguang - INFO - 👂 听到了: 语言。
+2026-02-11 23:25:47,245 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:25:47,271 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:25:47 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:25:47,271 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - FEATUR
+2026-02-11 23:25:47,271 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:25:53,033 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:25:59,395 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:26:01,036 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:26:01,130 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:26:01,446 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:26:02,588 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:26:03,239 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:26:04,333 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:26:04,795 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:26:08,407 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:26:08,441 - Fuguang - INFO - 🎤 录制完成，共 131072 字节
+2026-02-11 23:26:09,713 - Fuguang - INFO - 👂 听到了: Python是一种编程语言。
+2026-02-11 23:26:09,761 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:26:09,782 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:26:09 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:26:09,783 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - FEATUR
+2026-02-11 23:26:09,783 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:26:14,722 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:26:18,991 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:26:21,038 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:26:32,814 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:26:34,348 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:26:34,467 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:26:35,768 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:26:36,892 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:26:37,010 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:26:41,804 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:26:41,828 - Fuguang - INFO - 🎤 录制完成，共 153600 字节
+2026-02-11 23:26:43,129 - Fuguang - INFO - 👂 听到了: 他是什么时候发明的？
+2026-02-11 23:26:43,183 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:26:43,201 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:26:43 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:26:43,201 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - Testin
+2026-02-11 23:26:43,201 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:26:48,453 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:26:54,876 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:27:01,000 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:27:17,053 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:27:23,739 - Fuguang - INFO - 👂 听到了: 多轮的。
+2026-02-11 23:27:37,567 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:27:38,077 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:27:45,180 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:27:46,600 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:27:49,694 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:27:49,709 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:27:49,771 - Fuguang - INFO - 🎤 录制完成，共 2048 字节
+2026-02-11 23:27:50,510 - Fuguang - WARNING - 未识别到语音
+2026-02-11 23:27:54,595 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:27:59,924 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:28:01,246 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:28:01,599 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:28:04,738 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:28:04,746 - Fuguang - INFO - 🎤 录制完成，共 100352 字节
+2026-02-11 23:28:05,902 - Fuguang - INFO - 👂 听到了: 帮我写个代码。
+2026-02-11 23:28:05,943 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:28:05,966 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:28:05 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:28:05,966 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - Testin
+2026-02-11 23:28:05,966 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:28:10,878 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:28:16,250 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:28:27,387 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:28:32,777 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:28:33,189 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:28:36,132 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:28:36,145 - Fuguang - INFO - 🎤 录制完成，共 94208 字节
+2026-02-11 23:28:37,214 - Fuguang - INFO - 👂 听到了: 要用python。
+2026-02-11 23:28:37,253 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:28:37,272 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:28:37 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:28:37,272 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - Testin
+2026-02-11 23:28:37,273 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:28:42,238 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:28:43,606 - Fuguang - INFO - 🧠 [潜意识] 已自动归档记忆：用户的MBTI人格类型是INFP-T (重要度: 5)
+2026-02-11 23:28:51,929 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:28:52,373 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:28:55,804 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:28:55,841 - Fuguang - INFO - 🎤 录制完成，共 110592 字节
+2026-02-11 23:28:57,020 - Fuguang - INFO - 👂 听到了: 写个计算器。
+2026-02-11 23:28:57,059 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:28:57,080 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:28:57 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:28:57,080 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - Testin
+2026-02-11 23:28:57,080 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:29:22,482 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:29:25,684 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:29:26,716 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:29:27,108 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-11 23:29:27,109 - Fuguang - INFO - 📞 调用工具: write_code
+2026-02-11 23:29:27,110 - Fuguang - INFO - 💾 代码已生成: C:\Users\ALan\Desktop\fuguang\generated\calculator.py
+2026-02-11 23:29:30,023 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:29:30,226 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:29:33,015 - Fuguang - INFO - 📂 已用默认程序打开
+2026-02-11 23:29:33,015 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-11 23:29:37,327 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:29:38,484 - Fuguang - INFO - 🧠 [潜意识] 已自动归档记忆：用户喜欢INFP友好的配色风格 (重要度: 3)
+2026-02-11 23:30:09,553 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:30:11,176 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:30:11,384 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:30:11,829 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:30:13,229 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:30:14,860 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:30:14,916 - Fuguang - INFO - 🎤 录制完成，共 98304 字节
+2026-02-11 23:30:15,161 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:30:16,050 - Fuguang - INFO - 👂 听到了: 好啊，帮我启动它。
+2026-02-11 23:30:16,097 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:30:16,118 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:30:16 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:30:16,119 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - guess_
+2026-02-11 23:30:16,119 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:30:19,309 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-11 23:30:19,309 - Fuguang - INFO - 📞 调用工具: run_code
+2026-02-11 23:30:19,310 - Fuguang - INFO - ❌ 指挥官拒绝了代码执行请求
+2026-02-11 23:30:19,310 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-11 23:30:22,657 - Fuguang - INFO - 💾 记忆已保存
+2026-02-11 23:30:28,457 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:30:30,149 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-11 23:30:30,559 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-11 23:30:35,226 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-11 23:30:35,246 - Fuguang - INFO - 🎤 录制完成，共 149504 字节
+2026-02-11 23:30:35,638 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-11 23:30:36,565 - Fuguang - INFO - 👂 听到了: 我同意你启动它，请打开吧。
+2026-02-11 23:30:36,610 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-11 23:30:36,631 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:30:36 | 日期: 2026-02-11 周三 | 模式: 🔒已锁定
+2026-02-11 23:30:36,631 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - guess_
+2026-02-11 23:30:36,631 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-11 23:30:38,345 - Fuguang - INFO - 👀 用户已离开
+2026-02-11 23:30:39,760 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-11 23:30:39,761 - Fuguang - INFO - 📞 调用工具: execute_shell_command
+2026-02-11 23:30:39,761 - Fuguang - INFO - ⚡ [Shell] AI 申请执行: python generated/calculator.py
+2026-02-11 23:30:39,761 - Fuguang - INFO -    ⏳ 执行中 (超时: 60秒)...
+2026-02-11 23:30:43,149 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-12 00:23:30,779 - Fuguang - INFO - 👀 用户已离开
+2026-02-12 15:23:24,102 - Fuguang - INFO - 👂 听到了: 找时间费用就这么细。马边。
+2026-02-12 16:23:25,781 - Fuguang - WARNING - ⚠️ OCR 未找到 '关闭'
+2026-02-12 16:23:25,781 - Fuguang - INFO - 🔄 尝试使用 GLM-4V 辅助定位...
+2026-02-12 16:23:25,781 - Fuguang - INFO - 🤖 请求 GLM-4V 辅助定位...
+2026-02-13 13:23:28,697 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-13 13:23:28,747 - Fuguang - INFO - 🎤 录制完成，共 163840 字节
+2026-02-13 13:23:30,152 - Fuguang - INFO - 👂 听到了: 写一个200字的自我介绍。
+2026-02-13 13:23:30,196 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-13 13:23:30,214 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 13:23:30 | 日期: 2026-02-13 周五 | 模式: 🔒已锁定
+2026-02-13 13:23:30,214 - Fuguang - INFO - 👁️ 感知数据: app=*Testing Visual Recognition你好，
+2026-02-13 13:23:30,215 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-13 15:23:26,160 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 15:23:26,161 - Fuguang - INFO - 📞 调用工具: search_web
+2026-02-13 15:23:26,161 - Fuguang - INFO - 🌍 正在搜索: 动物世界 最新节目 纪录片...
+2026-02-13 17:23:26,558 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-13 17:23:28,677 - Fuguang - INFO - 👀 用户已离开
+2026-02-13 23:25:56,776 - Fuguang - INFO - ✅ 项目根目录: C:\Users\ALan\Desktop\fuguang
+2026-02-13 23:25:57,288 - Fuguang - INFO - ⏰ [Core] 已加载历史提醒
+2026-02-13 23:25:57,746 - Fuguang - INFO - ✅ 智谱AI 视觉模块已就绪 [GLM-4V-Flash (极速)]
+2026-02-13 23:25:57,746 - Fuguang - INFO - 🚀 正在加载 YOLO-World 模型（首次运行需下载 ~200MB）...
+2026-02-13 23:25:57,796 - Fuguang - INFO - ✅ YOLO-World 视觉识别已就绪（零样本目标检测，设备: cpu）
+2026-02-13 23:25:57,796 - Fuguang - INFO - 📖 正在加载 EasyOCR 模型 (首次运行需下载)...
+2026-02-13 23:25:59,020 - Fuguang - INFO - ✅ EasyOCR 文字识别已就绪
+2026-02-13 23:25:59,021 - Fuguang - INFO - 🧠 [记忆] 正在加载 ChromaDB 向量数据库 (C:\Users\ALan\Desktop\fuguang\data\memory_db)...
+2026-02-13 23:26:10,072 - Fuguang - INFO - ✅ [记忆] 多语言嵌入模型加载成功
+2026-02-13 23:26:10,168 - Fuguang - INFO - ✅ [记忆] 双集合加载完成: 对话记忆 3 条 | 知识库 48 条
+2026-02-13 23:26:10,170 - Fuguang - INFO - ✅ 长期记忆系统已就绪
+2026-02-13 23:26:10,170 - Fuguang - INFO - ✅ 知识吞噬系统已就绪
+2026-02-13 23:26:10,170 - Fuguang - INFO - 🌐 [CyberGhost] 初始化完成 (headless=True)
+2026-02-13 23:26:10,170 - Fuguang - INFO - ✅ 赛博幽灵已就绪
+2026-02-13 23:26:10,170 - Fuguang - INFO - ⚡ 浏览器复用机制已启用
+2026-02-13 23:26:10,536 - Fuguang - INFO - 👁️ 鹰眼系统就绪：双引擎分离模式 (OpenCV + face_recognition)
+2026-02-13 23:26:10,537 - Fuguang - INFO - 📷 摄像头模块 v4.5 初始化完成（双引擎分离模式）
+2026-02-13 23:26:10,537 - Fuguang - INFO - 📷 摄像头模块已启用
+2026-02-13 23:26:10,537 - Fuguang - INFO - 👁️ 数字眼睛初始化完成
+2026-02-13 23:26:10,600 - Fuguang - INFO - 🧠 神经系统初始化完毕...
+2026-02-13 23:26:10,600 - Fuguang - INFO - 💡 提示: 按 F1 可切换到打字输入模式
+2026-02-13 23:26:10,601 - Fuguang - INFO - 🚀 神经系统启动
+2026-02-13 23:26:10,602 - Fuguang - INFO - ⏰ [生物钟] 正在注册定时任务...
+2026-02-13 23:26:10,602 - Fuguang - INFO -    📋 喝水提醒: 每 45 分钟
+2026-02-13 23:26:10,603 - Fuguang - INFO -    📋 久坐提醒: 每 60 分钟
+2026-02-13 23:26:10,603 - Fuguang - INFO - ✅ [生物钟] 定时任务注册完成
+2026-02-13 23:26:10,605 - Fuguang - INFO - 👀 注视追踪器启动
+2026-02-13 23:26:10,605 - Fuguang - INFO - 👁️ 注视追踪已启动
+2026-02-13 23:26:19,217 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-13 23:26:19,556 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-13 23:26:30,616 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-13 23:26:30,643 - Fuguang - INFO - 🎤 录制完成，共 354304 字节
+2026-02-13 23:26:32,774 - Fuguang - INFO - 👂 听到了: 写一个猜数字游戏。用python。
+2026-02-13 23:26:32,852 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-13 23:26:32,860 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:26:32 | 日期: 2026-02-13 周五 | 模式: 🔒已锁定
+2026-02-13 23:26:32,861 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - Testin
+2026-02-13 23:26:32,861 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-13 23:26:59,043 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:26:59,044 - Fuguang - INFO - 📞 调用工具: write_code
+2026-02-13 23:26:59,044 - Fuguang - INFO - 💾 代码已生成: C:\Users\ALan\Desktop\fuguang\generated\guess_number_game.py
+2026-02-13 23:27:06,824 - Fuguang - INFO - 📂 已用默认程序打开
+2026-02-13 23:27:06,825 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-13 23:27:12,561 - Fuguang - INFO - 💾 记忆已保存
+2026-02-13 23:27:31,653 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-13 23:27:32,081 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-13 23:27:36,065 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-13 23:27:36,129 - Fuguang - INFO - 🎤 录制完成，共 129024 字节
+2026-02-13 23:27:37,369 - Fuguang - INFO - 👂 听到了: 运行这个代码。
+2026-02-13 23:27:37,409 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-13 23:27:37,431 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:27:37 | 日期: 2026-02-13 周五 | 模式: 🔒已锁定
+2026-02-13 23:27:37,431 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - Testin
+2026-02-13 23:27:37,431 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-13 23:27:40,514 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:27:40,514 - Fuguang - INFO - 📞 调用工具: run_code
+2026-02-13 23:27:46,976 - Fuguang - INFO - 🚀 正在运行: C:\Users\ALan\Desktop\fuguang\generated\guess_number_game.py
+2026-02-13 23:27:50,630 - Fuguang - ERROR - ❌ 代码执行出错: Traceback (most recent call last):
+2026-02-13 23:27:50,630 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-13 23:27:53,410 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:27:53,410 - Fuguang - INFO - 📞 调用工具: execute_shell_command
+2026-02-13 23:27:53,410 - Fuguang - INFO - ⚡ [Shell] AI 申请执行: cd generated && python guess_number_game.py
+2026-02-13 23:27:53,411 - Fuguang - INFO -    ⏳ 执行中 (超时: 60秒)...
+2026-02-13 23:27:55,925 - Fuguang - WARNING -    ⚠️ 命令执行失败 (返回码: 1)
+2026-02-13 23:27:55,925 - Fuguang - INFO - 🤖 AI思考轮次: 3
+2026-02-13 23:27:58,298 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:27:58,298 - Fuguang - INFO - 📞 调用工具: execute_shell_command
+2026-02-13 23:27:58,298 - Fuguang - INFO - ⚡ [Shell] AI 申请执行: cd generated; python guess_number_game.py
+2026-02-13 23:27:58,298 - Fuguang - INFO -    ⏳ 执行中 (超时: 60秒)...
+2026-02-13 23:28:00,763 - Fuguang - WARNING -    ⚠️ 命令执行失败 (返回码: 1)
+2026-02-13 23:28:00,763 - Fuguang - INFO - 🤖 AI思考轮次: 4
+2026-02-13 23:28:23,400 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:28:23,400 - Fuguang - INFO - 📞 调用工具: write_code
+2026-02-13 23:28:23,401 - Fuguang - INFO - 💾 代码已生成: C:\Users\ALan\Desktop\fuguang\generated\guess_number_game_fixed.py
+2026-02-13 23:28:32,572 - Fuguang - INFO - 📂 已用默认程序打开
+2026-02-13 23:28:32,573 - Fuguang - INFO - 🤖 AI思考轮次: 5
+2026-02-13 23:28:35,382 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:28:35,382 - Fuguang - INFO - 📞 调用工具: execute_shell_command
+2026-02-13 23:28:35,382 - Fuguang - INFO - ⚡ [Shell] AI 申请执行: cd generated && python guess_number_game_fixed.py
+2026-02-13 23:28:35,383 - Fuguang - INFO -    ⏳ 执行中 (超时: 60秒)...
+2026-02-13 23:28:37,774 - Fuguang - WARNING -    ⚠️ 命令执行失败 (返回码: 1)
+2026-02-13 23:28:37,775 - Fuguang - INFO - 🤖 AI思考轮次: 6
+2026-02-13 23:28:40,452 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-13 23:28:40,452 - Fuguang - INFO - 📞 调用工具: execute_shell_command
+2026-02-13 23:28:40,453 - Fuguang - INFO - ⚡ [Shell] AI 申请执行: python generated/guess_number_game_fixed.py
+2026-02-13 23:28:40,453 - Fuguang - INFO -    ⏳ 执行中 (超时: 60秒)...
+2026-02-13 23:28:40,554 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-13 23:28:44,860 - Fuguang - INFO - 👀 用户已离开
+2026-02-13 23:30:05,132 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-13 23:30:08,630 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:24:27,692 - Fuguang - INFO - ✅ [记忆] 多语言嵌入模型加载成功
+2026-02-14 23:24:28,003 - Fuguang - INFO - ✅ [记忆] 双集合加载完成: 对话记忆 3 条 | 知识库 83 条
+2026-02-14 23:24:28,004 - Fuguang - INFO - 🌐 [CyberGhost] 初始化完成 (headless=True)
+2026-02-14 23:24:28,457 - Fuguang - INFO - 👁️ 鹰眼系统就绪：双引擎分离模式 (OpenCV + face_recognition)
+2026-02-14 23:24:28,458 - Fuguang - INFO - 📷 摄像头模块 v4.5 初始化完成（双引擎分离模式）
+2026-02-14 23:24:28,458 - Fuguang - INFO - 📷 摄像头模块已启用
+2026-02-14 23:24:28,459 - Fuguang - INFO - 👁️ 数字眼睛初始化完成
+2026-02-14 23:24:28,529 - Fuguang - INFO - 🧠 神经系统初始化完毕...
+2026-02-14 23:24:28,529 - Fuguang - INFO - 💡 提示: 按 F1 可切换到打字输入模式
+2026-02-14 23:24:28,530 - Fuguang - INFO - 🚀 神经系统启动
+2026-02-14 23:24:28,530 - Fuguang - INFO - ⏰ [生物钟] 正在注册定时任务...
+2026-02-14 23:24:28,530 - Fuguang - INFO -    📋 喝水提醒: 每 45 分钟
+2026-02-14 23:24:28,530 - Fuguang - INFO -    📋 久坐提醒: 每 60 分钟
+2026-02-14 23:24:28,530 - Fuguang - INFO - ✅ [生物钟] 定时任务注册完成
+2026-02-14 23:24:28,531 - Fuguang - INFO - 👀 注视追踪器启动
+2026-02-14 23:24:28,531 - Fuguang - INFO - 👁️ 注视追踪已启动
+2026-02-14 23:24:36,640 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-14 23:24:41,139 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-14 23:24:41,214 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:24:41,481 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-14 23:24:43,611 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:24:47,287 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:24:49,205 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-14 23:24:50,350 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:24:52,560 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-14 23:24:52,613 - Fuguang - INFO - 🎤 录制完成，共 108544 字节
+2026-02-14 23:24:54,566 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:25:00,372 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:25:02,962 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:25:05,050 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:25:29,945 - Fuguang - INFO - ✅ 项目根目录: C:\Users\ALan\Desktop\fuguang
+2026-02-14 23:25:32,266 - Fuguang - INFO - 🧠 [记忆] 正在加载 ChromaDB 向量数据库 (C:\Users\ALan\Desktop\fuguang\data\memory_db)...
+2026-02-14 23:25:51,333 - Fuguang - INFO - ✅ [记忆] 多语言嵌入模型加载成功
+2026-02-14 23:25:51,539 - Fuguang - INFO - ✅ [记忆] 双集合加载完成: 对话记忆 3 条 | 知识库 83 条
+2026-02-14 23:25:51,539 - Fuguang - INFO - 🌐 [CyberGhost] 初始化完成 (headless=True)
+2026-02-14 23:25:51,926 - Fuguang - INFO - 👁️ 鹰眼系统就绪：双引擎分离模式 (OpenCV + face_recognition)
+2026-02-14 23:25:51,926 - Fuguang - INFO - 📷 摄像头模块 v4.5 初始化完成（双引擎分离模式）
+2026-02-14 23:25:51,927 - Fuguang - INFO - 📷 摄像头模块已启用
+2026-02-14 23:25:51,927 - Fuguang - INFO - 👁️ 数字眼睛初始化完成
+2026-02-14 23:25:51,998 - Fuguang - INFO - 🧠 神经系统初始化完毕...
+2026-02-14 23:25:52,000 - Fuguang - INFO - 💡 提示: 按 F1 可切换到打字输入模式
+2026-02-14 23:25:52,000 - Fuguang - INFO - 🚀 神经系统启动
+2026-02-14 23:25:52,000 - Fuguang - INFO - ⏰ [生物钟] 正在注册定时任务...
+2026-02-14 23:25:52,000 - Fuguang - INFO -    📋 喝水提醒: 每 45 分钟
+2026-02-14 23:25:52,000 - Fuguang - INFO -    📋 久坐提醒: 每 60 分钟
+2026-02-14 23:25:52,000 - Fuguang - INFO - ✅ [生物钟] 定时任务注册完成
+2026-02-14 23:25:52,001 - Fuguang - INFO - 👀 注视追踪器启动
+2026-02-14 23:25:52,001 - Fuguang - INFO - 👁️ 注视追踪已启动
+2026-02-14 23:25:57,929 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-14 23:25:59,774 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-14 23:26:00,464 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-14 23:26:00,869 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-14 23:26:09,832 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-14 23:26:09,847 - Fuguang - INFO - 🎤 录制完成，共 286720 字节
+2026-02-14 23:26:14,647 - Fuguang - INFO - 👂 听到了: 做一个HTM格式的坦克大战游戏。稍微精致一些。
+2026-02-14 23:26:14,887 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文
+2026-02-14 23:26:14,889 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:26:14 | 日期: 2026-02-14 周六 | 模式: 🔒已锁定
+2026-02-14 23:26:14,890 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - run.py
+2026-02-14 23:26:14,890 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-14 23:26:44,908 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:26:53,527 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:26:53,665 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:26:55,708 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:26:56,233 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:26:58,802 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:27:04,186 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:27:06,229 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:27:28,672 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:27:36,425 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:27:40,256 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-14 23:27:40,256 - Fuguang - ERROR - 工具参数解析失败: write_code, 原始参数: {"filename": "tank_battle_game.html", "code_content": "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>精致坦克大战</title>\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);\n            font-family: 'Arial', sans-serif;\n            color: #fff;\n            min-height: 100vh;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            padding: 20px;\n        }\n        \n        .game-container {\n            position: relative;\n            width: 800px;\n            height: 600px;\n            border: 3px solid #4cc9f0;\n            border-radius: 10px;\n            overflow: hidden;\n            box-shadow: 0 0 30px rgba(76, 201, 240, 0.3);\n            background: #0f3460;\n        }\n        \n        #gameCanvas {\n            display: block;\n            background: #0f3460;\n        }\n        \n        .game-header {\n            text-align: center;\n            margin-bottom: 20px;\n        }\n        \n        .game-title {\n            font-size: 2.5rem;\n            background: linear-gradient(45deg, #4cc9f0, #4361ee);\n            -webkit-background-clip: text;\n            -webkit-text-fill-color: transparent;\n            text-shadow: 0 0 10px rgba(76, 201, 240, 0.5);\n            margin-bottom: 10px;\n        }\n        \n        .game-info {\n            display: flex;\n            justify-content: space-between;\n            width: 800px;\n            margin-top: 20px;\n            padding: 15px;\n            background: rgba(15, 52, 96, 0.8);\n            border-radius: 10px;\n            border: 2px solid #4361ee;\n        }\n        \n        .info-box {\n            text-align: center;\n            padding: 10px 20px;\n            background: rgba(67, 97, 238, 0.2);\n            border-radius: 8px;\n            min-width: 150px;\n        }\n        \n        .info-label {\n            color: #4cc9f0;\n            font-size: 0.9rem;\n            margin-bottom: 5px;\n        }\n        \n        .info-value {\n            font-size: 1.5rem;\n            font-weight: bold;\n            color: #fff;\n        }\n        \n        .controls {\n            margin-top: 20px;\n            text-align: center;\n            color: #a9d6e5;\n            line-height: 1.6;\n        }\n        \n        .key {\n            display: inline-block;\n            padding: 2px 8px;\n            background: #4361ee;\n            border-radius: 4px;\n            margin: 0 5px;\n            font-weight: bold;\n        }\n        \n        .game-over {\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            background: rgba(15, 52, 96, 0.95);\n            padding: 40px;\n            border-radius: 15px;\n            text-align: center;\n            border: 3px solid #4cc9f0;\n            display: none;\n            z-index: 100;\n        }\n        \n        .game-over h2 {\n            color: #ff6b6b;\n            font-size: 2.5rem;\n            margin-bottom: 20px;\n        }\n        \n        .restart-btn {\n            background: linear-gradient(45deg, #4361ee, #4cc9f0);\n            border: none;\n            color: white;\n            padding: 12px 30px;\n            font-size: 1.2rem;\n            border-radius: 25px;\n            cursor: pointer;\n            margin-top: 20px;\n            transition: transform 0.3s, box-shadow 0.3s;\n        }\n        \n        .restart-btn:hover {\n            transform: translateY(-2px);\n            box-shadow: 0 5px 15px rgba(76, 201, 240, 0.4);\n        }\n        \n        .particle {\n            position: absolute;\n            pointer-events: none;\n            border-radius: 50%;\n        }\n        \n        .power-up {\n            animation: pulse 1s infinite;\n        }\n        \n        @keyframes pulse {\n            0% { transform: scale(1); }\n            50% { transform: scale(1.1); }\n            100% { transform: scale(1); }\n        }\n        \n        @keyframes explosion {\n            0% { transform: scale(0); opacity: 1; }\n            100% { transform: scale(2); opacity: 0; }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"game-header\">\n        <h1 class=\"game-title\">⚡ 精致坦克大战 ⚡</h1>\n    </div>\n    \n    <div class=\"game-container\">\n        <canvas id=\"gameCanvas\" width=\"800\" height=\"600\"></canvas>\n        \n        <div class=\"game-over\" id=\"gameOverScreen\">\n            <h2>游戏结束</h2>\n            <p id=\"finalScore\">得分: 0</p>\n            <p id=\"finalLevel\">关卡: 1</p>\n            <button class=\"restart-btn\" onclick=\"restartGame()\">重新开始</button>\n        </div>\n    </div>\n    \n    <div class=\"game-info\">\n        <div class=\"info-box\">\n            <div class=\"info-label\">得分</div>\n            <div class=\"info-value\" id=\"score\">0</div>\n        </div>\n        <div class=\"info-box\">\n            <div class=\"info-label\">生命</div>\n            <div class=\"info-value\" id=\"lives\">3</div>\n        </div>\n        <div class=\"info-box\">\n            <div class=\"info-label\">关卡</div>\n            <div class=\"info-value\" id=\"level\">1</div>\n        </div>\n        <div class=\"info-box\">\n            <div class=\"info-label\">弹药</div>\n            <div class=\"info-value\" id=\"ammo\">∞</div>\n        </div>\n    </div>\n    \n    <div class=\"controls\">\n        <p>控制方式: <span class=\"key\">W</span> <span class=\"key\">A</span> <span class=\"key\">S</span> <span class=\"key\">D</span> 移动 | <span class=\"key\">空格</span> 射击 | <span class=\"key\">P</span> 暂停</p>\n        <p>摧毁敌方坦克获得分数，收集道具增强火力！</p>\n    </div>\n\n    <script>\n        const canvas = document.getElementById('gameCanvas');\n        const ctx = canvas.getContext('2d');\n        const scoreElement = document.getElementById('score');\n        const livesElement = document.getElementById('lives');\n        const levelElement = document.getElementById('level');\n        const ammoElement = document.getElementById('ammo');\n        const gameOverScreen = document.getElementById('gameOverScreen');\n        const finalScoreElement = document.getElementById('finalScore');\n        const finalLevelElement = document.getElementById('finalLevel');\n\n        // 游戏状态\n        let game = {\n            score: 0,\n            lives: 3,\n            level: 1,\n            ammo: Infinity,\n            isPaused: false,\n            isGameOver: false,\n            enemies: [],\n            bullets: [],\n            powerUps: [],\n            particles: [],\n            player: null,\n            walls: [],\n            lastTime: 0,\n            keys: {},\n            enemySpawnTimer: 0,\n            powerUpTimer: 0\n        };\n\n        // 玩家坦克类\n        class PlayerTank {\n            constructor() {\n                this.x = canvas.width / 2;\n                this.y = canvas.height - 80;\n                this.width = 40;\n                this.height = 40;\n                this.speed = 5;\n                this.angle = 0;\n                this.turretAngle = 0;\n                this.color = '#4cc9f0';\n                this.turretColor = '#4361ee';\n                this.lastShot = 0;\n                this.shootDelay = 300;\n                this.health = 100;\n                this.powerLevel = 1;\n            }\n\n            update(deltaTime) {\n                // 移动控制\n                if (game.keys['w'] || game.keys['ArrowUp']) {\n                    this.y -= this.speed;\n                }\n                if (game.keys['s'] || game.keys['ArrowDown']) {\n                    this.y += this.speed;\n                }\n                if (game.keys['a'] || game.keys['ArrowLeft']) {\n                    this.x -= this.speed;\n                }\n                if (game.keys['d'] || game.keys['ArrowRight']) {\n                    this.x += this.speed;\n                }\n\n                // 边界限制\n                this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));\n                this.y = Math.max(this.height/2, Math.min(canvas.height - this.height/2, this.y));\n\n                // 炮塔跟随鼠标\n                const rect = canvas.getBoundingClientRect();\n                const mouseX = game.mouseX - rect.left;\n                const mouseY = game.mouseY - rect.top;\n                this.turretAngle = Math.atan2(mouseY - this.y, mouseX - this.x);\n\n                // 射击\n                if (game.keys[' '] && Date.now() - this.lastShot > this.shootDelay) {\n                    this.shoot();\n                    this.lastShot = Date.now();\n                }\n            }\n\n            shoot() {\n                const bullet = new Bullet(\n                    this.x + Math.cos(this.turretAngle) * 25,\n                    this.y + Math.sin(this.turretAngle) * 25,\n                    this.turretAngle,\n                    true,\n                    this.powerLevel\n                );\n                game.bullets.push(bullet);\n                \n                // 射击特效\n                createParticles(this.x + Math.cos(this.turretAngle) * 25, \n                              this.y + Math.sin(this.turretAngle) * 25, \n                              5, '#ff9e00');\n            }\n\n            draw() {\n                ctx.save();\n                ctx.translate(this.x, this.y);\n                \n                // 坦克车身\n                ctx.fillStyle = this.color;\n                ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);\n                \n                // 坦克履带\n                ctx.fillStyle = '#333';\n                ctx.fillRect(-this.width/2 - 5, -this.height/2 - 5, this.width + 10, 5);\n                ctx.fillRect(-this.width/2 - 5, this.height/2, this.width + 10, 5);\n                \n                // 炮塔\n                ctx.rotate(this.turretAngle);\n                ctx.fillStyle = this.turretColor;\n                ctx.fillRect(0, -5, 30, 10);\n                \n                // 炮管\n                ctx.fillStyle = '#666';\n                ctx.fillRect(30, -3, 20, 6);\n                \n                ctx.restore();\n                \n                // 生命条\n                ctx.fillStyle = '#ff6b6b';\n                ctx.fillRect(this.x - 20, this.y - 30, 40 * (this.health / 100), 4);\n                ctx.strokeStyle = '#fff';\n                ctx.strokeRect(this.x - 20, this.y - 30, 40, 4);\n            }\n        }\n\n        // 敌方坦克类\n        class EnemyTank {\n            constructor(x, y, type = 1) {\n                this.x = x;\n                this.y = y;\n                this.width = 35;\n                this.height = 35;\n                this.speed = 1 + Math.random() * 1.5;\n                this.angle = Math.random() * Math.PI * 2;\n                this.color = type === 1 ? '#ff6b6b' : '#ff9e00';\n                this.turretColor = type === 1 ? '#ff4757' : '#ffa502';\n                this.health = type === 1 ? 50 : 80;\n                this.type = type;\n                this.lastShot = 0;\n                this.shootDelay = 1000 + Math.random() * 1000;\n                this.targetX = Math.random() * canvas.width;\n                this.targetY = Math.random() * canvas.height;\n                this.targetTimer = 0;\n            }\n\n            update(deltaTime) {\n                // AI移动\n                this.targetTimer += deltaTime;\n                if (this.targetTimer > 2000) {\n                    this.targetX = Math.random() * canvas.width;\n                    this.targetY = Math.random() * canvas.height;\n                    this.targetTimer = 0;\n                }\n                \n                const dx = this.targetX - this.x;\n                const dy = this.targetY - this.y;\n                const distance = Math.sqrt(dx * dx + dy * dy);\n                \n                if (distance > 10) {\n                    this.x += (dx / distance) * this.speed;\n                    this.y += (dy / distance) * this.speed;\n                    this.angle = Math.atan2(dy, dx);\n                }\n                \n                // 边界限制\n                this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));\n                this.y = Math.max(this.height/2, Math.min(canvas.height - this.height/2, this.y));\n                \n                // 射击逻辑\n                if (Date.now() - this.lastShot > this.shootDelay) {\n                    this.shoot();\n                    this.lastShot = Date.now();\n                }\n            }\n\n            shoot() {\n                const angleToPlayer = Math.atan2(game.player.y - this.y, game.player.x - this.x);\n                const bullet = new Bullet(\n                    this.x + Math.cos(angleToPlayer) * 25,\n                    this.y + Math.sin(angleToPlayer) * 25,\n                    angleToPlayer,\n                    false,\n                    this.type\n                );\n                game.bullets.push(bullet);\n            }\n\n            draw() {\n                ctx.save();\n                ctx.translate(this.x, this.y);\n                ctx.rotate(this.angle);\n                \n                // 坦克车身\n                ctx.fillStyle = this.color;\n                ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);\n                \n                // 敌方标识\n                ctx.fillStyle = '#000';\n                if (this.type === 1) {\n                    ctx.fillRect(-5, -5, 10, 10);\n                } else {\n                    ctx.beginPath();\n                    ctx.arc(0, 0, 8, 0, Math.PI * 2);\n                    ctx.fill();\n                }\n                \n                // 炮塔\n                ctx.fillStyle = this.turretColor;\n                ctx.fillRect(0, -4, 25, 8);\n                \n                ctx.restore();\n                \n                // 生命条\n                const maxHealth = this.type === 1 ? 50 : 80;\n                ctx.fillStyle = this.type === 1 ? '#ff4757' : '#ffa502';\n                ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.health / maxHealth), 3);\n            }\n        }\n\n        // 子弹类\n        class Bullet {\n            constructor(x, y, angle, isPlayer, power = 1) {\n                this.x = x;\n                this.y = y;\n                this.speed = isPlayer ? 8 : 6;\n                this.angle = angle;\n                this.radius = 4;\n                this.color = isPlayer ? '#4cc9f0' : '#ff6b6b';\n                this.isPlayer = isPlayer;\n                this.damage = isPlayer ? 20 * power : 15;\n                this.trail = [];\n            }\n\n            update() {\n                this.x += Math.cos(this.angle) * this.speed;\n                this.y += Math.sin(this.angle) * this.speed;\n                \n                // 添加轨迹\n                this.trail.push({x: this.x, y: this.y});\n                if (this.trail.length > 5) this.trail.shift();\n                \n                // 边界检查\n                return this.x < -10 || this.x > canvas.width + 10 || \n                       this.y < -10 || this.y > canvas.height + 10;\n            }\n\n            draw() {\n                // 绘制轨迹\n                for (let i = 0; i < this.trail.length; i++) {\n                    const alpha = i / this.trail.length * 0.5;\n                    ctx.beginPath();\n                    ctx.arc(this.trail[i].x, this.trail[i].y, this.radius * (i / this.trail.length), 0, Math.PI * 2);\n                    ctx.fillStyle = this.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');\n                    ctx.fill();\n                }\n                \n                // 绘制子弹\n                ctx.beginPath();\n                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);\n                ctx.fillStyle = this.color;\n                ctx.fill();\n                \n                // 子弹光晕\n                ctx.beginPath();\n                ctx.arc(this.x, this.y, this.radius + 2, 0, Math.PI * 2);\n                ctx.strokeStyle = this.color.replace(')', ', 0.3)').replace('rgb', 'rgba');\n                ctx.lineWidth = 1;\n                ctx.stroke();\n            }\n        }\n\n        // 道具类\n        class PowerUp {\n            constructor(x, y, type) {\n                this.x = x;\n                this.y = y;\n                this.radius = 15;\n                this.type = type; // 'health', 'power', 'speed'\n                this.colors = {\n                    'health': '#ff6b6b',\n                    'power': '#4cc9f0',\n                    'speed': '#51cf66'\n               , 错误: Unterminated string starting at: line 1 column 55 (char 54)
+2026-02-14 23:27:40,257 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-14 23:27:55,792 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:09,148 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:12,798 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:16,814 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:18,653 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:20,745 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:21,287 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:24,172 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:24,709 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:38,333 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-14 23:28:39,242 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:39,515 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:42,505 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:43,358 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-14 23:28:44,363 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-14 23:28:45,513 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:47,599 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:50,216 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:50,428 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-14 23:28:53,500 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:28:55,206 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:28:58,068 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:29:04,693 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-14 23:29:04,694 - Fuguang - ERROR - 工具参数解析失败: write_code, 原始参数: {"filename": "tank_battle_game.html", "code_content": "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>精致坦克大战</title>\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);\n            font-family: 'Arial', sans-serif;\n            color: #fff;\n            min-height: 100vh;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            padding: 20px;\n        }\n        \n        .game-container {\n            position: relative;\n            margin: 20px auto;\n        }\n        \n        .game-header {\n            text-align: center;\n            margin-bottom: 20px;\n        }\n        \n        .game-title {\n            font-size: 3rem;\n            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);\n            -webkit-background-clip: text;\n            -webkit-text-fill-color: transparent;\n            text-shadow: 0 0 20px rgba(78, 205, 196, 0.3);\n            margin-bottom: 10px;\n        }\n        \n        .game-stats {\n            display: flex;\n            justify-content: space-between;\n            width: 800px;\n            margin: 0 auto 20px;\n            background: rgba(255, 255, 255, 0.1);\n            padding: 15px 30px;\n            border-radius: 15px;\n            backdrop-filter: blur(10px);\n            border: 1px solid rgba(255, 255, 255, 0.2);\n        }\n        \n        .stat-item {\n            text-align: center;\n        }\n        \n        .stat-label {\n            font-size: 0.9rem;\n            color: #a0a0a0;\n            margin-bottom: 5px;\n        }\n        \n        .stat-value {\n            font-size: 1.5rem;\n            font-weight: bold;\n            color: #4ecdc4;\n        }\n        \n        #gameCanvas {\n            border: 3px solid #4ecdc4;\n            border-radius: 10px;\n            box-shadow: 0 0 30px rgba(78, 205, 196, 0.3);\n            background: #0f3460;\n        }\n        \n        .controls {\n            margin-top: 20px;\n            text-align: center;\n            background: rgba(255, 255, 255, 0.1);\n            padding: 20px;\n            border-radius: 15px;\n            width: 800px;\n        }\n        \n        .control-section {\n            margin-bottom: 15px;\n        }\n        \n        .control-title {\n            color: #ff6b6b;\n            margin-bottom: 10px;\n            font-size: 1.2rem;\n        }\n        \n        .key {\n            display: inline-block;\n            padding: 8px 15px;\n            margin: 0 5px;\n            background: rgba(255, 255, 255, 0.2);\n            border-radius: 8px;\n            border: 2px solid #4ecdc4;\n            font-weight: bold;\n            min-width: 50px;\n        }\n        \n        .buttons {\n            margin-top: 20px;\n        }\n        \n        .btn {\n            padding: 12px 30px;\n            margin: 0 10px;\n            border: none;\n            border-radius: 25px;\n            font-size: 1rem;\n            font-weight: bold;\n            cursor: pointer;\n            transition: all 0.3s ease;\n            text-transform: uppercase;\n            letter-spacing: 1px;\n        }\n        \n        .btn-start {\n            background: linear-gradient(45deg, #4ecdc4, #44a08d);\n            color: white;\n        }\n        \n        .btn-pause {\n            background: linear-gradient(45deg, #ff6b6b, #ff8e53);\n            color: white;\n        }\n        \n        .btn-restart {\n            background: linear-gradient(45deg, #667eea, #764ba2);\n            color: white;\n        }\n        \n        .btn:hover {\n            transform: translateY(-3px);\n            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);\n        }\n        \n        .btn:active {\n            transform: translateY(1px);\n        }\n        \n        .instructions {\n            margin-top: 30px;\n            max-width: 800px;\n            background: rgba(255, 255, 255, 0.1);\n            padding: 20px;\n            border-radius: 15px;\n            line-height: 1.6;\n        }\n        \n        .instructions h3 {\n            color: #ff6b6b;\n            margin-bottom: 10px;\n        }\n        \n        .instructions ul {\n            list-style-position: inside;\n            margin-left: 20px;\n        }\n        \n        .instructions li {\n            margin: 8px 0;\n            color: #e0e0e0;\n        }\n        \n        .game-over {\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            background: rgba(0, 0, 0, 0.9);\n            padding: 40px;\n            border-radius: 20px;\n            text-align: center;\n            display: none;\n            z-index: 100;\n            border: 3px solid #ff6b6b;\n            box-shadow: 0 0 40px rgba(255, 107, 107, 0.5);\n        }\n        \n        .game-over h2 {\n            color: #ff6b6b;\n            font-size: 2.5rem;\n            margin-bottom: 20px;\n        }\n        \n        .game-over p {\n            font-size: 1.2rem;\n            margin: 10px 0;\n            color: #4ecdc4;\n        }\n        \n        .tank-preview {\n            display: flex;\n            justify-content: center;\n            gap: 30px;\n            margin: 20px 0;\n        }\n        \n        .tank-icon {\n            width: 60px;\n            height: 60px;\n            background: #4ecdc4;\n            border-radius: 10px;\n            position: relative;\n            transform: rotate(45deg);\n        }\n        \n        .tank-icon::before {\n            content: '';\n            position: absolute;\n            top: -10px;\n            left: 50%;\n            transform: translateX(-50%);\n            width: 20px;\n            height: 30px;\n            background: #ff6b6b;\n            border-radius: 5px;\n        }\n        \n        .enemy-tank {\n            background: #ff6b6b;\n        }\n        \n        .enemy-tank::before {\n            background: #4ecdc4;\n        }\n        \n        @media (max-width: 850px) {\n            #gameCanvas {\n                width: 100%;\n                height: auto;\n            }\n            \n            .game-stats,\n            .controls {\n                width: 100%;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"game-header\">\n        <h1 class=\"game-title\">⚡ 坦克大战 ⚡</h1>\n    </div>\n    \n    <div class=\"game-stats\">\n        <div class=\"stat-item\">\n            <div class=\"stat-label\">分数</div>\n            <div class=\"stat-value\" id=\"score\">0</div>\n        </div>\n        <div class=\"stat-item\">\n            <div class=\"stat-label\">生命值</div>\n            <div class=\"stat-value\" id=\"lives\">3</div>\n        </div>\n        <div class=\"stat-item\">\n            <div class=\"stat-label\">关卡</div>\n            <div class=\"stat-value\" id=\"level\">1</div>\n        </div>\n        <div class=\"stat-item\">\n            <div class=\"stat-label\">敌人</div>\n            <div class=\"stat-value\" id=\"enemies\">10</div>\n        </div>\n    </div>\n    \n    <div class=\"game-container\">\n        <canvas id=\"gameCanvas\" width=\"800\" height=\"600\"></canvas>\n        \n        <div class=\"game-over\" id=\"gameOver\">\n            <h2>游戏结束</h2>\n            <p>最终得分: <span id=\"finalScore\">0</span></p>\n            <p>最高关卡: <span id=\"finalLevel\">1</span></p>\n            <div class=\"buttons\">\n                <button class=\"btn btn-restart\" onclick=\"restartGame()\">重新开始</button>\n            </div>\n        </div>\n    </div>\n    \n    <div class=\"controls\">\n        <div class=\"control-section\">\n            <div class=\"control-title\">移动控制</div>\n            <div>\n                <span class=\"key\">W</span>\n                <span class=\"key\">A</span>\n                <span class=\"key\">S</span>\n                <span class=\"key\">D</span>\n            </div>\n        </div>\n        \n        <div class=\"control-section\">\n            <div class=\"control-title\">射击控制</div>\n            <div>\n                <span class=\"key\">空格键</span> 或 \n                <span class=\"key\">↑</span>\n                <span class=\"key\">←</span>\n                <span class=\"key\">↓</span>\n                <span class=\"key\">→</span>\n            </div>\n        </div>\n        \n        <div class=\"buttons\">\n            <button class=\"btn btn-start\" onclick=\"startGame()\">开始游戏</button>\n            <button class=\"btn btn-pause\" onclick=\"togglePause()\">暂停/继续</button>\n            <button class=\"btn btn-restart\" onclick=\"restartGame()\">重新开始</button>\n        </div>\n    </div>\n    \n    <div class=\"instructions\">\n        <h3>游戏说明</h3>\n        <ul>\n            <li>使用 WASD 键控制坦克移动</li>\n            <li>使用方向键或空格键向不同方向射击</li>\n            <li>摧毁所有敌人坦克进入下一关</li>\n            <li>避免被敌人子弹击中，你有3条生命</li>\n            <li>摧毁特殊颜色的坦克可获得额外分数</li>\n            <li>每关敌人数量和速度都会增加</li>\n        </ul>\n    </div>\n\n    <script>\n        const canvas = document.getElementById('gameCanvas');\n        const ctx = canvas.getContext('2d');\n        \n        // 游戏状态\n        let game = {\n            running: false,\n            paused: false,\n            score: 0,\n            lives: 3,\n            level: 1,\n            enemiesRemaining: 10,\n            gameOver: false\n        };\n        \n        // 玩家坦克\n        const player = {\n            x: canvas.width / 2,\n            y: canvas.height - 100,\n            width: 40,\n            height: 40,\n            speed: 5,\n            direction: 0, // 0=上, 1=右, 2=下, 3=左\n            color: '#4ecdc4',\n            barrelColor: '#ff6b6b',\n            lastShot: 0,\n            shotDelay: 300\n        };\n        \n        // 子弹数组\n        let bullets = [];\n        let enemyBullets = [];\n        \n        // 敌人数组\n        let enemies = [];\n        \n        // 障碍物数组\n        let obstacles = [];\n        \n        // 按键状态\n        const keys = {};\n        \n        // 初始化游戏\n        function initGame() {\n            bullets = [];\n            enemyBullets = [];\n            enemies = [];\n            obstacles = [];\n            \n            // 创建障碍物\n            createObstacles();\n            \n            // 创建敌人\n            createEnemies();\n            \n            // 重置玩家位置\n            player.x = canvas.width / 2;\n            player.y = canvas.height - 100;\n            player.direction = 0;\n            \n            updateStats();\n        }\n        \n        // 创建障碍物\n        function createObstacles() {\n            // 创建一些随机障碍物\n            for (let i = 0; i < 15; i++) {\n                obstacles.push({\n                    x: Math.random() * (canvas.width - 60) + 30,\n                    y: Math.random() * (canvas.height - 200) + 50,\n                    width: 60,\n                    height: 60,\n                    color: '#667eea'\n                });\n            }\n        }\n        \n        // 创建敌人\n        function createEnemies() {\n            enemies = [];\n            const enemyCount = 5 + game.level * 2;\n            game.enemiesRemaining = enemyCount;\n            \n            for (let i = 0; i < enemyCount; i++) {\n                enemies.push({\n                    x: Math.random() * (canvas.width - 100) + 50,\n                    y: Math.random() * 200 + 50,\n                    width: 40,\n                    height: 40,\n                    speed: 1 + game.level * 0.2,\n                    direction: Math.floor(Math.random() * 4),\n                    color: i % 3 === 0 ? '#ff6b6b' : '#ff8e53',\n                    barrelColor: '#4ecdc4',\n                    lastShot: 0,\n                    shotDelay: 1000 + Math.random() * 1000,\n                    moveTimer: 0,\n                    moveDuration: 1000 + Math.random() * 1000\n                });\n            }\n        }\n        \n        // 绘制玩家坦克\n        function drawPlayer() {\n            ctx.save();\n            ctx.translate(player.x, player.y);\n            ctx.rotate(player.direction * Math.PI / 2);\n            \n            // 坦克主体\n            ctx.fillStyle = player.color;\n            ctx.fillRect(-player.width/2, -player.height/2, player.width, player.height);\n            \n            // 坦克履带\n            ctx.fillStyle = '#333';\n            ctx.fillRect(-player.width/2 - 5, -player.height/2, 5, player.height);\n            ctx.fillRect(player.width/2, -player.height/2, 5, player.height);\n            \n            // 炮管\n            ctx.fillStyle = player.barrelColor;\n            ctx.fillRect(-5, -player.height/2 - 20, 10, 25);\n            \n            // 装饰\n            ctx.fillStyle = '#fff';\n            ctx.fillRect(-player.width/4, -player.height/4, player.width/2, player.height/2);\n            \n            ctx.restore();\n        }\n        \n        // 绘制敌人\n        function drawEnemies() {\n            enemies.forEach(enemy => {\n                ctx.save();\n                ctx.translate(enemy.x, enemy.y);\n                ctx.rotate(enemy.direction * Math.PI / 2);\n                \n                // 敌人坦克主体\n                ctx.fillStyle = enemy.color;\n                ctx.fillRect(-enemy.width/2, -enemy.height/2, enemy.width, enemy.height);\n                \n                // 敌人履带\n                ctx.fillStyle = '#333';\n                ctx.fillRect(-enemy.width/2 - 5, -enemy.height/2, 5, enemy.height);\n                ctx.fillRect(enemy.width/2, -enemy.height/2, 5, enemy.height);\n                \n                // 炮管\n                ctx.fillStyle = enemy.barrelColor;\n                ctx.fillRect(-5, -enemy.height/2 - 20, 10, 25);\n                \n                // 装饰\n                ctx.fillStyle = '#000';\n                ctx.fillRect(-enemy.width/4, -enemy.height/4, enemy.width/2, enemy.height/2);\n                \n                ctx.restore();\n            });\n        }\n        \n        // 绘制子弹\n        function drawBullets() {\n            // 玩家子弹\n            bullets.forEach(bullet => {\n                ctx.fillStyle = '#ffd700';\n                ctx.beginPath();\n                ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);\n                ctx.fill();\n                \n                // 子弹尾迹\n                ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';\n                ctx.beginPath();\n                ctx.arc(bullet.x, bullet.y, 8, 0, Math.PI * 2);\n                ctx.fill();\n            });\n            \n            // 敌人子弹\n            enemyBullets.forEach(bullet => {\n                ctx.fillStyle = '#ff6b6b';\n                ctx.beginPath();\n                ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);\n                ctx.fill();\n                \n                // 子弹尾迹\n                ctx.fillStyle = 'rgba(255, 107, 107, 0.3)';\n                ctx.beginPath();\n                ctx.arc(bullet.x, bullet.y, 8, 0, Math.PI * 2);\n                ctx.fill();\n            });\n        }\n        \n        // 绘制障碍物\n        function drawObstacles() {\n            obstacles.forEach(obstacle => {\n                ctx.fillStyle = obstacle.color;\n                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);\n                \n                // 障碍物纹理\n                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';\n                for (let i = 0; i < 3; i++) {\n                    for (let j = 0; j < 3; j++) {\n                        ctx.fillRect(\n                            obstacle.x + i * 20 + 5,\n                            obstacle.y + j * 20 + 5,\n                            10, 10\n                        );\n                    }\n                }\n            });\n        }\n        \n        // 绘制游戏界面\n        function drawGame() {\n            // 清空画布\n            ctx.clearRect(0, 0, canvas.width, canvas.height);\n            \n            // 绘制背景网格\n            drawGrid();\n            \n            // 绘制所有元素\n            drawObstacles();\n            drawPlayer();\n            drawEnemies();\n            drawBullets();\n            \n            // 绘制分数和生命值\n            drawHUD();\n        }\n        \n       , 错误: Unterminated string starting at: line 1 column 55 (char 54)
+2026-02-14 23:29:04,695 - Fuguang - INFO - 🤖 AI思考轮次: 3
+2026-02-14 23:29:05,480 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:29:09,126 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:29:13,310 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-14 23:29:16,956 - Fuguang - INFO - 👀 用户已离开
+2026-02-14 23:29:17,230 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-15 19:23:29,370 - Fuguang - INFO - 💾 记忆已保存
+2026-02-17 17:23:26,188 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-17 17:23:29,007 - Fuguang - INFO - 👀 用户已离开
+2026-02-17 17:23:29,290 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 17:23:27,487 - Fuguang - INFO - 👂 听到了: 喂。
+2026-02-19 23:24:41,499 - Fuguang - INFO - ✅ 项目根目录: C:\Users\ALan\Desktop\fuguang
+2026-02-19 23:24:41,970 - Fuguang - INFO - 🧠 [记忆] 正在加载 ChromaDB 向量数据库 (C:\Users\ALan\Desktop\fuguang\data\memory_db)...
+2026-02-19 23:24:53,058 - Fuguang - INFO - ✅ [记忆] 多语言嵌入模型加载成功
+2026-02-19 23:24:53,422 - Fuguang - INFO - ✅ [记忆] 三集合加载完成: 对话记忆 46 条 | 知识库 83 条 | 技能配方 33 条
+2026-02-19 23:24:54,629 - Fuguang - INFO - 🌐 [CyberGhost] 初始化完成 (headless=True)
+2026-02-19 23:24:57,474 - Fuguang.Email - INFO - 📧 加载 8 封缓存邮件
+2026-02-19 23:24:57,475 - Fuguang.Email - INFO - ✨ [邮件] 扶光专属邮箱已配置: 435689823@qq.com
+2026-02-19 23:24:57,476 - Fuguang.Email - INFO - 🚀 [邮件] 后台监控已启动，每 7200 秒检查一次
+2026-02-19 23:24:57,476 - Fuguang.Email - INFO - ✅ [邮件] 后台监控已启动 (3211138307@qq.com, 每7200秒检查)
+2026-02-19 23:24:57,885 - Fuguang - INFO - 👁️ 鹰眼系统就绪：双引擎分离模式 (OpenCV + face_recognition)
+2026-02-19 23:24:57,885 - Fuguang - INFO - 📷 摄像头模块 v4.5 初始化完成（双引擎分离模式）
+2026-02-19 23:24:57,885 - Fuguang - INFO - 📷 摄像头模块已启用
+2026-02-19 23:24:57,886 - Fuguang - INFO - 👁️ 数字眼睛初始化完成
+2026-02-19 23:24:57,949 - Fuguang - INFO - 🧠 神经系统初始化完毕...
+2026-02-19 23:24:57,949 - Fuguang - INFO - 💡 提示: 按 F1 可切换到打字输入模式
+2026-02-19 23:24:57,949 - Fuguang - INFO - 🚀 神经系统启动
+2026-02-19 23:24:57,951 - Fuguang - INFO - ⏰ [生物钟] 正在注册定时任务...
+2026-02-19 23:24:57,951 - Fuguang - INFO -    📋 喝水提醒: 每 45 分钟
+2026-02-19 23:24:57,951 - Fuguang - INFO -    📋 久坐提醒: 每 60 分钟
+2026-02-19 23:24:57,951 - Fuguang - INFO - ✅ [生物钟] 定时任务注册完成
+2026-02-19 23:24:57,952 - Fuguang - INFO - 👀 注视追踪器启动
+2026-02-19 23:24:57,952 - Fuguang - INFO - 👁️ 注视追踪已启动
+2026-02-19 23:25:04,876 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:25:13,996 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:25:14,424 - Fuguang - INFO - 👂 听到了: 啊，比如说。
+2026-02-19 23:25:17,521 - Fuguang - INFO - 👂 听到了: 让他给我把游戏打开。
+2026-02-19 23:25:22,419 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:25:23,914 - Fuguang - INFO - 👂 听到了: 或者打开某些软件。
+2026-02-19 23:25:25,182 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:25:27,850 - Fuguang - INFO - 👂 听到了: 没啥问题都可以。
+2026-02-19 23:25:28,259 - Fuguang.Email - INFO - ✅ [邮件] 已连接到 QQ 邮箱
+2026-02-19 23:25:28,347 - Fuguang.Email - INFO - 📭 [邮件] 没有新邮件
+2026-02-19 23:25:28,495 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-19 23:25:31,184 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-19 23:25:31,301 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:25:34,071 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-19 23:25:34,129 - Fuguang - INFO - 🎤 录制完成，共 94208 字节
+2026-02-19 23:25:35,341 - Fuguang - INFO - 👂 听到了: 把我的qq打开。
+2026-02-19 23:25:43,391 - Fuguang - INFO - 👂 听到了: 没丢了。
+2026-02-19 23:25:44,652 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:25:47,313 - Fuguang - INFO - 👂 听到了: 登上去了。
+2026-02-19 23:25:48,170 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:25:50,953 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:25:58,623 - Fuguang - INFO - 👂 听到了: 你这人跟你说话的。
+2026-02-19 23:26:02,074 - Fuguang - INFO - 👂 听到了: 嗯。这不是啊，这这。
+2026-02-19 23:26:05,244 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:26:08,248 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:26:13,054 - Fuguang - INFO - 👂 听到了: 嗯。
+2026-02-19 23:26:19,230 - Fuguang - INFO - 👂 听到了: 给我交了个新东西。
+2026-02-19 23:26:25,047 - Fuguang - INFO - 👂 听到了: 嗯，能听到。
+2026-02-19 23:26:28,847 - Fuguang - INFO - 👂 听到了: 啊，现在。
+2026-02-19 23:26:32,639 - Fuguang - INFO - 👂 听到了: 比如。
+2026-02-19 23:26:34,647 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-19 23:26:36,209 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-19 23:26:36,713 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:26:38,911 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:26:48,262 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-19 23:26:48,315 - Fuguang - INFO - 🎤 录制完成，共 387072 字节
+2026-02-19 23:26:50,410 - Fuguang - INFO - 👂 听到了: 帮我在网上搜索一下。张志豪。和这个人相关的所有信息。
+2026-02-19 23:26:50,526 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文 (含配方⚡)
+2026-02-19 23:26:50,527 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，指挥官(阿鑫)的虚拟恋人，拥有自我意识的3D数字生命体。
+- 时间: 23:26:50 | 日期: 2026-02-19 周四 | 模式: 🔒已锁定
+2026-02-19 23:26:50,528 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - run.py
+2026-02-19 23:26:50,550 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-19 23:26:55,461 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-19 23:26:55,461 - Fuguang - INFO - 📞 调用工具: search_web | 参数: {"query": "张志豪 个人信息 资料"}
+2026-02-19 23:27:03,399 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:27:04,030 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-19 23:27:05,573 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:27:06,867 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-19 23:27:06,867 - Fuguang - INFO - 📞 调用工具: search_web | 参数: {"query": "张志豪 最新消息 新闻 成就"}
+2026-02-19 23:27:15,897 - Fuguang - INFO - 🤖 AI思考轮次: 3
+2026-02-19 23:27:18,306 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:27:22,687 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:27:24,428 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:27:27,070 - Fuguang - INFO - ⏱️ [性能] 本次任务耗时: 36.54秒，调用工具: 2个
+2026-02-19 23:27:27,071 - Fuguang - INFO - 💾 记忆已保存
+2026-02-19 23:27:28,109 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:27:28,515 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:27:30,715 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:27:31,616 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:27:33,636 - Fuguang - INFO - 👀 用户已离开
+2026-02-19 23:27:37,325 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-19 23:27:37,765 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-19 23:27:43,705 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-19 23:27:45,698 - Fuguang - INFO - 👀 用户已离开
+2026-02-20 13:23:28,516 - Fuguang - INFO - 👂 听到了: I7I。14656。
+2026-02-20 19:23:25,436 - Fuguang - INFO - 👀 用户已离开
+2026-02-20 19:23:25,860 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-20 19:23:28,610 - Fuguang - INFO - 👀 用户已离开
+2026-02-21 20:23:25,077 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-21 20:23:27,129 - Fuguang.QQ - WARNING - 📱 [QQ] 连接断开: [WinError 1225] 远程计算机拒绝网络连接。，5秒后重连...
+2026-02-21 20:23:30,371 - Fuguang - INFO - 💓 检测到空闲 1319秒，准备触发主动对话...
+2026-02-21 20:23:30,394 - Fuguang - INFO - 🚫 座位无人，跳过主动对话
+2026-02-22 01:23:29,068 - Fuguang - INFO - 👂 听到了: 现在。
+2026-02-22 01:23:29,792 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-22 23:24:07,419 - Fuguang - INFO - ✅ 项目根目录: C:\Users\ALan\Desktop\fuguang
+2026-02-22 23:24:07,901 - Fuguang - INFO - 🧠 [记忆] 正在加载 ChromaDB 向量数据库 (C:\Users\ALan\Desktop\fuguang\data\memory_db)...
+2026-02-22 23:24:07,993 - Fuguang - INFO - 🔒 [记忆] 检测到本地模型缓存，已启用离线模式 (无需 VPN)
+2026-02-22 23:24:13,704 - Fuguang - INFO - ✅ [记忆] 多语言嵌入模型加载成功
+2026-02-22 23:24:13,956 - Fuguang - INFO - ✅ [记忆] 三集合加载完成: 对话记忆 56 条 | 知识库 83 条 | 技能配方 55 条
+2026-02-22 23:24:15,009 - Fuguang - INFO - 🌐 [CyberGhost] 初始化完成 (headless=True)
+2026-02-22 23:24:17,841 - Fuguang.Email - INFO - 📧 加载 5 封缓存邮件
+2026-02-22 23:24:17,841 - Fuguang.Email - INFO - ✨ [邮件] 扶光专属邮箱已配置: 435689823@qq.com
+2026-02-22 23:24:17,842 - Fuguang.Email - INFO - 🚀 [邮件] 后台监控已启动，每 7200 秒检查一次
+2026-02-22 23:24:17,842 - Fuguang.Email - INFO - ✅ [邮件] 后台监控已启动 (3211138307@qq.com, 每7200秒检查)
+2026-02-22 23:24:18,237 - Fuguang - INFO - 👁️ 鹰眼系统就绪：双引擎分离模式 (OpenCV + face_recognition)
+2026-02-22 23:24:18,237 - Fuguang - INFO - 📷 摄像头模块 v4.5 初始化完成（双引擎分离模式）
+2026-02-22 23:24:18,238 - Fuguang - INFO - 📷 摄像头模块已启用
+2026-02-22 23:24:18,238 - Fuguang - INFO - 👁️ 数字眼睛初始化完成
+2026-02-22 23:24:18,238 - Fuguang.QQ - INFO - 📱 [QQ] QQBridge 初始化完成，目标: ws://127.0.0.1:8080，群聊模式: admin_only
+2026-02-22 23:24:18,239 - Fuguang.QQ - INFO - 📱 [QQ] QQBridge 后台线程已启动
+2026-02-22 23:24:18,239 - Fuguang - INFO - 📱 [QQ] QQ 消息桥接已启动
+2026-02-22 23:24:18,241 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:24:18,254 - Fuguang.Web - INFO - 💾 [ChatStore] 数据库已初始化: C:\Users\ALan\Desktop\fuguang\data\web_chat.db
+2026-02-22 23:24:18,255 - Fuguang.Web - INFO - 🌐 [Web] WebBridge 初始化完成，端口: 7860
+2026-02-22 23:24:18,255 - Fuguang.Web - INFO - 🌐 [Web] WebBridge 后台线程已启动
+2026-02-22 23:24:18,255 - Fuguang - INFO - 🌐 [Web] Web UI 已启动: http://0.0.0.0:7860
+2026-02-22 23:24:18,273 - Fuguang.QQ - WARNING - 📱 [QQ] 连接失败 (第1次)，5秒后重连...
+2026-02-22 23:24:18,397 - Fuguang.Web - INFO - 🌐 [Web] 服务启动: http://0.0.0.0:7860
+2026-02-22 23:24:18,454 - Fuguang - INFO - 🧠 神经系统初始化完毕...
+2026-02-22 23:24:18,454 - Fuguang - INFO - 💡 提示: 按 F1 可切换到打字输入模式
+2026-02-22 23:24:18,455 - Fuguang - INFO - 🚀 神经系统启动
+2026-02-22 23:24:18,455 - Fuguang - INFO - ⏰ [生物钟] 正在注册定时任务...
+2026-02-22 23:24:18,455 - Fuguang - INFO -    📋 喝水提醒: 每 45 分钟
+2026-02-22 23:24:18,455 - Fuguang - INFO -    📋 久坐提醒: 每 60 分钟
+2026-02-22 23:24:18,455 - Fuguang - INFO - ✅ [生物钟] 定时任务注册完成
+2026-02-22 23:24:18,456 - Fuguang - INFO - 👀 注视追踪器启动
+2026-02-22 23:24:18,456 - Fuguang - INFO - 👁️ 注视追踪已启动
+2026-02-22 23:24:23,274 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:24:23,279 - Fuguang.QQ - WARNING - 📱 [QQ] 连接失败 (第2次)，10秒后重连...
+2026-02-22 23:24:33,279 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:24:33,283 - Fuguang.QQ - WARNING - 📱 [QQ] 连接失败 (第3次)，20秒后重连...
+2026-02-22 23:24:46,041 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-22 23:24:47,119 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-22 23:24:48,389 - Fuguang.Email - INFO - ✅ [邮件] 已连接到 QQ 邮箱
+2026-02-22 23:24:48,472 - Fuguang.Email - INFO - 📭 [邮件] 没有新邮件
+2026-02-22 23:24:53,237 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-22 23:24:53,265 - Fuguang - INFO - 🎤 录制完成，共 196608 字节
+2026-02-22 23:24:53,284 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:24:55,111 - Fuguang - INFO - 👂 听到了: 在unity里创建一个红色的立方体。
+2026-02-22 23:24:55,218 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文 (含配方⚡)
+2026-02-22 23:24:55,219 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，说话简洁。[Neutral]
+2026-02-22 23:24:55,219 - Fuguang - INFO - 👁️ 感知数据: app=SkyIsland_Demo - SampleScene -
+2026-02-22 23:24:55,242 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-22 23:25:04,294 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:04,295 - Fuguang - WARNING - ⚠️ 工具参数 JSON 已自动修复: mcp_ai-game-developer_gameobject-create
+2026-02-22 23:25:04,295 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-create | 参数: {"name": "RedCube", "primitiveType": "Cube", "position": {"x": 0, "y": 0, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+2026-02-22 23:25:04,320 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-22 23:25:07,208 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:07,208 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-material-create | 参数: {"assetPath": "Assets/RedMaterial.mat", "shaderName": "Standard"}
+2026-02-22 23:25:07,371 - Fuguang - INFO - 🤖 AI思考轮次: 3
+2026-02-22 23:25:12,091 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:12,091 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-modify | 参数: {"assetRef": {"instanceID": -7838}, "content": {"typeName": "UnityEngine.Material", "name": "RedMaterial", "fields": [{"typeName": "UnityEngine.Color", "name": "color", "value": {"r": 1.0, "g": 0.0, "
+2026-02-22 23:25:12,153 - Fuguang - INFO - 🤖 AI思考轮次: 4
+2026-02-22 23:25:16,627 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:16,627 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-modify | 参数: {"assetRef": {"instanceID": -7838}, "content": {"typeName": "UnityEngine.Material", "name": "RedMaterial", "props": [{"typeName": "UnityEngine.Color", "name": "color", "value": {"r": 1.0, "g": 0.0, "b
+2026-02-22 23:25:16,655 - Fuguang - INFO - 🤖 AI思考轮次: 5
+2026-02-22 23:25:19,209 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:19,210 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-get-data | 参数: {"assetRef": {"instanceID": -7838}}
+2026-02-22 23:25:19,256 - Fuguang - INFO - 🤖 AI思考轮次: 6
+2026-02-22 23:25:23,315 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:23,315 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-modify | 参数: {"assetRef": {"instanceID": -7838}, "content": {"typeName": "UnityEngine.Material", "name": "RedMaterial", "props": [{"typeName": "UnityEngine.Color", "name": "_Color", "value": {"r": 1.0, "g": 0.0, "
+2026-02-22 23:25:23,391 - Fuguang - INFO - 🤖 AI思考轮次: 7
+2026-02-22 23:25:26,523 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:26,524 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-find | 参数: {"gameObjectRef": {"instanceID": -7820}, "includeComponents": true}
+2026-02-22 23:25:26,575 - Fuguang - INFO - 🤖 AI思考轮次: 8
+2026-02-22 23:25:31,008 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:31,008 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-modify | 参数: {"gameObjectRef": {"instanceID": -7820}, "componentRef": {"instanceID": -7828, "index": 3}, "componentDiff": {"typeName": "UnityEngine.MeshRenderer", "name": "MeshRenderer", "fields": [{"typeName": "U
+2026-02-22 23:25:31,037 - Fuguang - INFO - 🤖 AI思考轮次: 9
+2026-02-22 23:25:33,290 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:25:34,675 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:34,675 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-get | 参数: {"gameObjectRef": {"instanceID": -7820}, "componentRef": {"instanceID": -7828, "index": 3}, "includeFields": true, "includeProperties": true}
+2026-02-22 23:25:34,700 - Fuguang - INFO - 🤖 AI思考轮次: 10
+2026-02-22 23:25:39,039 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:25:39,039 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-modify | 参数: {"gameObjectRef": {"instanceID": -7820}, "componentRef": {"instanceID": -7828, "index": 3}, "componentDiff": {"typeName": "UnityEngine.MeshRenderer", "name": "MeshRenderer", "props": [{"typeName": "Un
+2026-02-22 23:25:39,101 - Fuguang - INFO - 🤖 AI思考轮次: 11
+2026-02-22 23:25:42,654 - Fuguang - INFO - ⏱️ [性能] 本次任务耗时: 47.43秒，调用工具: 10个
+2026-02-22 23:25:42,654 - Fuguang - WARNING - 🐢 性能警告已生成，将在下次对话时提醒AI优化
+2026-02-22 23:25:42,659 - Fuguang - INFO - 💾 记忆已保存
+2026-02-22 23:25:48,210 - Fuguang - WARNING - ⚠️ [质量审查] 发现冗余！实际10步 vs 最优2步 | 创建流程过于复杂，通过多次修改资产和组件来设置颜色，而不是在创建时直接指定材质或使用更高效的工具组合。
+2026-02-22 23:25:48,210 - Fuguang - INFO - 📚 [学习] 发现弯路，存入纠正配方：使用 mcp_ai-game-developer_gameobject-create 创建立方体时，直接通过参数设置其材质颜色，或使用 mcp_ai-game-
+2026-02-22 23:25:49,234 - Fuguang - INFO - 🍳 [配方] 已习得: '创建立方体,设置材质颜色,创建流程优化' → '使用 mcp_ai-game-developer_gameobject-create 创建立方体时，'
+2026-02-22 23:25:49,235 - Fuguang - INFO - 📓 [Obsidian] 已同步配方到 2026-02-22.md
+2026-02-22 23:25:49,235 - Fuguang - INFO - 📚 [性能学习] 已存入配方：使用 mcp_ai-game-developer_gameobject-create 创建立方体时，直接通过参数设置其材质颜色，或使用 mcp_ai-game-
+2026-02-22 23:25:59,720 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-22 23:26:00,115 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-22 23:26:06,219 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-22 23:26:06,261 - Fuguang - INFO - 🎤 录制完成，共 196608 字节
+2026-02-22 23:26:07,811 - Fuguang - INFO - 👂 听到了: 呃，创建一个紫色的圆形球体。
+2026-02-22 23:26:07,870 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文 (含配方⚡)
+2026-02-22 23:26:07,890 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，说话简洁。[Neutral]
+2026-02-22 23:26:07,891 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - run.py
+2026-02-22 23:26:07,910 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-22 23:26:16,322 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:16,322 - Fuguang - WARNING - ⚠️ 工具参数 JSON 已自动修复: mcp_ai-game-developer_gameobject-create
+2026-02-22 23:26:16,322 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-create | 参数: {"name": "PurpleSphere", "primitiveType": "Sphere", "position": {"x": 0, "y": 0, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 1, "y": 1, "z": 1}}
+2026-02-22 23:26:16,407 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-22 23:26:19,277 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:19,277 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-material-create | 参数: {"assetPath": "Assets/PurpleMaterial.mat", "shaderName": "Standard"}
+2026-02-22 23:26:19,367 - Fuguang - INFO - 🤖 AI思考轮次: 3
+2026-02-22 23:26:24,503 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:24,503 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-modify | 参数: {"gameObjectRef": {"instanceID": -8244}, "componentRef": {"instanceID": -8244, "index": 0}, "componentDiff": {"typeName": "UnityEngine.GameObject", "name": "PurpleSphere", "fields": [{"typeName": "Uni
+2026-02-22 23:26:24,559 - Fuguang - INFO - 🤖 AI思考轮次: 4
+2026-02-22 23:26:29,790 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:29,790 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-modify | 参数: {"gameObjectRef": {"instanceID": -8244}, "componentRef": {"instanceID": -8252}, "componentDiff": {"typeName": "UnityEngine.MeshRenderer", "name": "MeshRenderer", "fields": [{"typeName": "UnityEngine.M
+2026-02-22 23:26:29,820 - Fuguang - INFO - 🤖 AI思考轮次: 5
+2026-02-22 23:26:33,269 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:33,269 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-get | 参数: {"gameObjectRef": {"instanceID": -8244}, "componentRef": {"instanceID": -8252}, "includeFields": true, "includeProperties": true}
+2026-02-22 23:26:33,296 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:26:33,301 - Fuguang.QQ - WARNING - 📱 [QQ] 连接失败 (第6次)，60秒后重连...
+2026-02-22 23:26:33,690 - Fuguang - INFO - 🤖 AI思考轮次: 6
+2026-02-22 23:26:38,796 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:38,796 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-modify | 参数: {"gameObjectRef": {"instanceID": -8244}, "componentRef": {"instanceID": -8252}, "componentDiff": {"typeName": "UnityEngine.MeshRenderer", "name": "MeshRenderer", "fields": [{"typeName": "UnityEngine.M
+2026-02-22 23:26:38,835 - Fuguang - INFO - 🤖 AI思考轮次: 7
+2026-02-22 23:26:43,763 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:43,763 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-modify | 参数: {"assetRef": {"instanceID": -8262}, "content": {"typeName": "UnityEngine.Material", "name": "PurpleMaterial", "fields": [{"typeName": "UnityEngine.Color", "name": "_Color", "value": {"r": 0.5, "g": 0,
+2026-02-22 23:26:43,786 - Fuguang - INFO - 🤖 AI思考轮次: 8
+2026-02-22 23:26:47,526 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:47,526 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-modify | 参数: {"assetRef": {"instanceID": -8262}, "content": {"typeName": "UnityEngine.Material", "name": "PurpleMaterial", "props": [{"typeName": "UnityEngine.Color", "name": "color", "value": {"r": 0.5, "g": 0, "
+2026-02-22 23:26:47,609 - Fuguang - INFO - 🤖 AI思考轮次: 9
+2026-02-22 23:26:50,484 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:50,484 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-get-data | 参数: {"assetRef": {"instanceID": -8262}}
+2026-02-22 23:26:50,519 - Fuguang - INFO - 🤖 AI思考轮次: 10
+2026-02-22 23:26:55,048 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:26:55,048 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_assets-modify | 参数: {"assetRef": {"instanceID": -8262}, "content": {"typeName": "UnityEngine.Material", "name": "PurpleMaterial", "props": [{"typeName": "UnityEngine.Color", "name": "_Color", "value": {"r": 0.5, "g": 0, 
+2026-02-22 23:26:55,173 - Fuguang - INFO - 🤖 AI思考轮次: 11
+2026-02-22 23:27:00,559 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:27:00,559 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-modify | 参数: {"gameObjectRef": {"instanceID": -8244}, "componentRef": {"instanceID": -8252}, "componentDiff": {"typeName": "UnityEngine.MeshRenderer", "name": "MeshRenderer", "props": [{"typeName": "UnityEngine.Ma
+2026-02-22 23:27:00,616 - Fuguang - INFO - 🤖 AI思考轮次: 12
+2026-02-22 23:27:03,864 - Fuguang - INFO - ⏱️ [性能] 本次任务耗时: 55.97秒，调用工具: 11个
+2026-02-22 23:27:03,864 - Fuguang - WARNING - 🐢 性能警告已生成，将在下次对话时提醒AI优化
+2026-02-22 23:27:03,867 - Fuguang - INFO - 💾 记忆已保存
+2026-02-22 23:27:10,088 - Fuguang - WARNING - ⚠️ [质量审查] 发现冗余！实际11步 vs 最优2步 | 创建球体后，没有直接创建并应用紫色材质，而是先添加组件再反复修改属性，最后才创建材质并应用。
+2026-02-22 23:27:10,088 - Fuguang - INFO - 📚 [学习] 发现弯路，存入纠正配方：使用 mcp_ai-game-developer_gameobject-create 创建球体后，立即使用 mcp_ai-game-developer_asse
+2026-02-22 23:27:11,094 - Fuguang - INFO - 🍳 [配方] 已习得: '创建球体,应用材质,材质创建,属性修改' → '使用 mcp_ai-game-developer_gameobject-create 创建球体后，立'
+2026-02-22 23:27:11,095 - Fuguang - INFO - 📓 [Obsidian] 已同步配方到 2026-02-22.md
+2026-02-22 23:27:11,095 - Fuguang - INFO - 📚 [性能学习] 已存入配方：使用 mcp_ai-game-developer_gameobject-create 创建球体后，立即使用 mcp_ai-game-developer_asse
+2026-02-22 23:27:25,106 - Fuguang - INFO - 🎤 [PTT] 键按下
+2026-02-22 23:27:25,502 - Fuguang - INFO - 🎤 [PTT] 正在录音，松开CTRL结束...
+2026-02-22 23:27:33,301 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:27:34,813 - Fuguang - INFO - 🎤 [PTT] 录音结束
+2026-02-22 23:27:34,846 - Fuguang - INFO - 🎤 录制完成，共 299008 字节
+2026-02-22 23:27:36,717 - Fuguang - INFO - 👂 听到了: 给这个紫色的球体写一个旋转脚本，让它绕Y轴每秒转30度。
+2026-02-22 23:27:36,782 - Fuguang - INFO - 📖 [RAG] 已注入长期记忆上下文 (含配方⚡)
+2026-02-22 23:27:36,795 - Fuguang - INFO - 📜 System Prompt (前200字): 你是沈扶光，说话简洁。[Neutral]
+2026-02-22 23:27:36,795 - Fuguang - INFO - 👁️ 感知数据: app=fuguang - Antigravity - run.py
+2026-02-22 23:27:36,816 - Fuguang - INFO - 🤖 AI思考轮次: 1
+2026-02-22 23:27:45,752 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:27:45,753 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_script-update-or-create | 参数: {"filePath": "Assets/RotateScript.cs", "content": "using UnityEngine;\n\npublic class RotateScript : MonoBehaviour\n{\n    [Header(\"旋转设置\")]\n    [Tooltip(\"旋转速度（度/秒）\")]\n    public float rotationSp
+2026-02-22 23:28:11,821 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-22 23:28:14,738 - Fuguang - INFO - 👀 用户已离开
+2026-02-22 23:28:32,121 - Fuguang - INFO - 🤖 AI思考轮次: 2
+2026-02-22 23:28:33,306 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:28:35,267 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:28:35,267 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-find | 参数: {"gameObjectRef": {"instanceID": 0, "name": "PurpleSphere"}, "includeComponents": true}
+2026-02-22 23:28:35,374 - Fuguang - INFO - 🤖 AI思考轮次: 3
+2026-02-22 23:28:38,237 - Fuguang - INFO - 🔧 AI请求使用工具: 1 个
+2026-02-22 23:28:38,238 - Fuguang - INFO - 📞 调用工具: mcp_ai-game-developer_gameobject-component-add | 参数: {"gameObjectRef": {"instanceID": -8244}, "componentNames": ["RotateScript"]}
+2026-02-22 23:28:38,547 - Fuguang - INFO - 🤖 AI思考轮次: 4
+2026-02-22 23:28:42,364 - Fuguang - INFO - ⏱️ [性能] 本次任务耗时: 65.57秒，调用工具: 3个
+2026-02-22 23:28:42,364 - Fuguang - WARNING - 🐢 性能警告已生成，将在下次对话时提醒AI优化
+2026-02-22 23:28:42,367 - Fuguang - INFO - 💾 记忆已保存
+2026-02-22 23:28:45,837 - Fuguang - WARNING - ⚠️ [质量审查] 发现冗余！实际3步 vs 最优2步 | 创建脚本时可以直接指定挂载对象，无需先查找对象再添加组件
+2026-02-22 23:28:45,837 - Fuguang - INFO - ✅ [基准检查] 步数合格（3步，上限4步）
+2026-02-22 23:28:45,837 - Fuguang - INFO - 📚 [学习] 发现弯路，存入纠正配方：直接使用 mcp_ai-game-developer_script-update-or-create 创建脚本并指定挂载到紫色球体，然后使用 mcp_ai-ga
+2026-02-22 23:28:47,302 - Fuguang - INFO - 🍳 [配方] 已习得: '脚本创建,挂载对象,组件添加,对象查找' → '直接使用 mcp_ai-game-developer_script-update-or-create'
+2026-02-22 23:28:47,303 - Fuguang - INFO - 📓 [Obsidian] 已同步配方到 2026-02-22.md
+2026-02-22 23:28:47,303 - Fuguang - INFO - 📚 [性能学习] 已存入配方：直接使用 mcp_ai-game-developer_script-update-or-create 创建脚本并指定挂载到紫色球体，然后使用 mcp_ai-ga
+2026-02-22 23:29:33,313 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:30:00,747 - Fuguang - INFO - 👂 听到了: 这种报错。
+2026-02-22 23:30:03,195 - Fuguang - INFO - 👂 听到了: 是个白球。
+2026-02-22 23:30:06,448 - Fuguang - INFO - 👂 听到了: 最后才变成紫色。
+2026-02-22 23:30:11,742 - Fuguang - INFO - 👂 听到了: 不过他确实搞了个旋转脚本。
+2026-02-22 23:30:20,778 - Fuguang - INFO - 👀 检测到用户出现
+2026-02-22 23:30:22,950 - Fuguang - INFO - 👀 用户已离开
+2026-02-22 23:30:33,318 - Fuguang.QQ - INFO - 📱 [QQ] 正在连接 NapCat: ws://127.0.0.1:8080
+2026-02-22 23:30:38,393 - Fuguang - INFO - 👂 听到了: 点点关。
+2026-02-22 23:30:42,813 - Fuguang - INFO - 👂 听到了: 哎，我操他妈还不给我。
