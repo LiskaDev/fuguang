@@ -946,6 +946,45 @@
             transform: translateY(-1px);
         }
 
+        /* ========== Image Preview Card ========== */
+        .image-preview-card {
+            margin: 8px 0;
+            max-width: 480px;
+            animation: fadeSlideIn 0.3s ease;
+        }
+
+        .image-preview-card img {
+            width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .image-preview-card img:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(88, 166, 255, 0.15);
+        }
+
+        .image-preview-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .image-preview-meta a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.78rem;
+        }
+
+        .image-preview-meta a:hover {
+            text-decoration: underline;
+        }
+
         /* ========== Mobile ========== */
         @media (max-width: 768px) {
             .sidebar {
@@ -1373,8 +1412,14 @@
                 py: '🐍', js: '🟨', html: '🌐', css: '🎨',
                 json: '📦', xml: '📦', yaml: '📦',
                 zip: '📦', rar: '📦',
+                png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', webp: '🖼️',
             };
             return icons[ext] || '📁';
+        }
+
+        function isImageFile(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext);
         }
 
         function addFileCard(filename, url, size) {
@@ -1385,13 +1430,20 @@
             const now = new Date();
             const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-            div.innerHTML = `
-                <div class="message-header">
-                    <div class="avatar ai">✨</div>
-                    <span class="message-name">扶光</span>
-                    <span class="message-time">${timeStr}</span>
-                </div>
-                <div class="message-content">
+            let cardContent;
+            if (isImageFile(filename)) {
+                // 图片文件 → 直接内联展示
+                cardContent = `
+                    <div class="image-preview-card">
+                        <img src="${url}" alt="${escapeHtml(filename)}" onclick="window.open('${url}', '_blank')" />
+                        <div class="image-preview-meta">
+                            <span>🖼️ ${escapeHtml(filename)}（${formatFileSize(size)}）</span>
+                            <a href="${url}" download="${escapeHtml(filename)}">⬇ 下载原图</a>
+                        </div>
+                    </div>`;
+            } else {
+                // 非图片文件 → 保持原有下载卡片
+                cardContent = `
                     <div class="file-card">
                         <div class="file-card-icon">${getFileIcon(filename)}</div>
                         <div class="file-card-info">
@@ -1399,7 +1451,17 @@
                             <div class="file-card-size">${formatFileSize(size)}</div>
                         </div>
                         <a class="file-card-download" href="${url}" download="${escapeHtml(filename)}">⬇ 下载</a>
-                    </div>
+                    </div>`;
+            }
+
+            div.innerHTML = `
+                <div class="message-header">
+                    <div class="avatar ai">✨</div>
+                    <span class="message-name">扶光</span>
+                    <span class="message-time">${timeStr}</span>
+                </div>
+                <div class="message-content">
+                    ${cardContent}
                 </div>
             `;
 

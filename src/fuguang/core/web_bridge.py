@@ -428,10 +428,13 @@ class WebBridge:
             file_info = self._files.get(file_id)
             if not file_info or not os.path.exists(file_info["path"]):
                 raise HTTPException(status_code=404, detail="文件不存在")
+            # 自动推断 MIME（图片需要正确类型才能被 <img> 渲染）
+            import mimetypes
+            mime, _ = mimetypes.guess_type(file_info["name"])
             return FileResponse(
                 file_info["path"],
                 filename=file_info["name"],
-                media_type="application/octet-stream"
+                media_type=mime or "application/octet-stream"
             )
 
         # ---- 路由：对话管理 ----
