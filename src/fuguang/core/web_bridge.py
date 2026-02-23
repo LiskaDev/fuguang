@@ -451,7 +451,6 @@ class WebBridge:
             mime, _ = mimetypes.guess_type(filename)
             return FileResponse(
                 str(file_path),
-                filename=filename,
                 media_type=mime or "application/octet-stream"
             )
 

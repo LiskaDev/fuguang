@@ -1036,10 +1036,42 @@
                 padding: 40px 30px;
             }
         }
+
+        /* ====== Image Lightbox ====== */
+        .image-lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
+        .image-lightbox.active {
+            display: flex;
+        }
+
+        .image-lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 
 <body>
+
+    <!-- ====== Image Lightbox ====== -->
+    <div class="image-lightbox" id="imageLightbox" onclick="hideImageLightbox()">
+        <img id="lightboxImg" src="" alt="preview" onclick="event.stopPropagation()" />
+    </div>
 
     <!-- ====== Drop Overlay ====== -->
     <div class="drop-overlay" id="dropOverlay">
@@ -1435,7 +1467,7 @@
                 // 图片文件 → 直接内联展示
                 cardContent = `
                     <div class="image-preview-card">
-                        <img src="${url}" alt="${escapeHtml(filename)}" onclick="window.open('${url}', '_blank')" />
+                        <img src="${url}" alt="${escapeHtml(filename)}" onclick="showImageLightbox('${url}')" style="cursor:zoom-in" />
                         <div class="image-preview-meta">
                             <span>🖼️ ${escapeHtml(filename)}（${formatFileSize(size)}）</span>
                             <a href="${url}" download="${escapeHtml(filename)}">⬇ 下载原图</a>
@@ -1686,6 +1718,18 @@
             const isOpen = sidebar.classList.toggle('open');
             backdrop.classList.toggle('active', isOpen);
         }
+
+        function showImageLightbox(url) {
+            const lb = document.getElementById('imageLightbox');
+            document.getElementById('lightboxImg').src = url;
+            lb.classList.add('active');
+            document.addEventListener('keydown', _lightboxEsc);
+        }
+        function hideImageLightbox() {
+            document.getElementById('imageLightbox').classList.remove('active');
+            document.removeEventListener('keydown', _lightboxEsc);
+        }
+        function _lightboxEsc(e) { if (e.key === 'Escape') hideImageLightbox(); }
 
         function closeSidebar() {
             document.getElementById('sidebar').classList.remove('open');
