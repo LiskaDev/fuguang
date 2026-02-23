@@ -275,6 +275,20 @@ class BaseSkillMixin:
                 self._init_email_monitor()
             except Exception as e:
                 logger.warning(f"⚠️ [邮件] 初始化失败（不影响核心功能）: {e}")
+
+        # [🎨 Figma] 验证 API Key 连通性
+        if hasattr(self, '_init_figma'):
+            try:
+                self._init_figma()
+            except Exception as e:
+                logger.warning(f"⚠️ [Figma] 初始化失败（不影响核心功能）: {e}")
+
+        # [🔍 Everything] 检测 HTTP 服务
+        if hasattr(self, '_init_everything'):
+            try:
+                self._init_everything()
+            except Exception as e:
+                logger.warning(f"⚠️ [Everything] 初始化失败（不影响核心功能）: {e}")
     
     # ------ 内部辅助方法 ------
     

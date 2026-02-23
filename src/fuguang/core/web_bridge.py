@@ -268,6 +268,16 @@ class WebBridge:
                                             "content": f"🤔 思考中 (第{iteration}轮)..."
                                         })
                                         asyncio.run_coroutine_threadsafe(coro, main_loop)
+                                elif msg_type == "file":
+                                    # 文件下载卡片 → 直接推送给前端
+                                    coro = ws.send_json({
+                                        "type": "file",
+                                        "file_id": info.get("file_id", ""),
+                                        "filename": info.get("filename", ""),
+                                        "url": info.get("url", ""),
+                                        "size": info.get("size", 0)
+                                    })
+                                    asyncio.run_coroutine_threadsafe(coro, main_loop)
                             except Exception:
                                 pass
                         
@@ -504,12 +514,40 @@ class WebBridge:
         }
         web_tools = [t for t in self.skills.get_tools_schema()
                      if t.get("function", {}).get("name") not in _web_excluded]
+
+        # 包装 tool_executor：拦截文件生成工具的 _pending_file_cards
+        _original_executor = self.skills.execute_tool
+        def _file_aware_executor(name, args):
+            result = _original_executor(name, args)
+            # 检查是否有待推送的文件卡片
+            pending = getattr(self.skills, '_pending_file_cards', [])
+            while pending:
+                card_info = pending.pop(0)
+                # 注册到 _files 表以供下载
+                file_id = str(uuid.uuid4())[:8]
+                self._files[file_id] = {
+                    "path": card_info["filepath"],
+                    "name": card_info["filename"],
+                    "created": time.time()
+                }
+                # 通过 progress_callback 推送文件卡片
+                if progress_callback:
+                    progress_callback({
+                        "type": "file",
+                        "file_id": file_id,
+                        "filename": card_info["filename"],
+                        "url": f"/api/files/{file_id}",
+                        "size": card_info["size"]
+                    })
+                logger.info(f"🌐 [Web] 文件卡片已推送: {card_info['filename']} -> /api/files/{file_id}")
+            return result
+
         try:
             ai_reply = self.brain.chat(
                 user_input=user_input,
                 system_content=system_content,
                 tools_schema=web_tools,
-                tool_executor=self.skills.execute_tool,
+                tool_executor=_file_aware_executor,
                 progress_callback=progress_callback,
                 cancel_event=cancel_event
             )

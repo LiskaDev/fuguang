@@ -102,6 +102,12 @@ class ConfigManager:
     UNITY_IP = os.getenv("UNITY_IP", "127.0.0.1")
     UNITY_PORT = int(os.getenv("UNITY_PORT", "5005"))
     
+    # === 🎨 Figma API ===
+    FIGMA_API_KEY = os.getenv("FIGMA_API_KEY", "")
+
+    # === 🔍 Everything 文件搜索 ===
+    EVERYTHING_PORT = int(os.getenv("EVERYTHING_PORT", "80"))
+
     # === 🎮 Unity MCP (AI Game Developer) ===
     UNITY_MCP_PROJECT_PATH = os.getenv("UNITY_MCP_PROJECT_PATH", "")  # Unity 项目根目录
     UNITY_MCP_PORT = int(os.getenv("UNITY_MCP_PORT", "8090"))         # Unity MCP 插件端口

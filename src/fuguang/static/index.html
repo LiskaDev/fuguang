@@ -885,6 +885,67 @@
             display: block;
         }
 
+        /* ========== File Download Card ========== */
+        .file-card {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.08), rgba(88, 166, 255, 0.03));
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 8px 0;
+            animation: fadeSlideIn 0.3s ease;
+            max-width: 420px;
+        }
+
+        .file-card-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .file-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-card-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-card-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .file-card-download {
+            flex-shrink: 0;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 8px 16px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .file-card-download:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
         /* ========== Mobile ========== */
         @media (max-width: 768px) {
             .sidebar {
@@ -1148,6 +1209,12 @@
                     return;
                 }
 
+                // 文件下载卡片
+                if (msg.type === 'file') {
+                    addFileCard(msg.filename, msg.url, msg.size);
+                    return;
+                }
+
                 // 标题更新通知
                 if (msg.type === 'title_updated') {
                     document.getElementById('chatTitle').textContent = msg.title;
@@ -1286,6 +1353,57 @@
                 enhanceCodeBlocks(div);
             }
 
+            scrollToBottom();
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let i = 0;
+            while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+            return bytes.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                pdf: '📕', docx: '📘', doc: '📘',
+                xlsx: '📊', xls: '📊', csv: '📊',
+                txt: '📄', md: '📄',
+                py: '🐍', js: '🟨', html: '🌐', css: '🎨',
+                json: '📦', xml: '📦', yaml: '📦',
+                zip: '📦', rar: '📦',
+            };
+            return icons[ext] || '📁';
+        }
+
+        function addFileCard(filename, url, size) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message ai';
+
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+            div.innerHTML = `
+                <div class="message-header">
+                    <div class="avatar ai">✨</div>
+                    <span class="message-name">扶光</span>
+                    <span class="message-time">${timeStr}</span>
+                </div>
+                <div class="message-content">
+                    <div class="file-card">
+                        <div class="file-card-icon">${getFileIcon(filename)}</div>
+                        <div class="file-card-info">
+                            <div class="file-card-name">${escapeHtml(filename)}</div>
+                            <div class="file-card-size">${formatFileSize(size)}</div>
+                        </div>
+                        <a class="file-card-download" href="${url}" download="${escapeHtml(filename)}">⬇ 下载</a>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(div);
             scrollToBottom();
         }
 

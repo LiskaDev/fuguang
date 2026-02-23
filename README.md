@@ -5,23 +5,30 @@
 
 ---
 
-## 🎉 最新功能亮点 (v6.2.0)
+## 🎉 最新功能亮点 (v6.4.0)
 
-### 🎮 **Unity MCP 接入 — AI 直控 Unity Editor**
+### � **Browser MCP（Playwright 无头浏览器）**
 
-扶光接入 **Unity MCP (AI Game Developer)** 插件，通过 HTTP Streamable 协议直连 Unity Editor，获得 **60+ 个 Unity 操作工具**：
+扶光新增 **Browser MCP** 能力——基于 Playwright Chromium 的 6 个无头浏览器工具，支持 JS 渲染、截图、点击、填表等真实浏览器操作。
 
 ```
-用户："在 Unity 里创建一个红色球体"
+用户："帮我截个 GitHub 首页的图"
      ↓
-扶光调用 unity_create_object(name="RedSphere", shape="球体", color="红色")
+扶光调用 browser_screenshot(url="https://github.com")
      ↓
-内部自动完成：创建物体 → 创建材质 → 设颜色 → 赋材质
+ Chromium 后台渲染 → 截图保存到 temp_files/ ✅
+
+用户："打开百度，在搜索框输入 '扶光 IDE'"
      ↓
-Unity Editor 实时出现红色球体 ✅
+扶光调用 browser_fill_form(url, fields={"#kw": "扶光 IDE"})
+     ↓
+自动填入表单内容 ✅
 ```
 
 **核心能力：**
+- � **Browser MCP** — 6 个工具（打开网页/截图/点击/填表/提取文字/执行JS）
+- �🎨 **Figma API** — 5 个工具（获取文件/节点/导出图片/读写评论）
+- 🔍 **Everything 文件搜索** — 3 个工具（关键词搜索/按扩展名/打开文件位置）
 - 🎮 **Unity MCP (HTTP 直连)** — 60+ 个工具（场景/物体/材质/脚本/Prefab/截图等）
 - 🐙 **GitHub MCP** — 26 个工具（搜索/读文件/创建 Issue & PR）
 - 📓 **Obsidian MCP** — 14 个工具（读写笔记/目录管理/搜索）
@@ -41,6 +48,65 @@ Unity Editor 实时出现红色球体 ✅
 
 **💡 扩展方式：**
 > MCP 架构已验证"插拔式"价值——接入新 Server 只需在 `_init_mcp()` 注册即可。目前已接入 3 个 MCP Server（GitHub + Obsidian + Unity）。
+> Figma / Everything 等 HTTP API 则通过 Mixin 技能模块接入，同样即插即用。
+
+---
+
+## 📋 历史更新 (v6.4.0)
+
+### v6.4.0 - 🌐 Browser MCP（Playwright 无头浏览器）(2026-02-23) 🆕
+> **背景**：接入 Playwright Chromium 无头浏览器，为扶光提供 JS 渲染、截图、点击、填表等真实浏览器操作能力。
+
+**Browser MCP（6 个工具）：**
+- **[新增]** 🌐 `browser_open` — 打开网页，返回标题和正文（JS 渲染后）
+- **[新增]** 📸 `browser_screenshot` — 截取网页全页截图，保存到 `temp_files/`
+- **[新增]** 🖱️ `browser_click` — 通过 CSS 选择器点击页面元素
+- **[新增]** ✏️ `browser_fill_form` — 自动填写表单字段
+- **[新增]** 📝 `browser_get_text` — 提取指定元素的文字内容
+- **[新增]** ⚡ `browser_run_js` — 在页面上执行 JavaScript 并返回结果
+
+**架构设计：**
+- 使用独立的 `_get_headless_page()` 方法（`headless=True`），与已有的 `browse_website`（`headless=False`）互不干扰
+- Playwright 资源通过 `try...finally` 确保正确释放
+- 浏览器跑在服务端，手机端/Web 端调用时只传回文字和图片结果
+
+**文件变更：**
+- 修改 `core/skills/browser.py`（+6 工具 schema + 6 方法 + 2 辅助方法，~200 行）
+- 修改 `core/skills/__init__.py`（+6 工具路由）
+- 修改 `tests/test_tool_routing.py`（+6 工具名加入必要列表）
+- 测试总数：26 passed ✅
+
+---
+
+### v6.3.0 - 🎨 Figma API + 🔍 Everything 本地文件搜索 (2026-02-23)
+> **背景**：接入 Figma REST API 实现设计协作能力，接入 Everything HTTP API 实现极速本地文件搜索。
+
+**Figma API（5 个工具）：**
+- **[新增]** 🎨 `get_figma_file` — 获取 Figma 文件节点结构
+- **[新增]** 🔍 `get_figma_node` — 获取指定节点详情
+- **[新增]** 🖼️ `get_figma_images` — 导出节点为图片 URL（PNG/SVG/PDF）
+- **[新增]** 💬 `list_figma_comments` — 读取文件评论
+- **[新增]** ✏️ `post_figma_comment` — 发表评论
+
+**Everything 本地搜索（3 个工具）：**
+- **[新增]** 🔍 `search_files` — 关键词搜索文件/文件夹（毫秒级）
+- **[新增]** 📁 `search_files_by_ext` — 按扩展名搜索（如 `.blend`、`.unity`、`.psd`）
+- **[新增]** 📂 `open_file_location` — 在资源管理器中打开文件所在位置
+
+**配置说明：**
+- Figma：`.env` 中配置 `FIGMA_API_KEY`（从 Figma 设置 → Personal Access Tokens 获取）
+- Everything：`.env` 中配置 `EVERYTHING_PORT=80`（需开启 Everything HTTP 服务器）
+  - 开启方法：Everything → 工具 → 选项 → HTTP服务器 → ✅ 启用
+  - ⚠️ 不要勾选"允许从网络访问"（默认只监听 localhost，安全）
+
+**文件变更：**
+- 新增 `core/skills/figma.py`（FigmaSkills Mixin，~285 行）
+- 新增 `core/skills/everything.py`（EverythingSkills Mixin，~267 行）
+- 修改 `core/skills/__init__.py`（注册 2 个 Mixin + 8 个工具路由）
+- 修改 `config.py` + `core/config.py`（`FIGMA_API_KEY` + `EVERYTHING_PORT`）
+- 修改 `.env`（新增 2 个环境变量）
+- 新增 `tests/test_figma.py`（7 个测试）+ `tests/test_everything.py`（9 个测试）
+- 测试总数：26 passed ✅
 
 ---
 

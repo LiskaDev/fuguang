@@ -14,6 +14,9 @@ from .memory import MemorySkills
 from .skill_mcp import MCPSkills
 from .email import EmailSkills
 from .bilibili import BilibiliSkills
+from .file_generator import FileGeneratorSkills
+from .figma import FigmaSkills
+from .everything import EverythingSkills
 
 logger = logging.getLogger("fuguang.skills")
 
@@ -28,6 +31,9 @@ class SkillManager(
     MCPSkills,
     EmailSkills,
     BilibiliSkills,
+    FileGeneratorSkills,
+    FigmaSkills,
+    EverythingSkills,
 ):
     """
     技能管理器（协调器）
@@ -100,6 +106,9 @@ class SkillManager(
         all_tools.extend(getattr(self, '_UNITY_CONVENIENCE_TOOLS', []))
         all_tools.extend(getattr(self, '_EMAIL_TOOLS', []))
         all_tools.extend(getattr(self, '_BILIBILI_TOOLS', []))
+        all_tools.extend(getattr(self, '_FILE_GENERATOR_TOOLS', []))
+        all_tools.extend(getattr(self, '_FIGMA_TOOLS', []))
+        all_tools.extend(getattr(self, '_EVERYTHING_TOOLS', []))
         all_tools.append(set_reminder_tool)
         return all_tools
 
@@ -119,6 +128,19 @@ class SkillManager(
             return self.open_video(func_args.get("keyword", ""))
         elif func_name == "browse_website":
             return self.browse_website(func_args.get("url", ""), func_args.get("take_screenshot", False))
+        # --- Browser Playwright MCP ---
+        elif func_name == "browser_open":
+            return self.browser_open(func_args.get("url", ""))
+        elif func_name == "browser_screenshot":
+            return self.browser_screenshot(func_args.get("url", ""))
+        elif func_name == "browser_click":
+            return self.browser_click(func_args.get("url", ""), func_args.get("selector", ""))
+        elif func_name == "browser_fill_form":
+            return self.browser_fill_form(func_args.get("url", ""), func_args.get("fields", {}))
+        elif func_name == "browser_get_text":
+            return self.browser_get_text(func_args.get("url", ""), func_args.get("selector", ""))
+        elif func_name == "browser_run_js":
+            return self.browser_run_js(func_args.get("url", ""), func_args.get("script", ""))
 
         # --- Vision ---
         elif func_name == "analyze_screen_content":
@@ -266,6 +288,76 @@ class SkillManager(
                 color=func_args.get("color", "white"),
                 position=func_args.get("position")
             )
+
+        # --- 文件生成 ---
+        elif func_name == "generate_text_file":
+            return self.generate_text_file(
+                filename=func_args.get("filename", "file.txt"),
+                content=func_args.get("content", "")
+            )
+        elif func_name == "generate_csv":
+            return self.generate_csv(
+                filename=func_args.get("filename", "data.csv"),
+                headers=func_args.get("headers", []),
+                rows=func_args.get("rows", [])
+            )
+        elif func_name == "generate_xlsx":
+            return self.generate_xlsx(
+                filename=func_args.get("filename", "data.xlsx"),
+                sheets=func_args.get("sheets", [])
+            )
+        elif func_name == "generate_docx":
+            return self.generate_docx(
+                filename=func_args.get("filename", "doc.docx"),
+                title=func_args.get("title", ""),
+                blocks=func_args.get("blocks", [])
+            )
+        elif func_name == "generate_pdf":
+            return self.generate_pdf(
+                filename=func_args.get("filename", "doc.pdf"),
+                title=func_args.get("title", ""),
+                content=func_args.get("content", "")
+            )
+
+        # --- Figma ---
+        elif func_name == "get_figma_file":
+            return self.get_figma_file(file_key=func_args.get("file_key", ""))
+        elif func_name == "get_figma_node":
+            return self.get_figma_node(
+                file_key=func_args.get("file_key", ""),
+                node_id=func_args.get("node_id", "")
+            )
+        elif func_name == "get_figma_images":
+            return self.get_figma_images(
+                file_key=func_args.get("file_key", ""),
+                node_ids=func_args.get("node_ids", []),
+                format=func_args.get("format", "png"),
+                scale=func_args.get("scale", 2)
+            )
+        elif func_name == "list_figma_comments":
+            return self.list_figma_comments(file_key=func_args.get("file_key", ""))
+        elif func_name == "post_figma_comment":
+            return self.post_figma_comment(
+                file_key=func_args.get("file_key", ""),
+                message=func_args.get("message", ""),
+                x=func_args.get("x", 0),
+                y=func_args.get("y", 0)
+            )
+
+        # --- Everything (本地文件搜索) ---
+        elif func_name == "search_files":
+            return self.search_files(
+                query=func_args.get("query", ""),
+                max_results=func_args.get("max_results", 20)
+            )
+        elif func_name == "search_files_by_ext":
+            return self.search_files_by_ext(
+                ext=func_args.get("ext", ""),
+                query=func_args.get("query", ""),
+                max_results=func_args.get("max_results", 20)
+            )
+        elif func_name == "open_file_location":
+            return self.open_file_location(filepath=func_args.get("filepath", ""))
 
         # --- MCP (外部工具服务器) ---
         elif func_name.startswith("mcp_"):

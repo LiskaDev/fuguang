@@ -65,6 +65,23 @@ REQUIRED_TOOLS = [
     "send_email",
     "download_attachment",
     "notify_commander",
+    # Figma
+    "get_figma_file",
+    "get_figma_node",
+    "get_figma_images",
+    "list_figma_comments",
+    "post_figma_comment",
+    # Everything
+    "search_files",
+    "search_files_by_ext",
+    "open_file_location",
+    # Browser Playwright MCP
+    "browser_open",
+    "browser_screenshot",
+    "browser_click",
+    "browser_fill_form",
+    "browser_get_text",
+    "browser_run_js",
 ]
 
 

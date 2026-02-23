@@ -55,6 +55,8 @@ class ConfigManager:
         self.ZHIPU_API_KEY = GlobalConfig.ZHIPU_API_KEY
         self.GITHUB_TOKEN = GlobalConfig.GITHUB_TOKEN
         self.OBSIDIAN_VAULT_PATH = GlobalConfig.OBSIDIAN_VAULT_PATH
+        self.FIGMA_API_KEY = GlobalConfig.FIGMA_API_KEY
+        self.EVERYTHING_PORT = GlobalConfig.EVERYTHING_PORT
         
         # 📧 邮件监控配置 (用户邮箱)
         self.EMAIL_QQ = GlobalConfig.EMAIL_QQ
