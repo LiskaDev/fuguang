@@ -283,6 +283,7 @@ class WebBridge:
                         
                         # 并发执行：Brain 处理 + WebSocket 监听取消
                         cancelled = False  # 是否已取消
+                        self._current_conversation_id = current_conv_id  # 供 _file_aware_executor 持久化文件卡片
                         brain_task = asyncio.create_task(
                             asyncio.to_thread(
                                 self._process_with_brain, content, _progress_cb, cancel_event
@@ -422,18 +423,35 @@ class WebBridge:
                 logger.error(f"🌐 [Web] 文件上传处理失败: {e}")
                 return JSONResponse({"error": str(e)}, status_code=500)
 
-        # ---- 路由：文件下载 ----
+        # ---- 路由：文件下载（by file_id，实时推送用） ----
         @app.get("/api/files/{file_id}")
         async def download_file(file_id: str):
             file_info = self._files.get(file_id)
             if not file_info or not os.path.exists(file_info["path"]):
                 raise HTTPException(status_code=404, detail="文件不存在")
-            # 自动推断 MIME（图片需要正确类型才能被 <img> 渲染）
             import mimetypes
             mime, _ = mimetypes.guess_type(file_info["name"])
             return FileResponse(
                 file_info["path"],
                 filename=file_info["name"],
+                media_type=mime or "application/octet-stream"
+            )
+
+        # ---- 路由：temp_files 静态服务（持久化 URL，刷新后仍可访问） ----
+        @app.get("/api/temp_files/{filename}")
+        async def serve_temp_file(filename: str):
+            temp_dir = self.config.PROJECT_ROOT / "temp_files"
+            file_path = temp_dir / filename
+            if not file_path.exists() or not file_path.is_file():
+                raise HTTPException(status_code=404, detail="文件不存在")
+            # 安全检查：防止路径遍历
+            if not file_path.resolve().parent == temp_dir.resolve():
+                raise HTTPException(status_code=403, detail="禁止访问")
+            import mimetypes
+            mime, _ = mimetypes.guess_type(filename)
+            return FileResponse(
+                str(file_path),
+                filename=filename,
                 media_type=mime or "application/octet-stream"
             )
 
@@ -533,16 +551,32 @@ class WebBridge:
                     "name": card_info["filename"],
                     "created": time.time()
                 }
-                # 通过 progress_callback 推送文件卡片
+                # 构建持久化 URL（基于文件名，不依赖内存 file_id）
+                import json as _json
+                persistent_url = f"/api/temp_files/{card_info['filename']}"
+                # 通过 progress_callback 推送文件卡片（实时）
                 if progress_callback:
                     progress_callback({
                         "type": "file",
                         "file_id": file_id,
                         "filename": card_info["filename"],
-                        "url": f"/api/files/{file_id}",
+                        "url": persistent_url,
                         "size": card_info["size"]
                     })
-                logger.info(f"🌐 [Web] 文件卡片已推送: {card_info['filename']} -> /api/files/{file_id}")
+                # 持久化到数据库（刷新后可恢复）
+                if hasattr(self, '_current_conversation_id') and self._current_conversation_id:
+                    try:
+                        file_msg = _json.dumps({
+                            "filename": card_info["filename"],
+                            "url": persistent_url,
+                            "size": card_info["size"]
+                        }, ensure_ascii=False)
+                        self.chat_store.add_message(
+                            self._current_conversation_id, "file", file_msg
+                        )
+                    except Exception as e:
+                        logger.warning(f"🌐 [Web] 文件卡片持久化失败: {e}")
+                logger.info(f"🌐 [Web] 文件卡片已推送: {card_info['filename']} -> {persistent_url}")
             return result
 
         try:

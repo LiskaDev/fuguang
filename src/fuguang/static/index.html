@@ -1804,6 +1804,16 @@
                 }
 
                 msgs.forEach(m => {
+                    if (m.role === 'file') {
+                        // 持久化的文件卡片 → 重建为 image/file card
+                        try {
+                            const fileData = JSON.parse(m.content);
+                            addFileCard(fileData.filename, fileData.url, fileData.size);
+                        } catch (e) {
+                            console.warn('文件卡片解析失败:', e);
+                        }
+                        return;
+                    }
                     // 用户消息可能包含 HTML（文件标签），检测并使用 isHtml
                     const isUserHtml = m.role === 'user' && m.content.includes('file-attachment-tag');
                     addMessage(m.role, m.content, isUserHtml);
