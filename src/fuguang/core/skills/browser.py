@@ -355,6 +355,8 @@ class BrowserSkills:
             page.screenshot(path=str(filepath), full_page=True)
             title = page.title() or "无标题"
             logger.info(f"✅ [browser_screenshot] 已保存: {filepath}")
+            # 注册文件卡片 → Web UI 自动推送下载（与 PDF/DOCX 同机制）
+            self._register_file_card(str(filepath), filepath.name)
             return (
                 f"📸 网页截图已保存\n"
                 f"页面标题: {title}\n"
