@@ -110,6 +110,7 @@ class FuguangSignals(QObject):
     quit_request = pyqtSignal()
     ball_moved = pyqtSignal()
     ptt_toggle = pyqtSignal(bool)
+    chat_history_request = pyqtSignal()  # [新增] 请求显示聊天记录
 
 
 class FloatingBall(QWidget):
@@ -413,6 +414,10 @@ class FloatingBall(QWidget):
         screenshot_action = QAction("📸 截图分析", self)
         screenshot_action.triggered.connect(self.signals.screenshot_request.emit)
         menu.addAction(screenshot_action)
+        
+        history_action = QAction("📜 聊天记录", self)
+        history_action.triggered.connect(self.signals.chat_history_request.emit)
+        menu.addAction(history_action)
         
         menu.addSeparator()
         

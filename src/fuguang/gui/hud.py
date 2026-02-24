@@ -147,6 +147,57 @@ hr {
     text-align: center;
     padding: 4px;
 }
+/* ======== 聊天记录面板 ======== */
+.chat-header {
+    color: #00E5FF;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    padding: 6px 0 10px 0;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    margin-bottom: 8px;
+}
+.chat-bubble {
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin: 4px 0;
+    max-width: 85%;
+    word-wrap: break-word;
+    line-height: 1.5;
+    font-size: 12.5px;
+}
+.chat-bubble-user {
+    background: rgba(0, 229, 255, 0.15);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    color: #E0F7FA;
+    margin-left: auto;
+    text-align: right;
+}
+.chat-bubble-ai {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #E0E0E0;
+    margin-right: auto;
+}
+.chat-role {
+    font-size: 10px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+.chat-role-user { color: #00E5FF; text-align: right; }
+.chat-role-ai { color: #B0BEC5; }
+.chat-time {
+    font-size: 9px;
+    color: #546E7A;
+    margin-top: 2px;
+}
+.chat-time-right { text-align: right; }
+.chat-empty {
+    color: #546E7A;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+}
 """
 
 
@@ -362,6 +413,66 @@ class HolographicHUD(QWidget):
             self._hide_timer.start(duration)
         else:
             self._hide_timer.stop()
+
+    def show_chat_history(self, messages: list):
+        """
+        显示聊天记录回看面板
+
+        Args:
+            messages: [{role: 'user'|'assistant', content: str, created_at: float}, ...]
+        """
+        if not messages:
+            html = '<div class="chat-empty">暂无聊天记录</div>'
+            self._set_html(html)
+            self._show_at_ball()
+            self._hide_timer.stop()
+            return
+
+        import datetime
+        parts = ['<div class="chat-header">📜 聊天记录</div>']
+
+        for msg in messages:
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            ts = msg.get('created_at', 0)
+
+            # 格式化时间
+            try:
+                time_str = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+            except Exception:
+                time_str = ''
+
+            if role == 'user':
+                parts.append(f'''
+                <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                    <div class="chat-role chat-role-user">👤 指挥官</div>
+                    <div class="chat-bubble chat-bubble-user">{self._escape(content)}</div>
+                    <div class="chat-time chat-time-right">{time_str}</div>
+                </div>''')
+            else:
+                # AI 回复支持 Markdown
+                ai_html = _md_to_html(content)
+                parts.append(f'''
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <div class="chat-role chat-role-ai">🤖 扶光</div>
+                    <div class="chat-bubble chat-bubble-ai">{ai_html}</div>
+                    <div class="chat-time">{time_str}</div>
+                </div>''')
+
+        html = '\n'.join(parts)
+        self._set_html(html)
+        self._show_at_ball()
+        self._hide_timer.stop()  # 聊天记录不自动隐藏
+
+        # 滚动到底部（显示最新消息）
+        scrollbar = self.browser.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
+    @staticmethod
+    def _escape(text: str) -> str:
+        """HTML 转义"""
+        import html as _html
+        return _html.escape(text).replace('\n', '<br>')
     
     def update_position(self):
         """根据悬浮球位置更新 HUD 位置（吸附逻辑）"""

@@ -289,6 +289,9 @@ class FuguangApp:
         
         # 拖拽时实时跟随（比定时器更流畅）
         self.signals.ball_moved.connect(self._update_hud_position)
+        
+        # [新增] 聊天记录回看
+        self.signals.chat_history_request.connect(self._on_chat_history_request)
 
     def _on_subtitle_update(self, text: str):
         """更新 HUD 短消息（自动 8 秒隐藏）"""
@@ -307,6 +310,17 @@ class FuguangApp:
     def _on_file_ingested(self, result: str):
         """文件吞噬完成"""
         self.hud.show_message(result, 8000)
+
+    def _on_chat_history_request(self):
+        """显示聊天记录回看面板"""
+        messages = []
+        try:
+            ns = self.worker.nervous_system
+            if ns and ns.chat_store and ns._gui_conv_id:
+                messages = ns.chat_store.get_messages(ns._gui_conv_id)
+        except Exception as e:
+            logger.warning(f"读取聊天记录失败: {e}")
+        self.hud.show_chat_history(messages)
 
     def _update_hud_position(self):
         """HUD 位置跟随悬浮球"""
