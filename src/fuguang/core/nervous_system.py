@@ -20,6 +20,7 @@ from .skills import SkillManager
 from .eyes import Eyes
 from .qq_bridge import QQBridge
 from .web_bridge import WebBridge
+from .chat_store import ChatStore
 
 logger = logging.getLogger("Fuguang")
 
@@ -59,6 +60,7 @@ class NervousSystem:
         self.on_subtitle = None       # (text: str, persistent: bool) -> None
         self.on_speech_start = None   # (text: str) -> None
         self.on_speech_end = None     # () -> None
+        self.on_expression_change = None  # (expression: str) -> None, 如 "Joy"/"Angry"/"Sorrow"
         
         # 状态变量
         self.AWAKE_STATE = "sleeping"  # sleeping / voice_wake
@@ -91,6 +93,24 @@ class NervousSystem:
         self._gui_recording_active = False   # 是否正在 GUI 录音
         self._gui_stop_event = threading.Event()  # 停止录音信号
         self._gui_record_thread = None
+
+        # ========================================
+        # [新增] GUI 聊天历史持久化（与 Web UI 共享数据库）
+        # ========================================
+        try:
+            from pathlib import Path
+            data_dir = getattr(self.config, 'DATA_DIR', Path('.') / 'data')
+            db_path = Path(data_dir) / "web_chat.db"
+            self.chat_store = ChatStore(str(db_path))
+            # 每次启动创建新会话
+            ts = datetime.datetime.now().strftime("%m-%d %H:%M")
+            conv = self.chat_store.create_conversation(f"GUI 语音对话 {ts}")
+            self._gui_conv_id = conv["id"]
+            logger.info(f"💾 [ChatStore] GUI 会话已创建: {self._gui_conv_id}")
+        except Exception as e:
+            logger.warning(f"💾 [ChatStore] 初始化失败（不影响对话）: {e}")
+            self.chat_store = None
+            self._gui_conv_id = None
 
         # ========================================
         # [新增] QQ 消息桥接（NapCat OneBot）
@@ -408,7 +428,9 @@ class NervousSystem:
         clean_text = re.sub(r"\[.*?\]", "", ai_text).strip()
 
         for tag in tags:
-            if tag in ["Joy", "Angry", "Sorrow", "Fun", "Surprised", "Neutral"]:
+            if tag in ["Joy", "Angry", "Sorrow", "Fun", "Surprised", "Neutral",
+                       "Shy", "Love", "Proud", "Confused", "Apologetic",
+                       "Thinking", "Sleeping", "Working", "Wave"]:
                 cmd_expression = tag
             elif tag == "CMD:MODE_ON":
                 self.brain.IS_CREATION_MODE = True
@@ -422,6 +444,12 @@ class NervousSystem:
                 cmd_unity = tag.replace("CMD:", "").lower()
 
         self.mouth.send_to_unity(cmd_expression)
+        # [新增] 通知 GUI 切换表情 Emoji
+        if self.on_expression_change:
+            try:
+                self.on_expression_change(cmd_expression)
+            except Exception as e:
+                logger.warning(f"GUI 表情回调异常: {e}")
 
         if cmd_unity:
             if self.brain.IS_CREATION_MODE:
@@ -439,6 +467,13 @@ class NervousSystem:
         """处理 AI 回复 (简化版 - 逻辑已移至 Brain.chat)"""
         self.LAST_ACTIVE_TIME = time.time()
         fuguang_heartbeat.update_interaction()
+        
+        # [持久化] 保存用户消息
+        if self.chat_store and self._gui_conv_id:
+            try:
+                self.chat_store.add_message(self._gui_conv_id, "user", user_input)
+            except Exception as e:
+                logger.warning(f"💾 保存用户消息失败: {e}")
         
         # [GUI] 通知界面：开始思考
         self._emit_state("THINKING")
@@ -510,6 +545,16 @@ class NervousSystem:
             
             self.mouth.stop_thinking()
             
+            # [持久化] 保存 AI 回复
+            if ai_reply and self.chat_store and self._gui_conv_id:
+                try:
+                    # 保存清理后的文本（去掉表情标签）
+                    clean = re.sub(r"\[.*?\]", "", ai_reply).strip()
+                    if clean:
+                        self.chat_store.add_message(self._gui_conv_id, "assistant", clean)
+                except Exception as e:
+                    logger.warning(f"💾 保存AI回复失败: {e}")
+
             # 处理回复（语音播放）
             if ai_reply and not ("<｜DSML｜" in ai_reply or "<tool_code>" in ai_reply):
                 self._process_response(ai_reply)

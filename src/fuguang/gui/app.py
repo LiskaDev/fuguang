@@ -55,6 +55,7 @@ class FuguangWorker(QThread):
     subtitle_update = pyqtSignal(str)    # 字幕更新 (自动 8 秒隐藏)
     subtitle_long = pyqtSignal(str)      # 持久字幕 (不自动隐藏)
     file_ingested = pyqtSignal(str)      # 文件吞噬完成
+    expression_changed = pyqtSignal(str) # [新增] AI 表情标签变更
     
     def __init__(self, signals: FuguangSignals):
         super().__init__()
@@ -154,6 +155,11 @@ class FuguangWorker(QThread):
             else:
                 self.state_changed.emit(BallState.IDLE)
         ns.mouth.on_speech_end = on_speech_end
+        
+        # 5. [新增] AI 表情标签回调 → 驱动 GUI Emoji 切换
+        def on_expression_change(expression: str):
+            self.expression_changed.emit(expression)
+        ns.on_expression_change = on_expression_change
         
         logger.info("🔌 GUI 回调已注入到 NervousSystem")
 
@@ -263,6 +269,7 @@ class FuguangApp:
         
         # 连接工作线程信号到 UI
         self.worker.state_changed.connect(self.ball.set_state)
+        self.worker.expression_changed.connect(self.ball.set_expression)  # [新增] AI 表情 → Emoji
         self.worker.subtitle_update.connect(self._on_subtitle_update)
         self.worker.subtitle_long.connect(self._on_subtitle_long)
         self.worker.file_ingested.connect(self._on_file_ingested)

@@ -5,7 +5,7 @@
 
 ---
 
-## 🎉 最新功能亮点 (v6.4.0)
+## 🎉 最新功能亮点 (v6.5.0)
 
 ### � **Browser MCP（Playwright 无头浏览器）**
 
@@ -49,6 +49,37 @@
 **💡 扩展方式：**
 > MCP 架构已验证"插拔式"价值——接入新 Server 只需在 `_init_mcp()` 注册即可。目前已接入 3 个 MCP Server（GitHub + Obsidian + Unity）。
 > Figma / Everything 等 HTTP API 则通过 Mixin 技能模块接入，同样即插即用。
+
+---
+
+## 📋 历史更新 (v6.5.0)
+
+### v6.5.0 - 🎨 Lottie 矢量动态 Emoji 头像 + 💾 GUI 聊天历史持久化 (2026-02-24) 🆕
+> **背景**：将桌面悬浮球的静态蓝色球体升级为 Google Noto Animated Emoji 动态头像，AI 回复时根据情绪标签自动切换表情。
+> 后续从 GIF 位图升级为 Lottie 矢量动画，实现手机级清晰度。同时为 GUI 模式加入聊天历史持久化。
+
+**🎨 Lottie 矢量 Emoji 头像：**
+- **[新增]** 🎭 **动态表情系统**：AI 回复自动解析 `[Joy]`/`[Angry]`/`[Love]` 等 15 种表情标签，悬浮球实时切换对应 Emoji。
+- **[新增]** 🎨 **Lottie 矢量渲染**：`QWebEngineView` 内嵌 `dotlottie-player`，分辨率无限清晰（告别 GIF 模糊）。
+- **[新增]** 🔄 **CSS 压扁弹开过渡**：GPU 加速的 `scaleY()` 动画，表情切换丝滑无闪烁。
+- **[新增]** 📦 **17 个 Lottie JSON 文件**：从 Google Noto Animated Emoji CDN 下载，矢量格式。
+- **[新增]** 🔙 **GIF 回退模式**：未安装 `PyQtWebEngine` 时自动回退到 `QMovie` + GIF 渲染。
+
+**💾 GUI 聊天历史持久化：**
+- **[新增]** 💾 **NervousSystem ChatStore 集成**：复用 Web UI 的 `data/web_chat.db`（SQLite），GUI 对话自动保存。
+- **[新增]** 📝 **自动创建会话**：每次启动自动创建 `"GUI 语音对话 MM-DD HH:MM"` 会话，用户消息和 AI 回复实时写入。
+- **[新增]** 🔗 **两端数据互通**：GUI 端的对话记录在 Web UI 中可见，反之亦然。
+
+**文件变更：**
+- 重写 `gui/ball.py`（`QWebEngineView` + Lottie 替代 `QMovie` + GIF，~330 行）
+- 新增 `gui/lottie_player.html`（内嵌播放器模板 + CSS 过渡动画）
+- 新增 `gui/download_lottie.py`（Lottie JSON 下载工具）
+- 新增 `gui/emotions/*.json`（17 个 Lottie 矢量动画文件）
+- 修改 `core/nervous_system.py`（ChatStore 集成 + 表情回调钩子 + 消息持久化）
+- 修改 `gui/app.py`（`expression_changed` 信号连接）
+- 修改 `core/heartbeat.py`（扩展 15 种表情标签）
+- 修改 `config/system_prompt.txt`（扩展表情标签说明）
+- 新增依赖：`PyQt6-WebEngine`
 
 ---
 

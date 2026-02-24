@@ -376,11 +376,11 @@ You have a headless browser (Playwright) running on the server, capable of silen
 
 【通讯协议】
 1. 直接说话，不要加"say:"
-2. 每句话结尾带表情: [Joy]/[Angry]/[Sorrow]/[Fun]/[Surprised]/[Neutral]
+2. 每句话结尾带表情: [Joy]/[Angry]/[Sorrow]/[Fun]/[Surprised]/[Neutral]/[Shy]/[Love]/[Proud]/[Confused]/[Apologetic]/[Thinking]/[Sleeping]/[Working]/[Wave]
 3. 动作指令用方括号: [CMD:XXX]
 
 【指令表】
-表情: [Joy] [Angry] [Sorrow] [Fun] [Surprised] [Neutral]
+表情: [Joy] [Angry] [Sorrow] [Fun] [Surprised] [Neutral] [Shy] [Love] [Proud] [Confused] [Apologetic] [Thinking] [Sleeping] [Working] [Wave]
 移动: [CMD:MOVE_FORWARD] [CMD:MOVE_BACK] [CMD:MOVE_LEFT] [CMD:MOVE_RIGHT] [CMD:STOP]
 动作: [CMD:THINKING] [CMD:WAVE]
 系统: [CMD:MODE_ON] [CMD:MODE_OFF] [CMD:SHUTDOWN]

@@ -134,7 +134,7 @@ def generate_proactive_message() -> str:
    - 深夜：关心睡眠、劝睡觉
    - 中午：问吃饭没
    - 其他：可以是提醒休息、求聊天、分享冷知识、撒娇
-3. **必须**在句首加情绪标签：[Joy]/[Sorrow]/[Fun]/[Surprised]/[Angry]/[Neutral]
+3. **必须**在句首加情绪标签：[Joy]/[Sorrow]/[Fun]/[Surprised]/[Angry]/[Neutral]/[Shy]/[Love]/[Proud]/[Confused]/[Apologetic]
 4. 回复简短，不超过 30 字
 
 【示例】
@@ -170,7 +170,9 @@ def parse_and_speak(text: str):
     expression = "Neutral"
     tags = re.findall(r"\[(.*?)\]", text)
     for tag in tags:
-        if tag in ["Joy", "Angry", "Sorrow", "Fun", "Surprised", "Neutral"]:
+        if tag in ["Joy", "Angry", "Sorrow", "Fun", "Surprised", "Neutral",
+                   "Shy", "Love", "Proud", "Confused", "Apologetic",
+                   "Thinking", "Sleeping", "Working", "Wave"]:
             expression = tag
             break
     
