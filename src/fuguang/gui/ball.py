@@ -139,6 +139,7 @@ class FloatingBall(QWidget):
         
         # Emoji 状态
         self._current_emoji = ""
+        self._expression_override = None  # AI 表情锁定（防止被 SPEAKING 状态覆盖）
         self._webview_ready = False
         self._pending_load = None  # 等待 webview 加载完成后再切换
         
@@ -314,6 +315,13 @@ class FloatingBall(QWidget):
         if state not in STATE_EMOJI_MAP:
             return
         self.current_state = state
+        # SPEAKING 状态：如果 AI 已指定表情（如 [Sorrow]），保留它，不覆盖为 joy
+        if state == BallState.SPEAKING and self._expression_override:
+            logger.debug(f"🔮 [GUI] 状态=SPEAKING，保留 AI 表情: {self._expression_override}")
+            return
+        # IDLE 状态：清除表情锁定，恢复默认
+        if state == BallState.IDLE:
+            self._expression_override = None
         emoji_name = STATE_EMOJI_MAP[state]
         self._switch_emoji(emoji_name)
         logger.debug(f"🔮 [GUI] 状态变更: {state} → {emoji_name}")
@@ -322,6 +330,7 @@ class FloatingBall(QWidget):
         """设置 AI 表情 — 由 AI 回复中的表情标签驱动"""
         emoji_name = EXPRESSION_EMOJI_MAP.get(expression)
         if emoji_name:
+            self._expression_override = emoji_name  # 锁定表情，防止被 SPEAKING 状态覆盖
             self._switch_emoji(emoji_name)
             logger.debug(f"🔮 [GUI] AI 表情: {expression} → {emoji_name}")
         else:
