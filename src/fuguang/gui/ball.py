@@ -25,6 +25,7 @@
 
 import sys
 import os
+import random
 import logging
 from typing import Optional
 from pathlib import Path
@@ -75,6 +76,9 @@ STATE_EMOJI_MAP = {
     BallState.SPEAKING: "joy",
     BallState.ERROR: "error",
 }
+
+# 启动表情（随机选一个，显示到正式上线前）
+STARTUP_EMOJIS = ["partying", "melting"]
 
 # AI 表情标签 → Emoji 文件名映射
 EXPRESSION_EMOJI_MAP = {
@@ -205,8 +209,11 @@ class FloatingBall(QWidget):
         self._emoji_label.setStyleSheet("background: transparent;")
         self._emoji_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         
-        # 加载默认 GIF
-        gif_path = EMOTIONS_DIR / "neutral.gif"
+        # 加载启动 GIF（随机 partying 或 melting）
+        startup = random.choice(STARTUP_EMOJIS)
+        gif_path = EMOTIONS_DIR / f"{startup}.gif"
+        if not gif_path.exists():
+            gif_path = EMOTIONS_DIR / "neutral.gif"
         if gif_path.exists():
             movie = QMovie(str(gif_path))
             movie.setScaledSize(QSize(self.BALL_SIZE, self.BALL_SIZE))
@@ -222,12 +229,14 @@ class FloatingBall(QWidget):
             self._webview_ready = True
             logger.info("🔮 [GUI] Lottie 播放器就绪")
             
-            # 加载默认表情
+            # 加载启动表情（随机 partying 或 melting）
             if self._pending_load:
                 self._do_switch(self._pending_load)
                 self._pending_load = None
             else:
-                self._do_load("neutral")
+                startup = random.choice(STARTUP_EMOJIS)
+                self._do_load(startup)
+                logger.info(f"🔮 [GUI] 启动表情: {startup}")
         else:
             logger.error("🔮 [GUI] Lottie 播放器加载失败")
 
