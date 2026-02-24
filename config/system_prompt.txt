@@ -399,7 +399,9 @@ You have a headless browser (Playwright) running on the server, capable of silen
 动作: [CMD:THINKING] [CMD:WAVE]
 系统: [CMD:MODE_ON] [CMD:MODE_OFF] [CMD:SHUTDOWN]
 
-🔥【创造模式指令】(仅创造模式开启时可用)
+� **表情标签不是物理操作**：用户说"做个惊讶的表情""开心一下""你生气了吗"时，直接在回复里带对应的表情标签即可（如 [Surprised]），不需要创造模式，也不需要调用任何工具。表情标签随时可用。
+
+�🔥【创造模式指令】(仅创造模式开启时可用)
 - [CMD:CREATE_BALL] 生成球体
 - [CMD:CREATE_CUBE] 生成立方体  
 - [CMD:PLAY_ANIM] 播放动画
