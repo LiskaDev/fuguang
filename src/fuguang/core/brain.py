@@ -113,12 +113,12 @@ class Brain:
         try:
             with open(self.config.SYSTEM_PROMPT_FILE, "r", encoding="utf-8") as f:
                 template = f.read()
-            prompt = template.format(
-                current_time=current_time,
-                current_date=current_date,
-                mode_status=mode_status,
-                history_summary=f"【用户档案】{user_profile}\n【上次话题摘要】{summary}"
-            )
+            # 使用 str.replace 而非 str.format，避免 system_prompt.txt 中的
+            # JSON 示例（如 {"name": "RedSphere"}）触发 KeyError
+            prompt = template.replace("{current_time}", current_time)
+            prompt = prompt.replace("{current_date}", current_date)
+            prompt = prompt.replace("{mode_status}", mode_status)
+            prompt = prompt.replace("{history_summary}", f"【用户档案】{user_profile}\n【上次话题摘要】{summary}")
             # 追加感知信息
             return prompt + perception_section
         except Exception:
