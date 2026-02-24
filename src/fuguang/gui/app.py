@@ -1,32 +1,19 @@
-# app.py - 扶光 GUI 应用主入口 (Soul Injection v4.0)
+# app.py - 扶光统一入口 (Soul Injection v5.0)
 """
-将大脑(NervousSystem)与身体(FloatingBall)融合的入口
+扶光系统唯一入口，支持两种模式：
 
-架构:
-- 主线程: PyQt6 GUI (FloatingBall + HolographicHUD)
-- 工作线程: FuguangWorker (NervousSystem)
-- 通信: Signal/Slot
-
-启动方式:
+  GUI 模式（默认）：
     python -m fuguang.gui.app
+    → 主线程: PyQt6 GUI (FloatingBall + HolographicHUD)
+    → 工作线程: FuguangWorker (NervousSystem)
+
+  终端模式：
+    python -m fuguang.gui.app --no-gui
+    → 直接运行 NervousSystem.run()（原 ide.py 逻辑）
 """
 
 import sys
 import os
-
-# ===================================================
-# 🛡️ Torch 预加载 (确保 CUDA 正确初始化)
-# ===================================================
-# 优先加载 Torch，确保 GPU 资源最先被正确初始化
-# 注：Conda 环境已彻底解决 OpenMP DLL 冲突，无需再设置 KMP_DUPLICATE_LIB_OK
-try:
-    import torch
-    print(f"✅ Torch 已加载: {torch.__version__}")
-except ImportError:
-    print("⚠️ Torch 未安装 (仅 UI 模式)")
-
-# ===================================================
-
 import logging
 import threading
 from pathlib import Path
@@ -35,13 +22,29 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-# 3. 最后加载 PyQt6
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
-from PyQt6.QtGui import QColor
+# ===================================================
+# 🛡️ Torch 预加载 (确保 CUDA 正确初始化)
+# ===================================================
+try:
+    import torch
+    print(f"✅ Torch 已加载: {torch.__version__}")
+except ImportError:
+    print("⚠️ Torch 未安装 (仅 UI 模式)")
 
-from fuguang.gui.ball import FloatingBall, FuguangSignals, BallState
-from fuguang.gui.hud import HolographicHUD
+# ===================================================
+# 🖥️ PyQt6 条件导入（--no-gui 时不需要）
+# ===================================================
+HAS_PYQT = False
+try:
+    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtCore import QThread, pyqtSignal, Qt, QTimer
+    from PyQt6.QtGui import QColor
+    from fuguang.gui.ball import FloatingBall, FuguangSignals, BallState
+    from fuguang.gui.hud import HolographicHUD
+    HAS_PYQT = True
+except ImportError:
+    pass  # 终端模式不需要 PyQt6
+
 # NervousSystem 延迟导入，避免 pygame/torch 初始化冲突
 
 logger = logging.getLogger("Fuguang")
@@ -348,16 +351,41 @@ class FuguangApp:
 
 
 def main():
-    """主入口"""
-    # 配置日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%H:%M:%S"
-    )
-    
-    app = FuguangApp()
-    sys.exit(app.run())
+    """扶光统一入口"""
+    import argparse
+    parser = argparse.ArgumentParser(description="扶光系统 - AI 个人助手")
+    parser.add_argument("--no-gui", action="store_true",
+                        help="终端模式（无 GUI 悬浮球，直接运行 NervousSystem）")
+    args = parser.parse_args()
+
+    if args.no_gui:
+        # ===== 终端模式（原 ide.py 逻辑）=====
+        from fuguang.logger import setup_logger
+        setup_logger()
+        from fuguang.core.nervous_system import NervousSystem
+        print("🚀 扶光终端模式启动...")
+        ns = NervousSystem()
+        ns.run()
+    else:
+        # ===== GUI 模式 =====
+        if not HAS_PYQT:
+            print("❌ GUI 模式需要 PyQt6，请安装: pip install PyQt6 PyQt6-WebEngine")
+            print("   或使用终端模式: python -m fuguang.gui.app --no-gui")
+            sys.exit(1)
+        
+        # GUI 模式也使用 setup_logger（支持文件日志）
+        try:
+            from fuguang.logger import setup_logger
+            setup_logger()
+        except Exception:
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s [%(levelname)s] %(message)s",
+                datefmt="%H:%M:%S"
+            )
+        
+        app = FuguangApp()
+        sys.exit(app.run())
 
 
 if __name__ == "__main__":
