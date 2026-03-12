@@ -83,13 +83,13 @@ STARTUP_EMOJIS = ["partying", "melting"]
 # AI 表情标签 → Emoji 文件名列表（切换时随机抽一个）
 EXPRESSION_EMOJI_MAP = {
     "Joy":        ["joy", "grin", "laughing", "rofl"],
-    "Fun":        ["fun", "wink", "zany", "yum"],
+    "Fun":        ["fun", "wink", "zany", "yum", "imp_smile"],
     "Love":       ["love", "heart_eyes", "kissing_heart", "heart_face"],
     "Shy":        ["shy", "blush", "warm_smile", "hand_over_mouth"],
     "Surprised":  ["surprised", "astonished", "mind_blown", "scream"],
     "Thinking":   ["thinking", "pensive", "raised_eyebrow"],
     "Confused":   ["confused", "dizzy", "woozy", "rolling_eyes"],
-    "Angry":      ["angry", "triumph", "unamused", "rage"],
+    "Angry":      ["angry", "triumph", "unamused", "rage", "imp_frown"],
     "Sorrow":     ["sorrow", "loudly_crying", "sad", "concerned"],
     "Apologetic": ["apologetic", "flushed", "anxious_sweat", "worried"],
     "Proud":      ["proud", "star_struck", "partying", "salute"],
@@ -99,8 +99,8 @@ EXPRESSION_EMOJI_MAP = {
     "Neutral":    ["neutral", "expressionless", "diagonal_mouth"],
 }
 
-# IDLE 时随机轮播的软情绪表情组（排除 Joy/Angry/Sorrow 等强情绪）
-IDLE_EMOJI_TAGS = ["Neutral", "Shy", "Love", "Wave", "Fun", "Surprised", "Sleeping"]
+# IDLE 时随机轮播的表情组（全部 15 个标签）
+IDLE_EMOJI_TAGS = list(EXPRESSION_EMOJI_MAP.keys())
 
 
 class FuguangSignals(QObject):
