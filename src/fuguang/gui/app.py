@@ -152,6 +152,8 @@ class FuguangWorker(QThread):
         
         # 4. TTS 结束回调
         def on_speech_end():
+            # 清空 HUD 字幕（说完话后隐藏文字框）
+            self.subtitle_long.emit("")
             # 如果 GUI 录音正在进行（用户打断了语音并开始新录音），不要重置为 IDLE
             if self.nervous_system and self.nervous_system._gui_recording_active:
                 self.state_changed.emit(BallState.LISTENING)
