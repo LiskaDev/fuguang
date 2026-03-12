@@ -80,25 +80,23 @@ STATE_EMOJI_MAP = {
 # 启动表情（随机选一个，显示到正式上线前）
 STARTUP_EMOJIS = ["partying", "melting"]
 
-# AI 表情标签 → Emoji 文件名映射
+# AI 表情标签 → Emoji 文件名列表（切换时随机抽一个）
 EXPRESSION_EMOJI_MAP = {
-    # 基础 6 种
-    "Joy": "joy",
-    "Angry": "angry",
-    "Sorrow": "sorrow",
-    "Fun": "fun",
-    "Surprised": "surprised",
-    "Neutral": "neutral",
-    # 扩展表情
-    "Thinking": "thinking",
-    "Shy": "shy",
-    "Love": "love",
-    "Proud": "proud",
-    "Confused": "confused",
-    "Apologetic": "apologetic",
-    "Sleeping": "sleeping",
-    "Working": "working",
-    "Wave": "wave",
+    "Joy":        ["joy", "grin", "laughing", "rofl"],
+    "Fun":        ["fun", "wink", "zany", "yum"],
+    "Love":       ["love", "heart_eyes", "kissing_heart", "heart_face"],
+    "Shy":        ["shy", "blush", "warm_smile", "hand_over_mouth"],
+    "Surprised":  ["surprised", "astonished", "mind_blown", "scream"],
+    "Thinking":   ["thinking", "pensive", "raised_eyebrow"],
+    "Confused":   ["confused", "dizzy", "woozy", "rolling_eyes"],
+    "Angry":      ["angry", "triumph", "unamused", "rage"],
+    "Sorrow":     ["sorrow", "loudly_crying", "sad", "concerned"],
+    "Apologetic": ["apologetic", "flushed", "anxious_sweat", "worried"],
+    "Proud":      ["proud", "star_struck", "partying", "salute"],
+    "Working":    ["working", "zipper_mouth", "shushing", "monocle"],
+    "Sleeping":   ["sleeping", "sleepy", "tired"],
+    "Wave":       ["wave", "smile", "big_eyes_smile", "slightly_happy"],
+    "Neutral":    ["neutral", "expressionless", "diagonal_mouth"],
 }
 
 
@@ -327,12 +325,15 @@ class FloatingBall(QWidget):
         logger.debug(f"🔮 [GUI] 状态变更: {state} → {emoji_name}")
 
     def set_expression(self, expression: str):
-        """设置 AI 表情 — 由 AI 回复中的表情标签驱动"""
-        emoji_name = EXPRESSION_EMOJI_MAP.get(expression)
-        if emoji_name:
+        """设置 AI 表情 — 由 AI 回复中的表情标签驱动
+        每个表情标签对应一组 emoji，随机抽一个播放
+        """
+        emoji_group = EXPRESSION_EMOJI_MAP.get(expression)
+        if emoji_group:
+            emoji_name = random.choice(emoji_group)
             self._expression_override = emoji_name  # 锁定表情，防止被 SPEAKING 状态覆盖
             self._switch_emoji(emoji_name)
-            logger.debug(f"🔮 [GUI] AI 表情: {expression} → {emoji_name}")
+            logger.debug(f"🔮 [GUI] AI 表情: {expression} → {emoji_name} (从 {len(emoji_group)} 个中随机)")
         else:
             logger.debug(f"🔮 [GUI] 未知表情标签: {expression}，忽略")
 
