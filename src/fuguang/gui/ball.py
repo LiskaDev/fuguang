@@ -99,6 +99,9 @@ EXPRESSION_EMOJI_MAP = {
     "Neutral":    ["neutral", "expressionless", "diagonal_mouth"],
 }
 
+# IDLE 时随机轮播的软情绪表情组（排除 Joy/Angry/Sorrow 等强情绪）
+IDLE_EMOJI_TAGS = ["Neutral", "Shy", "Love", "Wave", "Fun", "Surprised", "Sleeping"]
+
 
 class FuguangSignals(QObject):
     """扶光信号中心 - 用于线程间通信"""
@@ -150,6 +153,11 @@ class FloatingBall(QWidget):
         self.old_pos = None
         self._is_dragging = False
         self._press_pos = None
+        
+        # IDLE 随机表情轮播
+        self._idle_timer = QTimer(self)
+        self._idle_timer.timeout.connect(self._on_idle_tick)
+        self._idle_entered_time = 0.0  # 进入 IDLE 状态的时间戳
         
         # 初始化 UI
         self._init_ui()
@@ -316,13 +324,46 @@ class FloatingBall(QWidget):
         # SPEAKING 状态：如果 AI 已指定表情（如 [Sorrow]），保留它，不覆盖为 joy
         if state == BallState.SPEAKING and self._expression_override:
             logger.debug(f"🔮 [GUI] 状态=SPEAKING，保留 AI 表情: {self._expression_override}")
+            self._stop_idle_timer()
             return
-        # IDLE 状态：清除表情锁定，恢复默认
+        # 非 IDLE 状态：停止 idle 轮播
+        if state != BallState.IDLE:
+            self._stop_idle_timer()
+        # IDLE 状态：清除表情锁定，启动 idle 轮播计时
         if state == BallState.IDLE:
             self._expression_override = None
+            self._start_idle_timer()
         emoji_name = STATE_EMOJI_MAP[state]
         self._switch_emoji(emoji_name)
         logger.debug(f"🔮 [GUI] 状态变更: {state} → {emoji_name}")
+
+    def _start_idle_timer(self):
+        """启动 IDLE 随机表情轮播（8秒后开始）"""
+        import time
+        self._idle_entered_time = time.time()
+        # 先等 8 秒的“冷却期”，然后开始随机切换
+        self._idle_timer.start(8000)
+        logger.debug("🔮 [GUI] IDLE 轮播: 8秒后开始")
+
+    def _stop_idle_timer(self):
+        """停止 IDLE 随机表情轮播"""
+        if self._idle_timer.isActive():
+            self._idle_timer.stop()
+            logger.debug("🔮 [GUI] IDLE 轮播: 已停止")
+
+    def _on_idle_tick(self):
+        """定时器回调：随机切换一个软情绪表情"""
+        if self.current_state != BallState.IDLE:
+            self._stop_idle_timer()
+            return
+        # 随机选一个表情组，再从组内随机选一个文件
+        tag = random.choice(IDLE_EMOJI_TAGS)
+        emoji_name = random.choice(EXPRESSION_EMOJI_MAP[tag])
+        self._switch_emoji(emoji_name)
+        logger.debug(f"🔮 [GUI] IDLE 轮播: {tag} → {emoji_name}")
+        # 下次切换间隔 5-8 秒随机
+        next_ms = random.randint(5000, 8000)
+        self._idle_timer.start(next_ms)
 
     def set_expression(self, expression: str):
         """设置 AI 表情 — 由 AI 回复中的表情标签驱动
