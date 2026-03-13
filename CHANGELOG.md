@@ -1,0 +1,1367 @@
+
+# 📜 Fuguang 更新日志 (CHANGELOG)
+
+> 详细版本记录。项目简介请看 [README.md](README.md)。
+
+---
+
+## 🎉 最新功能亮点 (v6.6)
+
+### v6.6.0~v6.6.4 - 🎭 表情大扩展 + IDLE 轮播 + HUD 自动隐藏 + Soul 文件 (2026-03-12~13)
+
+**🎭 表情系统大升级：**
+- **[新增]** 🎲 **59 个 Lottie 表情**：从原 17 个扩展到 59 个（含 😈👿 恶魔表情），GIF 回退文件已删除（-19MB）
+- **[新增]** 📂 **15 组分组随机**：每个表情标签对应 3-5 个变体，`set_expression()` 用 `random.choice()` 随机抽取
+  - 例：`[Joy]` → 随机播放 joy / grin / laughing / rofl 其中一个
+- **[新增]** 💤 **IDLE 随机轮播**：闲置 8 秒后，每 5-8 秒随机切换一个表情，覆盖全部 15 组
+
+**🖥️ HUD 改进：**
+- **[修复]** 📝 **说完自动隐藏**：`on_speech_end` 触发 `hud.clear()`，TTS 结束后字幕气泡自动消失
+
+**📋 Prompt 优化：**
+- **[新增]** 🧠 **思维链规划**：工具调用前必须先规划（①工具 ②顺序 ③预期结果）
+- **[修复]** 📸 **截屏规则收紧**：从关键词触发改为意图判断，闲聊/表情请求不再误触发截屏
+- **[清理]** 🗑️ **移除 CMD 指令**：删除 Unity CMD 指令表、创造模式指令、CMD 回复示例（由 MCP 替代）
+
+**🌟 Soul 文件：**
+- **[新增]** 💎 `config/soul.md`：扶光的自述文件——记录她是谁、和用户的相处、成长轨迹。AI 可通过 MCP 自行更新
+
+**文件变更：**
+- 新增 42 个 `gui/emotions/*.json`（Lottie 表情文件）
+- 删除 17 个 `gui/emotions/*.gif`（GIF 回退文件，-19MB）
+- 新增 `config/soul.md`（AI 自述文件）
+- 修改 `gui/ball.py`（`EXPRESSION_EMOJI_MAP` → 分组列表 + IDLE 轮播定时器）
+- 修改 `gui/app.py`（`on_speech_end` 清空 HUD）
+- 修改 `config/system_prompt.txt`（soul 引用 + 思维链 + 截屏规则 + CMD 清理）
+
+---
+
+## 📋 历史更新 (v6.5.0)
+
+### � **Browser MCP（Playwright 无头浏览器）**
+
+扶光新增 **Browser MCP** 能力——基于 Playwright Chromium 的 6 个无头浏览器工具，支持 JS 渲染、截图、点击、填表等真实浏览器操作。
+
+```
+用户："帮我截个 GitHub 首页的图"
+     ↓
+扶光调用 browser_screenshot(url="https://github.com")
+     ↓
+ Chromium 后台渲染 → 截图保存到 temp_files/ ✅
+
+用户："打开百度，在搜索框输入 '扶光 IDE'"
+     ↓
+扶光调用 browser_fill_form(url, fields={"#kw": "扶光 IDE"})
+     ↓
+自动填入表单内容 ✅
+```
+
+**核心能力：**
+- � **Browser MCP** — 6 个工具（打开网页/截图/点击/填表/提取文字/执行JS）
+- �🎨 **Figma API** — 5 个工具（获取文件/节点/导出图片/读写评论）
+- 🔍 **Everything 文件搜索** — 3 个工具（关键词搜索/按扩展名/打开文件位置）
+- 🎮 **Unity MCP (HTTP 直连)** — 60+ 个工具（场景/物体/材质/脚本/Prefab/截图等）
+- 🐙 **GitHub MCP** — 26 个工具（搜索/读文件/创建 Issue & PR）
+- 📓 **Obsidian MCP** — 14 个工具（读写笔记/目录管理/搜索）
+- ⚡ **配方记忆** — 自动去重、进化替换、Obsidian 日记同步
+- 🔄 **MCP 断线重连** — Server 崩溃自动恢复，不用重启
+- 📧 **邮件监控** — 后台监控 QQ 邮箱，智能过滤垃圾邮件，重要邮件语音通知
+- 📊 **WebUI 状态面板** — 一眨看到记忆/MCP/Obsidian 状态
+
+**🎮 Unity 能力亮点：**
+- 🏗️ **场景操作** — 创建/查找/修改/删除 GameObject,管理场景层级
+- 🎨 **材质系统** — 创建材质、设置颜色/Shader、赋材质给物体
+- 📦 **Prefab 管理** — 创建/实例化/编辑 Prefab
+- 📝 **脚本操作** — 读写 C# 脚本、执行 C# 代码、运行测试
+- 📸 **截图能力** — 从 Scene View / Game View / Camera 截图
+- 🔧 **一键便捷工具** — `unity_create_object` 中英文创建带颜色物体
+- 🛡️ **DeepSeek 参数自动修正** — 自动纠正 AI 常犯的 fields/props/颜色格式错误
+
+**💡 扩展方式：**
+> MCP 架构已验证"插拔式"价值——接入新 Server 只需在 `_init_mcp()` 注册即可。目前已接入 3 个 MCP Server（GitHub + Obsidian + Unity）。
+> Figma / Everything 等 HTTP API 则通过 Mixin 技能模块接入，同样即插即用。
+
+---
+
+## 📋 历史更新 (v6.5.0)
+
+### v6.5.0 - 🎨 Lottie 矢量动态 Emoji 头像 + 💾 GUI 聊天历史持久化 (2026-02-24) 🆕
+> **背景**：将桌面悬浮球的静态蓝色球体升级为 Google Noto Animated Emoji 动态头像，AI 回复时根据情绪标签自动切换表情。
+> 后续从 GIF 位图升级为 Lottie 矢量动画，实现手机级清晰度。同时为 GUI 模式加入聊天历史持久化。
+
+**🎨 Lottie 矢量 Emoji 头像：**
+- **[新增]** 🎭 **动态表情系统**：AI 回复自动解析 `[Joy]`/`[Angry]`/`[Love]` 等 15 种表情标签，悬浮球实时切换对应 Emoji。
+- **[新增]** 🎨 **Lottie 矢量渲染**：`QWebEngineView` 内嵌 `dotlottie-player`，分辨率无限清晰（告别 GIF 模糊）。
+- **[新增]** 🔄 **CSS 压扁弹开过渡**：GPU 加速的 `scaleY()` 动画，表情切换丝滑无闪烁。
+- **[新增]** 📦 **17 个 Lottie JSON 文件**：从 Google Noto Animated Emoji CDN 下载，矢量格式。
+- **[新增]** 🔙 **GIF 回退模式**：未安装 `PyQtWebEngine` 时自动回退到 `QMovie` + GIF 渲染。
+
+**💾 GUI 聊天历史持久化：**
+- **[新增]** 💾 **NervousSystem ChatStore 集成**：复用 Web UI 的 `data/web_chat.db`（SQLite），GUI 对话自动保存。
+- **[新增]** 📝 **自动创建会话**：每次启动自动创建 `"GUI 语音对话 MM-DD HH:MM"` 会话，用户消息和 AI 回复实时写入。
+- **[新增]** 🔗 **两端数据互通**：GUI 端的对话记录在 Web UI 中可见，反之亦然。
+
+**文件变更：**
+- 重写 `gui/ball.py`（`QWebEngineView` + Lottie 替代 `QMovie` + GIF，~330 行）
+- 新增 `gui/lottie_player.html`（内嵌播放器模板 + CSS 过渡动画）
+- 新增 `gui/download_lottie.py`（Lottie JSON 下载工具）
+- 新增 `gui/emotions/*.json`（17 个 Lottie 矢量动画文件）
+- 修改 `core/nervous_system.py`（ChatStore 集成 + 表情回调钩子 + 消息持久化）
+- 修改 `gui/app.py`（`expression_changed` 信号连接）
+- 修改 `core/heartbeat.py`（扩展 15 种表情标签）
+- 修改 `config/system_prompt.txt`（扩展表情标签说明）
+- 新增依赖：`PyQt6-WebEngine`
+
+---
+
+## 📋 历史更新 (v6.4.0)
+
+### v6.4.0 - 🌐 Browser MCP（Playwright 无头浏览器）(2026-02-23) 🆕
+> **背景**：接入 Playwright Chromium 无头浏览器，为扶光提供 JS 渲染、截图、点击、填表等真实浏览器操作能力。
+
+**Browser MCP（6 个工具）：**
+- **[新增]** 🌐 `browser_open` — 打开网页，返回标题和正文（JS 渲染后）
+- **[新增]** 📸 `browser_screenshot` — 截取网页全页截图，保存到 `temp_files/`
+- **[新增]** 🖱️ `browser_click` — 通过 CSS 选择器点击页面元素
+- **[新增]** ✏️ `browser_fill_form` — 自动填写表单字段
+- **[新增]** 📝 `browser_get_text` — 提取指定元素的文字内容
+- **[新增]** ⚡ `browser_run_js` — 在页面上执行 JavaScript 并返回结果
+
+**架构设计：**
+- 使用独立的 `_get_headless_page()` 方法（`headless=True`），与已有的 `browse_website`（`headless=False`）互不干扰
+- Playwright 资源通过 `try...finally` 确保正确释放
+- 浏览器跑在服务端，手机端/Web 端调用时只传回文字和图片结果
+
+**文件变更：**
+- 修改 `core/skills/browser.py`（+6 工具 schema + 6 方法 + 2 辅助方法，~200 行）
+- 修改 `core/skills/__init__.py`（+6 工具路由）
+- 修改 `tests/test_tool_routing.py`（+6 工具名加入必要列表）
+- 测试总数：26 passed ✅
+
+---
+
+### v6.3.0 - 🎨 Figma API + 🔍 Everything 本地文件搜索 (2026-02-23)
+> **背景**：接入 Figma REST API 实现设计协作能力，接入 Everything HTTP API 实现极速本地文件搜索。
+
+**Figma API（5 个工具）：**
+- **[新增]** 🎨 `get_figma_file` — 获取 Figma 文件节点结构
+- **[新增]** 🔍 `get_figma_node` — 获取指定节点详情
+- **[新增]** 🖼️ `get_figma_images` — 导出节点为图片 URL（PNG/SVG/PDF）
+- **[新增]** 💬 `list_figma_comments` — 读取文件评论
+- **[新增]** ✏️ `post_figma_comment` — 发表评论
+
+**Everything 本地搜索（3 个工具）：**
+- **[新增]** 🔍 `search_files` — 关键词搜索文件/文件夹（毫秒级）
+- **[新增]** 📁 `search_files_by_ext` — 按扩展名搜索（如 `.blend`、`.unity`、`.psd`）
+- **[新增]** 📂 `open_file_location` — 在资源管理器中打开文件所在位置
+
+**配置说明：**
+- Figma：`.env` 中配置 `FIGMA_API_KEY`（从 Figma 设置 → Personal Access Tokens 获取）
+- Everything：`.env` 中配置 `EVERYTHING_PORT=80`（需开启 Everything HTTP 服务器）
+  - 开启方法：Everything → 工具 → 选项 → HTTP服务器 → ✅ 启用
+  - ⚠️ 不要勾选"允许从网络访问"（默认只监听 localhost，安全）
+
+**文件变更：**
+- 新增 `core/skills/figma.py`（FigmaSkills Mixin，~285 行）
+- 新增 `core/skills/everything.py`（EverythingSkills Mixin，~267 行）
+- 修改 `core/skills/__init__.py`（注册 2 个 Mixin + 8 个工具路由）
+- 修改 `config.py` + `core/config.py`（`FIGMA_API_KEY` + `EVERYTHING_PORT`）
+- 修改 `.env`（新增 2 个环境变量）
+- 新增 `tests/test_figma.py`（7 个测试）+ `tests/test_everything.py`（9 个测试）
+- 测试总数：26 passed ✅
+
+---
+
+## 📋 历史更新 (v6.2.1)
+
+### v6.2.1 - 🛠️ Web UI 稳定性增强 + 输出扩容 (2026-02-23) 🔧
+> **背景**：Web UI 停止按钮不生效（AI 阻塞在 API 调用时无法响应取消），
+> JSON 截断修复对 JavaScript 等代码内容失效，复杂任务需多轮工具调用导致耗时过长。
+
+**核心修复：**
+- **[修复]** ⏹ **停止按钮即时响应**：收到取消请求后立即回复客户端，不等待 Brain 线程结束。
+  - Brain 线程在后台自行退出，用户无需等待 30 秒的 API 调用。
+- **[修复]** 🔧 **JSON 截断修复增强**：新增 Strategy 1.5（正则提取 `create_file_directly` 参数）。
+  - 完全绕过 JSON 解析，直接从原始字符串提取 `file_path` 和 `content`。
+  - Strategy 2 改进为字符串感知的括号计数，不再被代码内容中的 `{` `}` 干扰。
+- **[优化]** 📈 **`max_tokens` 扩容**：4096 → **8192**（DeepSeek 支持最大 8K 输出）。
+  - 复杂任务（如创建游戏）可在单次回复中完成，减少多轮工具调用。
+
+**文件变更：**
+- 修改 `core/web_bridge.py`（cancel 即时回复 + cancelled 标志位）
+- 修改 `core/brain.py`（JSON 正则提取 + 字符串感知括号计数 + max_tokens 8192）
+- 删除 `webui_legacy.py`（废弃测试脚本）
+
+---
+
+## 📋 历史更新 (v4.8.0)
+
+### ⚡ **配方记忆系统 (Recipe Memory)** - AI 的"肌肉记忆"
+
+扶光新增第三种记忆集合——**技能配方 (Recipes)**，专门存储成功的工具链和操作模式。当 AI 遇到类似场景时，配方会被**自动召回并优先执行**，实现"做过一次就永远记住最优解"。
+
+**🧠 记忆架构升级（双集合 → 三集合）：**
+
+| 集合 | 用途 | 示例 |
+|:---|:---|:---|
+| `fuguang_memories` | 对话记忆（事实、偏好） | "用户喜欢暗色主题" |
+| `fuguang_knowledge` | 知识库（文件吞噬） | PDF/Word/代码文档内容 |
+| **`fuguang_recipes`** ⚡ NEW | 技能配方（肌肉记忆） | "写文件用 create_file_directly，不要打开记事本" |
+
+**🔄 工作原理：**
+1. **自动学习**：Brain 检测到慢操作（>5秒 且 >2个工具调用）→ LLM 分析原因 → 教训自动存入 recipes 集合
+2. **AI 主动存储**：AI 可通过 `remember_recipe` 工具手动保存最佳实践
+3. **自动召回**：每次用户提问 → `get_memory_context()` 优先查询 recipes → 匹配的配方以"⚡ 最佳实践（务必优先遵循）"注入 system prompt
+4. **AI 主动查询**：AI 可通过 `recall_recipe` 工具按场景搜索配方
+
+**📁 涉及文件：**
+
+| 文件 | 改动内容 |
+|:---|:---|
+| `src/fuguang/core/memory.py` | 新增 `fuguang_recipes` 集合 + `add_recipe()` / `recall_recipe()` / `search_recipes()` API + `get_memory_context()` 配方优先路由 + `get_stats()` 含配方统计 |
+| `src/fuguang/core/brain.py` | `learn_from_performance()` 教训存入 recipes 集合（原先存入通用记忆池） |
+| `src/fuguang/core/skills/memory.py` | 新增 `remember_recipe` / `recall_recipe` 两个 Function Calling 工具定义 + 对应方法实现 |
+| `src/fuguang/core/nervous_system.py` | RAG 检索日志区分配方命中 `(含配方⚡)` |
+
+**💡 设计思路：**
+> 参考 GPT/Gemini 对记忆层级的分析，采用"务实版"方案——只新增 recipes 集合（而非完整 4 层），以最小改动获得最大收益。配方记忆本质上是"条件反射"：触发场景 → 最优解法，让 AI 不再重复犯同样的慢操作错误。
+
+---
+
+## 📋 历史更新 (v4.7.1)
+
+### 📚 **完善工具文档** - 覆盖率提升到88%
+为18个核心工具方法添加规范的docstring，大幅提升工具扫描器覆盖率！
+
+**📈 改进数据：**
+- **覆盖率**：35.3% → **87.9%**（提升52.6个百分点）
+- **自动扫描工具数**：12 → **29**（增加17个）
+- **未覆盖工具数**：26 → **8**（减少18个）
+
+**✨ 涉及模块：**
+- `browser.py`（4个方法）：search_web, read_web_page, open_website, browse_website
+- `system.py`（6个方法）：execute_shell, control_volume, take_note, write_code, open_tool, run_code
+- `gui.py`（3个方法）：click_screen_text, list_ui_elements, click_by_description
+- `memory.py`（5个方法）：save_to_long_term_memory, ingest_knowledge_file, forget_knowledge, forget_memory, list_learned_files
+
+**🎯 实际影响：**
+- 未来添加新工具只需写docstring即可自动注册
+- 减少90%的重复Schema定义代码
+- 统一文档格式，提高代码可维护性
+- 工具扫描器从玩具变成生产力工具
+
+---
+
+## 📋 历史更新 (v4.6.1)
+
+### ⚡ **Web UI界面** - 轻松体验AI助手
+不需要配置语音/摄像头，直接在浏览器中使用扶光！
+
+```bash
+python webui.py
+# 访问 http://localhost:7860
+```
+
+**特性：**
+- 💬 聊天对话：实时与AI交互，执行各种任务
+- 📊 性能监控：查看任务耗时、工具调用统计
+- 🌐 局域网访问：手机/平板也能使用
+
+👉 详细说明：[WEBUI_README.md](WEBUI_README.md)
+
+### 🧠 **自我学习系统** - AI真的会进化
+扶光现在能从慢操作中自动学习，永久记住优化方案！
+
+**工作原理：**
+1. 检测慢操作（耗时>5秒 且 调用>2个工具）
+2. AI自动分析：为什么慢？有更快的方法吗？
+3. 生成教训并保存到长期记忆（ChromaDB）
+4. 下次遇到类似任务，自动使用优化方案
+
+**实测效果：**
+- **文件创建**：从60秒（打开记事本）→ 0.05秒（直接创建）**提速600倍！**
+- **保存操作**：从点击菜单（5秒）→ Ctrl+S快捷键（0.1秒）**提速50倍！**
+
+### 🔧 **工具自动扫描** - 减少90%重复代码
+新增工具时，只需写函数+docstring，无需手动注册Schema！
+
+**之前（手动注册30个工具）：**
+```python
+tools_schema = [
+    {"name": "create_file", "description": "...", "parameters": {...}},
+    {"name": "send_hotkey", "description": "...", "parameters": {...}},
+    # ... 手写30个工具定义
+]
+```
+
+**现在（自动扫描）：**
+```python
+from tool_scanner import ToolScanner
+scanner = ToolScanner()
+tools = scanner.scan_class(SkillManager)  # 自动发现所有工具
+```
+
+**只需写好docstring：**
+```python
+def create_file_directly(self, file_path: str, content: str):
+    """
+    【极速模式】直接创建文件，0.05秒完成，比打开记事本快600倍。
+    
+    Args:
+        file_path: 文件路径
+        content: 文件内容
+    """
+    # 实现...
+```
+
+---
+
+## 🏥 核心架构说明 (System Architecture)
+
+所有的核心逻辑都位于 `src/fuguang/core/` 目录下。任何 AI 或开发者在修改代码前，请先阅读下表：
+
+| 文件路径 (`src/fuguang/core/`) | 对应器官 | 职责描述 (Responsibility) | 常见修改场景 |
+| :--- | :--- | :--- | :--- |
+| **`nervous_system.py`** | **神经系统** | **信号协调**。负责主循环、按键监听 (PTT)、将输入传给大脑、播放回复。 | 修改按键逻辑、调整交互流程、修改心跳机制。 |
+| **`brain.py`** | **大脑** | **思考与对话**。负责调用 LLM API、**工具调用循环 (Function Calling)**、管理对话历史、记忆检索与归档。 | 修改 System Prompt、更换 AI 模型、调整记忆长度、**修改工具调用逻辑**。 |
+| **`skills/`** | **手/技能** | **执行**。模块化技能包，通过 Mixin 多继承组合 7 大技能领域：`vision.py`(视觉)、`gui.py`(桌面控制)、`browser.py`(浏览器)、`system.py`(系统命令)、`memory.py`(记忆)、`skill_mcp.py`(MCP外部协议)。 | **这是最常修改的目录**。增加新功能按领域放入对应模块。 |
+| **`ears.py`** | **耳朵** | **听觉**。负责麦克风录音、ASR 语音识别、唤醒词检测。 | 调整麦克风灵敏度、修改唤醒词、更换语音识别服务。 |
+| **`eyes.py`** | **眼睛** | **视觉**。负责获取窗口标题、剪贴板内容、屏幕截图，结合 **GLM-4V** 进行视觉分析。 | 新增视觉识别场景、调整图片质量、切换极速/标准模式。 |
+| **`mouth.py`** | **嘴巴** | **表达**。负责 TTS 语音合成、发送表情/动作指令给 Unity。 | 更换 TTS 音色、对接新的 Unity 动画事件。 |
+| **`config.py`** | **管家** | **配置**。负责管理 API Key、路径常量、全局参数。 | 更新 API Key、修改文件保存路径、修改 IP 端口。 |
+
+---
+
+## 📏 开发规范 (Development Rules)
+
+1.  **每次编辑后必须测试**：修改任何 `.py` 文件后，运行 `python app.py` 确认无报错再提交。
+2.  **配置文件分工**：
+    - API 密钥 → 编辑 **`.env`** 文件
+    - 功能开关 → 编辑 **`src/fuguang/config.py`**
+    - 新增配置项 → 两个 config.py 都要加（外层定义，内层复制）
+3.  **统一入口 (`app.py`)**：使用 `--no-gui` 参数切换终端模式；默认启动 GUI 悬浮球模式。
+4.  **核心修改**：如果修改了 `core/` 下的代码，会同时影响到所有引用它的入口。
+
+---
+
+## � 概念文档 (Concepts)
+
+如果你对以下概念感到困惑，请阅读对应文档：
+
+| 文档 | 内容 |
+| :--- | :--- |
+| **[Function Calling vs Skill vs MCP](docs/concepts_comparison.md)** | 三种 AI 扩展能力的直观对比，包含扶光实际代码示例 |
+
+---
+
+## 👁️ 视觉功能使用指南 (Vision Features)
+
+扶光现已接入 **智谱 GLM-4V** 多模态大模型，拥有强大的视觉识别能力。
+
+### 💬 对话示例
+
+**场景1：分析本地图片**
+```
+你："帮我看看 jimi.png 这张图片"
+扶光："让我看看这张图片...（3秒）这是一张黑白照片，两个人站在斑驳的房间里..."
+```
+
+**场景2：看屏幕报错**
+```
+你："看看屏幕，这个报错怎么解决？"
+扶光："让我看看屏幕...（4秒）这个错误是因为缺少依赖包..."
+```
+
+**场景3：网页内容分析**
+```
+你："打开B站，看看有什么有趣的视频"
+扶光："（打开B站后）让我看看屏幕...《xxx》这个封面最吸引人，色彩设计很棒..."
+```
+
+### ⚙️ 配置说明
+
+视觉功能的配置项位于 `src/fuguang/config.py`：
+
+| 配置项 | 默认值 | 说明 |
+|:---|:---|:---|
+| `VISION_USE_FLASH` | `False` | `True`=极速模式(2秒), `False`=标准模式(4秒) |
+| `VISION_QUALITY` | `85` | 图片压缩质量 (60-95)，越高越清晰但越慢 |
+| `VISION_MAX_SIZE` | `1280` | 图片最大边长 (768-2048)，越大越清晰但越慢 |
+
+**性能调优建议**：
+- 追求速度：`VISION_USE_FLASH = True` + `VISION_QUALITY = 70`
+- 追求清晰：`VISION_USE_FLASH = False` + `VISION_QUALITY = 95` + `VISION_MAX_SIZE = 1920`
+
+### 🔑 API Key 配置
+
+智谱 API Key 已内置在配置文件中。如需更换，修改 `src/fuguang/config.py`：
+```python
+ZHIPU_API_KEY = "你的智谱APIKey"
+```
+
+---
+
+## 🖱️ GUI 控制功能使用指南 (GUI Control)
+
+扶光现已具备**智能 GUI 操作能力**，可以自动控制电脑完成复杂任务。
+
+### 💬 对话示例
+
+**场景1：打开应用并操作**
+```
+你："打开记事本，然后点击文件菜单"
+扶光："正在打开 notepad...（应用启动）正在寻找 文件...（鼠标移动）已点击 文件"
+```
+
+**场景2：输入文字**
+```
+你："在记事本里输入：你好，扶光！"
+扶光："正在输入...（文字出现）已发送"
+```
+
+**场景3：复杂场景串联**
+```
+你："打开B站视频，发送弹幕666"
+扶光：自动执行：
+  1. open_application("edge", "https://bilibili.com/...")
+  2. click_screen_text("弹幕输入框", window_title="Bilibili")
+  3. type_text("666")
+  4. click_screen_text("发送", window_title="Bilibili")
+```
+
+### ⚙️ 配置说明
+
+GUI 控制的配置项位于 `src/fuguang/config.py`：
+
+| 配置项 | 默认值 | 说明 |
+|:---|:---|:---|
+| `ENABLE_GUI_CONTROL` | `True` | GUI 控制总开关 |
+| `GUI_CLICK_DELAY` | `0.5` | 鼠标移动延迟（秒），越大越慢但越像人类 |
+| `GUI_USE_GLM_FALLBACK` | `True` | UIA/OCR 均失败时是否启用 GLM-4V 辅助定位 |
+
+### 🎯 能力边界
+
+**✅ 当前支持：**
+- **原生应用精准控制**：记事本、资源管理器、设置、计算器等（基于 UIA）。
+- **非原生应用视觉控制**：Chrome、VS Code、微信等（基于 RapidOCR）。
+- **智能回退**：UIA 找不到控件 -> 尝试 OCR 识别文字 -> 尝试 GLM-4V 视觉理解。
+- **多窗口操作**：通过 `window_title` 参数锁定特定窗口，防止点错。
+- **复杂任务**：探测窗口控件 (`list_ui_elements`) -> 规划操作路径 -> 执行。
+
+**❌ 当前限制：**
+- **纯图形按钮**：无文字说明的纯图标（需 GLM-4V 辅助，速度较慢）。
+- **DirectX 游戏**：全屏独占游戏无法获取 UI 树。
+
+### 🔧 依赖安装
+
+GUI 控制需要以下依赖（`app.py` 会自动检测并提示安装）：
+```bash
+pip install pywinauto rapidocr-onnxruntime pygetwindow pyautogui
+```
+
+无需手动下载模型，RapidOCR 会在首次运行时自动处理。
+
+---
+
+## ⚠️ 常见坑点 (Common Pitfalls)
+
+> 以下是开发过程中遇到的典型问题，**AI 助手和开发者必读**！
+
+### 坑点 #1：路径计算层级错误
+
+**问题表现**：`system_prompt.txt` 无法加载，AI 人设丢失，回复变成默认机械风格。
+
+**根本原因**：`core/config.py` 中的 `PROJECT_ROOT` 路径计算错误。
+
+```python
+# ❌ 错误写法（少算了一级）
+self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # 指向 src/
+
+# ✅ 正确写法
+self.PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # 指向 fuguang/
+```
+
+**路径追踪**：
+```
+__file__ = src/fuguang/core/config.py
+parent   = core/
+parent^2 = fuguang/
+parent^3 = src/         ← 错误！
+parent^4 = fuguang/     ← 正确！（项目根目录）
+```
+
+**预防措施**：修改任何 `Path(__file__)` 路径时，务必在控制台打印验证。
+
+### 坑点 #2：两个 config.py 文件
+
+**问题表现**：新增配置项后，运行时读不到值。
+
+**根本原因**：项目有两个 config.py，新增配置时两个都要加。
+
+| 文件 | 作用 |
+| :--- | :--- |
+| `src/fuguang/config.py` | 定义默认值（静态类属性） |
+| `src/fuguang/core/config.py` | 运行时使用（复制外层值 + 额外属性） |
+
+**正确做法**：
+```python
+# 1. 先在 src/fuguang/config.py 添加
+class ConfigManager:
+    MY_NEW_CONFIG = True
+
+# 2. 再在 src/fuguang/core/config.py 的 __init__ 添加
+self.MY_NEW_CONFIG = GlobalConfig.MY_NEW_CONFIG
+```
+
+### 坑点 #3：安全检查遗漏
+
+**问题表现**：锁定状态下，陌生人说话扶光还是会响应。
+
+**根本原因**：只在一处检查了 `security_mode_active`。
+
+**正确做法**：PTT 模式和语音唤醒模式**都要检查**：
+```python
+if self.security_mode_active:
+    time.sleep(0.1)
+    continue  # 跳过语音处理
+```
+
+---
+
+## 🔧 环境搭建指南 (Environment Setup)
+
+> **⚠️ 本项目使用 Conda 管理环境。首次搭建后，日常启动只需双击 `启动扶光.bat`。**
+
+### Conda 环境信息
+
+| 项目 | 值 |
+|:---|:---|
+| **Conda 安装位置** | `D:\conda` |
+| **扶光环境** | `fuguang` (`D:\conda\envs\fuguang`) |
+| **Python** | 3.11 |
+| **PyTorch** | 2.5.1 + CUDA 12.4 |
+
+### 🚀 首次搭建（只做一次）
+
+```powershell
+# 1. 安装 Miniconda → https://docs.conda.io/en/latest/miniconda.html（建议装 D 盘）
+# 2. 初始化 Conda（只需一次，然后重启终端）
+& "D:\conda\condabin\conda.bat" init powershell
+
+# 3. 创建环境 + 安装 PyTorch（必须用 conda 装，解决 DLL 冲突）
+conda create -n fuguang python=3.11 -y
+conda activate fuguang
+conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia -y
+
+# 4. 安装其他依赖
+pip install -r requirements.txt
+playwright install chromium
+```
+
+### ⚡ 日常启动
+
+**方法 1（推荐）**：双击项目根目录的 **`启动扶光.bat`**（终端模式）或 **`启动扶光GUI.bat`**（GUI 悬浮球模式）
+
+**方法 2（终端）**：
+```powershell
+conda activate fuguang
+cd C:\Users\ALan\Desktop\fuguang
+
+# GUI 模式（悬浮球 + Lottie 表情）
+python app.py
+
+# 终端模式（无 GUI，纯语音交互）
+python app.py --no-gui
+```
+
+> VS Code 用户：按 `Ctrl+Shift+P` → `Python: Select Interpreter` → 选 `D:\conda\envs\fuguang\python.exe`，之后终端会自动激活环境。
+
+### ❓ 常见问题
+
+| 问题 | 解决方法 |
+|:---|:---|
+| `conda 不是内部命令` | 执行 `& "D:\conda\condabin\conda.bat" init powershell`，重启终端 |
+| `No module named 'xxx'` | 先 `conda activate fuguang`，或直接双击 `启动扶光.bat` |
+| `CUDA out of memory` | 关闭其他 GPU 程序（游戏等） |
+
+> **💡 给朋友分享时的注意事项：**
+> 
+> 运行 `app.py` 报 `No module named 'schedule'`（或其他库缺失）？这不是代码问题，是 **Python 解释器没选对**。
+> 本项目的依赖装在 Conda 环境 `fuguang` 里，而不是系统自带的 Python。
+> 
+> **快速解决**：双击 `启动扶光.bat` 即可（它会自动激活正确的 Conda 环境）。
+> 
+> **IDE 用户**：在你的编程软件中把 Python 解释器切换到 `D:\conda\envs\fuguang\python.exe`，之后直接运行就不会报错了。
+
+---
+
+## 🔧 常用命令 (Common Commands)
+
+```powershell
+# 运行扶光 GUI 模式（需先 conda activate fuguang）
+python app.py
+
+# 运行扶光终端模式
+python app.py --no-gui
+
+# 注册人脸
+python src/scripts/register_face.py
+
+# 验证配置
+python verify_config.py
+```
+
+---
+
+## 📋 日志查看 (Logging)
+
+| 日志类型 | 位置 | 说明 |
+| :--- | :--- | :--- |
+| **控制台日志** | 运行时终端窗口 | 实时查看，包含所有 `logger.info()` 输出 |
+| **文件日志** | `logs/fuguang.log` | 持久化日志 |
+
+**关键日志标识**：
+- `📜 System Prompt` - 人设加载状态
+- `🧠 激活记忆` - 长期记忆检索
+- `🔧 AI请求使用工具` - Function Calling 触发
+- `⏰ 触发提醒` - 定时任务执行
+
+---
+
+## 📝 更新日志 (Changelog)
+
+**规则**：每次增加新功能、修复 Bug 或调整架构后，**必须**在此处记录修改内容。
+
+### v6.2.0 - 🎮 Unity MCP 接入 — AI 直控 Unity Editor (2026-02-23) 🎮
+> **背景**：接入 Unity MCP (AI Game Developer) 插件，通过 HTTP Streamable 协议直连 Unity Editor，
+> 扶光获得 60+ 个 Unity 操作能力，可语音/文字指令控制 Unity 场景编辑。
+
+**核心功能：**
+- **[新增]** 🌐 **MCPHttpClient 客户端**：全新 HTTP 传输层（`streamablehttp_client`），直连 Unity 插件。
+  - 独立于 stdio 的 `MCPClient`，专为 HTTP MCP Server 设计。
+  - 异步事件循环 + 线程桥接，60s 超时（Unity 操作较慢），8000 字符输出截断。
+  - 自动重连机制：连接断开后自动 disconnect → connect 重试。
+- **[新增]** 🎮 **Unity MCP Server 注册** (`_init_mcp()`)：通过 `UNITY_MCP_PORT` 配置连接。
+  - 工具命名规则：`mcp_ai-game-developer_{tool_name}`，自动路由到 `execute_mcp_tool()`。
+  - 60+ 个工具自动发现：场景/物体/材质/脚本/Prefab/截图/包管理等。
+- **[新增]** 🔧 **`unity_create_object` 便捷工具**：一键创建带颜色的 Unity 物体。
+  - 支持 6 种形状（中英文映射：Cube/球体/圆柱体/胶囊体/平面/面片）。
+  - 支持 13 种颜色（中英文映射：red/绿/蓝色/yellow 等）。
+  - 内部自动完成 4 步：创建物体 → 创建材质 → 设颜色 → 赋材质（含三重 fallback）。
+- **[新增]** 🛡️ **DeepSeek 参数自动修正** (`_autocorrect_unity_params()`)。
+  - 自动修正 `_Color` fields→props 错位、`color`→`_Color` 命名错误、缺少 alpha 通道。
+  - 自动修正 `material` fields→props 错位、`m_Materials`→`sharedMaterial` 字段名。
+- **[配置]** `.env` 新增 `UNITY_MCP_PORT` + `UNITY_MCP_PROJECT_PATH`。
+
+**文件变更：**
+- 修改 `core/skills/skill_mcp.py`（新增 `MCPHttpClient` 类 + Unity 注册 + 便捷工具 + 自动修正，+400 行）
+- 修改 `core/skills/__init__.py`（新增 `unity_create_object` 路由）
+- 修改 `config.py` + `core/config.py`（新增 `UNITY_MCP_PORT` / `UNITY_MCP_PROJECT_PATH`）
+- 修改 `.env`（新增 Unity MCP 配置项）
+
+---
+
+### v6.1.0 - 🗂️ Web UI 聊天历史持久化 + 本地工具过滤 (2026-02-22) 💾
+> **背景**：Web UI Phase 3——实现 SQLite 对话历史持久化，侧边栏历史列表，刷新恢复，本地工具过滤。
+
+**核心功能：**
+- **[新增]** 💾 **SQLite 聊天存储** (`chat_store.py`)：新建 `ChatStore` 类，双表结构 `conversations` + `messages`。
+  - 线程安全（`threading.local`）、WAL 模式、CASCADE 删除。
+  - 完整 CRUD：创建/列表/删除对话，添加/查询消息，自动生成标题。
+  - 数据库位于 `data/web_chat.db`。
+- **[新增]** 🌐 **对话管理 API** (`web_bridge.py`)：5 个 REST 端点。
+  - `GET /api/conversations` — 列出最近 50 条对话
+  - `POST /api/conversations` — 创建新对话
+  - `DELETE /api/conversations/{id}` — 删除对话
+  - `PUT /api/conversations/{id}/title` — 重命名对话
+  - `GET /api/conversations/{id}/messages` — 获取消息列表
+- **[新增]** 💬 **WebSocket 消息持久化**：发送消息自动创建/关联对话，保存用户和 AI 消息。
+  - 第一条消息自动生成标题（截取前 20 字）。
+  - `conversation_created` / `title_updated` 事件通知前端。
+  - `switch_conversation` 消息支持对话切换。
+- **[新增]** 📋 **侧边栏历史列表** (`index.html`)：实时渲染对话列表，点击切换，悬停显示🗑删除。
+- **[修复]** 🐛 **新对话 Bug**：`newChat()` 现在通过 WebSocket 通知后端重置 `current_conv_id`。
+- **[优化]** 🛡️ **本地工具过滤**：Web 端从 2 个扩展到 **14 个**过滤工具（GUI/音量/浏览器/应用启动）。
+  - System prompt 明确告知 AI "网页端无法控制桌面/音量/浏览器"。
+- **[修复]** 🎨 **CSS 警告**：添加标准 `background-clip: text` 属性。
+
+**文件变更：**
+- 新增 `core/chat_store.py`（SQLite 存储层，~150 行）
+- 修改 `core/web_bridge.py`（ChatStore 集成 + REST API + WebSocket 持久化 + 工具过滤扩展）
+- 修改 `static/index.html`（侧边栏渲染/对话切换/历史加载/CSS 修复）
+
+---
+
+### v5.6.0 - 📱 QQ 消息接入 (NapCat OneBot) (2026-02-20) 🤖
+> **背景**：通过 NapCat OneBot v11 协议接入 QQ，实现手机 QQ 远程控制扶光。
+
+**核心功能：**
+- **[新增]** 📱 **QQ 消息桥接** (`qq_bridge.py`)：WebSocket 客户端连接 NapCat，自动重连。
+  - 支持**私聊**（直接发消息）和**群聊**（@机器人）两种触发方式。
+  - 完整复用 Brain 对话 + 工具调用能力（邮件、Shell、浏览器等）。
+  - 消息去重、OneBot 事件解析、Markdown 转纯文本。
+- **[新增]** ⚙️ **QQ 配置项**：`.env` 中 `QQ_ENABLED=true` 一键开启。
+- **[新增]** 🧪 **29 个 QQ 桥接测试**：覆盖消息解析、格式化、Brain 对接、事件处理、去重。
+- **测试总数**：113 个（全部通过）。
+
+---
+
+### v5.5.0 - 📎 邮件附件 + 🤖 AI 双重身份 + 🧪 测试覆盖扩展 (2026-02-19) 📧
+> **背景**：邮件系统功能扩展三大方向——带附件发送、AI 以独立身份发通知、测试覆盖率翻倍。
+
+**核心功能：**
+- **[新增]** 📎 **邮件附件发送**：`send_email` 工具新增 `attachment` 参数，支持带附件发送。
+  - MIMEBase 编码，支持中文文件名（RFC 2231 utf-8 编码）。
+  - 25MB 限制检查 + 文件存在性验证，预览阶段显示附件名和大小。
+  - AI 用 shell 搜索桌面文件 → 确认路径 → 发邮件，支持模糊文件名。
+- **[新增]** 🤖 **AI 双重身份（扶光专属邮箱）**：`notify_commander` 工具。
+  - 扶光以自己的邮箱 (435689823@qq.com) 向指挥官发通知邮件。
+  - 每月 2 封限制（频率计数持久化），动态注册（无 AI 邮箱时不显示此工具）。
+- **[新增]** 👤 **昵称/名字发邮件**：`_resolve_recipient` 从缓存邮件记录中按昵称模糊匹配收件人。
+- **[新增]** 🧪 **测试覆盖率翻倍**：43 → **84 个测试**（新增 41 个邮件专项测试）。
+  - 10 个测试类：规则分类(7) / 缓存(2) / 过滤规则(4) / AI频率限制(5) / SMTP发送(9) / 附件解析(6) / Schema(5) / HTML解析(4)。
+  - `REQUIRED_TOOLS` 新增 8 个邮件工具路由检查。
+
+**文件变更：**
+- 修改 `core/skills/email.py`（MIMEBase 导入 + `send_reply` 附件参数 + `send_as_ai` + `notify_commander` Schema/Mixin/路由）
+- 修改 `core/skills/__init__.py`（`attachment` 路由 + `notify_commander` 路由）
+- 修改 `config.py` + `core/config.py`（`EMAIL_AI_QQ` / `EMAIL_AI_AUTH_CODE`）
+- 修改 `.env`（扶光专属邮箱配置）
+- 新增 `tests/test_email.py`（41 个测试）
+- 修改 `tests/test_tool_routing.py`（`REQUIRED_TOOLS` 新增 8 个邮件工具）
+
+---
+
+### v5.4.0 - 📧 邮件监控模块 Email Monitor (2026-02-19) 📧
+> **背景**：接入 QQ 邮箱 IMAP 监控，支持 Gmail 转发邮件的智能分级通知。
+> 垃圾邮件自动过滤，重要邮件语音提醒，紧急邮件 AI 总结。
+
+**核心功能：**
+- **[新增]** 📧 **邮件监控 Mixin**：`EmailSkills` 挂载到 `SkillManager`，后台每 2 小时自动检查 QQ 邮箱。
+- **[新增]** 🛡️ **两层智能过滤**：Python 规则快速分类（50+ 垃圾关键词 + 域名黑名单）→ AI 精准分类（~100 Token）。
+- **[新增]** 🔔 **分级通知**：垃圾邮件静默 → 普通邮件记录日志 → 重要邮件语音 + Toast → 紧急邮件 AI 总结 + 语音。
+- **[新增]** 💾 **已处理 ID 持久化**：重启扶光不会重复通知旧邮件（`data/email_processed_ids.json`）。
+- **[新增]** 🔧 **`check_email` 工具**：AI 可通过 Function Calling 手动触发邮件检查（“查一下邮箱”）。
+
+**垃圾过滤能力：**
+- 50+ 中英文垃圾关键词（优惠/促销/营销/贷款/招聘等）
+- 域名黑名单（淘宝/京东/拼多多/支付宝/美团/饿了么等）
+- 发件人模式匹配（noreply/marketing/newsletter等）
+- 主题行正则（广告标记/验证码识别）
+
+**文件变更：**
+- 新增 `core/skills/email.py`（`_EmailMonitorWorker` + `EmailSkills` Mixin，~430行）
+- 修改 `core/skills/__init__.py`（注册 EmailSkills + `check_email` 路由）
+- 修改 `core/skills/base.py`（`__init__` 末尾调用 `_init_email_monitor()`）
+- 修改 `config.py` + `core/config.py`（新增 `EMAIL_QQ`/`EMAIL_AUTH_CODE`/`EMAIL_CHECK_INTERVAL`）
+- 修改 `.env`（新增邮箱配置项）
+
+---
+
+### v5.3.1 - 深度排障与修复 Troubleshoot Fixes (2026-02-17) 🛠️
+> **背景**：针对配方记忆系统的实际运行表现，进行了深度排障，解决了8个核心痛点。
+
+**核心修复：**
+- **[修复]** 🧠 **配方去重算法优化**：从字符集合比较（set）升级为序列相似度（difflib），阈值60%，彻底解决"学过但记不住"的问题。
+- **[修复]** 🔍 **召回阈值放宽**：配方 recall 阈值从 1.0 调整为 1.2，解决因匹配过严导致已有配方无法召回的问题。
+- **[修复]** ⚖️ **配方质量过滤**：`get_memory_context` 改为结构化检索，确保 low importance 配方被正确过滤，不再污染上下文。
+- **[优化]** 🚀 **配方注入位置提前**：将配方从 System Prompt 深处移至用户指令最前端（标注"强制规范"），确保 AI 优先执行。
+- **[优化]** 🎙️ **语义Trigger生成**：`learn_from_performance` 不再直接使用易错的语音原文，改为由 LLM 提取语义关键词作为 Trigger。
+- **[优化]** 👮 **强制性性能规范**：将"建议反思"的温和警告改为"禁止/必须"的强制规则，杜绝 AI 无视优化建议。
+- **[数据]** 🧹 **配方库清洗**：物理删除 ChromaDB 中 23 条互相矛盾的旧配方（如 Obsidian 路径冲突），重新写入唯一正确版本。
+- **[配置]** 📝 **最高优先级路径修正**：System Prompt 中强制写入正确 Obsidian 路径（D:\Obsidian\FUGUANGcangkun\FUGUANG\  覆盖旧配方干扰），确立配置的最高权威。
+
+**文件变更：**
+- 修改 `core/memory.py`（去重算法/召回阈值/结构化过滤）
+- 修改 `core/brain.py`（配方注入位置/语义Trigger/强制规范）
+- 执行 `fix_recipes_final.py`（数据库清洗）
+- 修改 `config/system_prompt.txt`（路径修正）
+
+---
+
+### v5.3.0 - 记忆增强 + 对话健壮性 + 测试套件 (2026-02-17) 🧠
+> **背景**：v5.2.1 修复了体验问题后，开始强化记忆系统和对话链路的可靠性。
+
+**核心升级：**
+- **[新增]** 🧠 **潜意识记忆去重**：存新记忆前先语义查重（距离 < 0.5），不再重复存储相同信息。
+- **[新增]** 🎯 **记忆重要度过滤**：召回记忆时过滤 importance < 2 的琐碎信息，避免上下文污染。
+- **[新增]** 💬 **自然记忆引用**：记忆注入提示词引导 AI 自然地说“对了你之前说过…”而非机械列出。
+- **[新增]** 🔄 **API 重试 + 降级机制**：网络超时/连接失败自动重试 3 次（指数退避），全失败降级回复。
+- **[新增]** 🛡️ **工具执行异常捕获**：工具报错不再导致整个对话崩溃，错误信息返回 AI 自行决策。
+- **[新增]** ⚙️ **工具结果满足即停规则**：MCP 工具已返回结果后，禁止再用 search_web 重复搜索同一主题。
+- **[新增]** 🧪 **pytest 测试套件**：41 个自动化测试覆盖配置/路由/记忆/Brain/安全/健壮性。
+
+**文件变更：**
+- 修改 `src/fuguang/core/brain.py`（潜意识去重 + API 重试 + 工具异常捕获）
+- 修改 `src/fuguang/core/memory.py`（重要度过滤 + 自然引用提示）
+- 修改 `config/system_prompt.txt`（记忆引用规则 + 工具结果即停 + {server}转义修复）
+- 新增 `tests/` 目录（7 个测试文件，41 个测试用例）
+- 新增 `pytest.ini`（测试配置）
+
+---
+
+### v5.2.1 - 体验优化: 人脸/截屏/PTT (2026-02-17) 🔧
+> **背景**：v5.2.0 稳定后，实测发现 3 个体验问题。
+
+**修复：**
+- **[修复]** 👤 人脸识别误报：阈值 0.4→0.50，增加连续 3 次确认机制 + 60s 自动解锁。
+- **[修复]** 📸 自动截屏误触发：移除“什么情况”“怎么回事”等过于宽泛的视觉关键词。
+- **[修复]** 🎙️ PTT 双触发：增加 200ms 去抖动。
+- **[优化]** 📝 Obsidian MCP 工具提升到优先级 1。
+
+---
+
+### v5.2.0 - 深度打磨: Prompt/单实例/日志 (2026-02-17) 🔧
+> **背景**：功能堪称出强大但细节需打磨——System Prompt 还不知道新能力，ChromaDB 浪费双实例，日志刷屏。
+
+**核心升级：**
+- **[优化]** 🧠 **System Prompt 全面更新**：加入 MCP GitHub/Obsidian 能力声明 + 配方三集合架构说明。
+  - 扶光现在知道自己能操作 GitHub、读写 Obsidian、导出配方。
+  - 触发词映射：“GitHub/仓库/Issue” → mcp_github_*，“写笔记/Obsidian/日记” → mcp_obsidian_*。
+- **[优化]** 💾 **MemoryBank 单实例共享**：SkillManager 复用 Brain 的 MemoryBank，不再创建第二个 ChromaDB 实例。
+  - 省内存 + 数据一致性保证，启动日志显示「共享 Brain 实例」。
+- **[优化]** 📡 **日志降噪**：httpx/httpcore/sentence_transformers/chromadb/huggingface_hub 日志级别设为 WARNING。
+  - 启动日志从 ~60 行降到 ~15 行，全是关键信息。
+
+**文件变更：**
+- 修改 `config/system_prompt.txt`（新增 MCP/Obsidian/配方能力声明）。
+- 修改 `core/skills/base.py`（MemoryBank 复用 Brain 实例）。
+- 修改 `webui.py`（第三方库日志降级）。
+
+---
+
+### v5.1.0 - 健壮性升级: 去重/重连/状态面板 (2026-02-17) 🛡️
+> **背景**：功能堆了很多但配方会重复、MCP 断线无法恢复、运行状态不可见。
+
+**核心升级：**
+- **[新增]** 🔄 **配方去重机制**：`add_recipe()` 入库前语义查重（距离 < 0.5），相似配方自动替换而非重复堆积。
+  - 日志显示「已进化」而非「已习得」，配方库保持精练。
+- **[新增]** 🔌 **MCP 断线自动重连**：`call_tool()` 失败时检测连接类错误，自动 disconnect → connect 重试一次。
+  - 覆盖 closed/broken/eof/connection/transport 等异常关键词。
+- **[新增]** 📊 **WebUI 状态面板**：新增「🔧 系统状态」Tab，一键查看：
+  - 记忆统计（对话/知识/配方条数）、MCP 连接状态、Obsidian 日记天数、性能数据。
+- **[优化]** `_search_collection()` 返回结果新增 `id` 和 `metadata` 字段，支撑去重逻辑。
+
+**文件变更：**
+- 修改 `core/memory.py`（配方去重、搜索结果返回 id）。
+- 修改 `core/skills/skill_mcp.py`（断线重连 + `_reconnect()` 方法）。
+- 修改 `webui.py`（新增状态面板 Tab）。
+
+---
+
+### v5.0.5 - MCP Obsidian FileSystem 接入 (2026-02-17) 📁
+> **背景**：借助已有 MCPClient 架构，仅加 3 行配置就接入了 Obsidian 文件系统 MCP Server。
+
+**核心升级：**
+- **[新增]** 📁 **Obsidian FileSystem MCP**：通过 `@modelcontextprotocol/server-filesystem` 接入。
+  - 14 个工具自动发现：read_file/write_file/edit_file/list_directory/search_files 等。
+  - 工具前缀 `mcp_obsidian_*`，AI 可主动读写 Obsidian 笔记。
+  - 安全沙箱：只允许访问指定的 Vault 目录。
+- **[架构]** 插拔式设计验证：新增 MCP Server 只需在 `_init_mcp()` 加几行代码。
+
+**文件变更：**
+- 修改 `core/skills/skill_mcp.py`（`_init_mcp()` 新增 Obsidian FileSystem 注册）。
+
+---
+
+### v5.0.0 - Obsidian 成长日记 (2026-02-17) 📓
+> **背景**：让扶光的配方记忆从"黑箱数据库"变成可视化的 Obsidian Markdown 日记，
+> 方便用户浏览、搜索、分享扶光的成长轨迹。
+
+**核心升级：**
+- **[新增]** 📓 **Obsidian 实时同步**：`add_recipe()` 调用时自动将配方追加到当天日记文件。
+  - 每日一个 `.md` 文件，带 YAML front-matter（tags/date）。
+  - Markdown 格式：二级标题 + 引用块 + 元数据（时间/来源）。
+- **[新增]** 📚 **全量导出**：`export_all_recipes_to_obsidian()` 一键生成所有历史配方日记 + 索引页。
+  - 索引页 `README.md` 使用 Obsidian `[[wiki-link]]` 格式，支持图谱导航。
+- **[新增]** 🔧 **Function Calling 工具**：`export_recipes_to_obsidian`，AI 可自主触发导出。
+- **[配置]** `.env` + 两个 `config.py` 新增 `OBSIDIAN_VAULT_PATH`。
+
+**文件变更：**
+- 修改 `core/memory.py`（新增 `_sync_recipe_to_obsidian()`、`export_all_recipes_to_obsidian()`、构造函数接受 `obsidian_vault_path`）。
+- 修改 `core/skills/memory.py`（新增 `export_recipes_to_obsidian` 工具 Schema + 方法）。
+- 修改 `core/skills/__init__.py`（工具路由新增 `export_recipes_to_obsidian`）。
+- 修改 `core/skills/base.py`、`core/brain.py`（传递 `obsidian_vault_path` 参数）。
+- 修改 `config.py`、`core/config.py`、`.env`。
+
+---
+
+### v4.9.0 - MCP 协议接入 Model Context Protocol (2026-02-17) 🧩
+> **背景**：接入 Anthropic 制定的 MCP 标准协议，实现插拔式外部工具扩展架构。
+> 首个接入 GitHub MCP Server，扶光获得 26 个 GitHub 操作能力。
+
+**核心升级：**
+- **[新增]** 🧩 **MCP Client 实现**：完整的 MCP 客户端（`MCPClient` 类）。
+  - stdio JSON-RPC 通信，自动启动/管理 Node.js MCP Server 子进程。
+  - 自动发现 Server 暴露的工具列表，动态转换为 OpenAI Function Calling Schema。
+  - 异步事件循环桥接（`asyncio` + `threading`），同步 API 封装异步 MCP 调用。
+  - 输出截断保护（4000 字符上限，防止 token 爆炸）。
+- **[新增]** 🐙 **GitHub MCP Server 接入**：`@modelcontextprotocol/server-github`。
+  - 26 个工具自动注册：搜索仓库/代码/Issue、查看文件/Commit/Release、创建 Issue/PR 等。
+  - 工具命名规则：`mcp_github_{tool_name}`，自动路由到 `execute_mcp_tool()`。
+- **[架构]** 🔌 **插拔式扩展**：`_init_mcp()` 中注册新 `MCPClient` 即可接入更多 Server。
+- **[配置]** `.env` + 两个 `config.py` 新增 `GITHUB_TOKEN`。
+
+**文件变更：**
+- 重写 `core/skills/skill_mcp.py`（从占位 → 完整 MCP Client + MCPSkills Mixin）。
+- 修改 `core/skills/base.py`（`__init__` 末尾调用 `_init_mcp()`）。
+- 修改 `core/skills/__init__.py`（`execute_tool` 新增 `mcp_` 前缀路由 + `remember_recipe`/`recall_recipe` 路由）。
+- 修改 `config.py`、`core/config.py`、`.env`。
+
+---
+
+### v4.8.0 - 配方记忆系统 Recipe Memory (2026-02-16) ⚡
+> **背景**：参考 GPT/Gemini 对记忆层级的分析，采用"务实版"方案——新增 recipes 集合。
+> 让 AI 从慢操作中自动学习，存储最佳实践，下次遇到类似场景自动召回。
+
+**核心升级：**
+- **[新增]** ⚡ **技能配方集合** `fuguang_recipes`（记忆架构：双集合 → 三集合）。
+  - `add_recipe(trigger, solution)` / `recall_recipe(query)` / `search_recipes()` API。
+  - `get_memory_context()` 配方优先路由，匹配的配方以"⚡ 最佳实践"注入 system prompt。
+- **[修改]** 🧠 `brain.py` 的 `learn_from_performance()` 教训存入 recipes 集合（原存通用记忆池）。
+- **[新增]** 🔧 `remember_recipe` + `recall_recipe` 两个 Function Calling 工具（AI 主动存取配方）。
+- **[修复]** 🔒 10 个代码质量问题（命令注入、路径穿越、except:pass、glob 性能等）。
+
+**文件变更：**
+- 修改 `core/memory.py`、`core/brain.py`、`core/skills/memory.py`、`core/nervous_system.py`。
+- 修改 `core/skills/system.py`、`core/skills/gui.py`、`core/skills/base.py`、`core/ingest.py`（安全修复）。
+
+---
+
+### v4.2.0 - 开源能力集成 Open Source Integration (2026-02-15) 🚀
+> **背景**：为了提升 GUI 操作的准确性和中文识别速度，集成两大开源利器。
+> 抛弃了不稳定的 YOLO-World (GUI) 和慢速的 EasyOCR。
+
+**核心升级：**
+- **[重构]** 🖱️ **Pywinauto (UIA) 接入**：GUI 操作不再依赖视觉图像！
+  - 直接通过 Windows UI Automation (UIA) 协议获取控件树。
+  - 获取控件名称、类型、位置，实现**100% 精准点击**。
+  - 极速响应（毫秒级），无需 GPU 推理，不占用显存。
+  - 自动回退机制：UIA 失败（如 Electron 应用） → 自动降级为 RapidOCR。
+- **[重构]** ⚡ **RapidOCR (ONNX) 接入**：替代 EasyOCR。
+  - 基于 PaddleOCR 的 ONNX 推理版本，启动速度快，内存占用低。
+  - 彻底解决 EasyOCR 带来的 PyTorch/CUDA 依赖冲突问题。
+  - 中文识别准确率大幅提升，全屏识别仅需 ~1 秒。
+- **[新增]** 📋 **`list_ui_elements` 工具**：
+  - AI 可主动探测当前窗口有哪些按钮、输入框、菜单。
+  - 告别"盲点"，先看后点，显著提升复杂交互成功率。
+- **[优化]** 🖱️ **智能点击策略**：
+  - 优先级：**UIA (精准)** > **RapidOCR (视觉)** > **GLM-4V (理解)**
+  - `click_screen_text`参数增强：强烈建议传入 `window_title` 以锁定目标窗口。
+
+**文件变更：**
+- 修改 `core/skills/gui.py`、`core/skills/base.py`。
+- 新增依赖 `pywinauto`、`rapidocr-onnxruntime`。
+
+---
+
+### v4.1.0 - Skills 器官分化重构 Organ Differentiation (2025-02-14) 🧬🔬
+
+> **背景**：`skills.py` 膨胀至 3087 行 / 53 个方法，维护困难。
+> 按「器官分化」理念将单体文件拆分为模块化技能包。
+
+**架构改进：**
+- **[重构]** 🧬 **Mixin 多继承**：`SkillManager` 组合 6 个领域 Mixin（`VisionSkills` / `GUISkills` / `BrowserSkills` / `SystemSkills` / `MemorySkills` / `MCPSkills`），共享初始化和常量由 `BaseSkillMixin` 统一管理。
+- **[重构]** 📦 **skills/ 包结构**：
+  - `base.py` — 共享 `__init__`、`APP_REGISTRY`、`WEBSITE_REGISTRY`、辅助方法
+  - `vision.py` — GLM-4V 屏幕/图片分析、视觉历史
+  - `gui.py` — 鼠标/键盘/OCR/YOLO 桌面控制
+  - `browser.py` — 网页搜索、阅读、深度浏览、视频播放
+  - `system.py` — Shell 执行、音量控制、代码生成、提醒、应用启动
+  - `memory.py` — 长期记忆、知识库管理
+  - `skill_mcp.py` — 外部 MCP 扩展占位
+  - `__init__.py` — SkillManager 组合器、`execute_tool`、`get_tools_schema`
+- **[兼容]** ✅ **零破坏性变更**：`nervous_system.py` 等所有外部调用无需修改。
+
+**文件变更：**
+- 新增 `core/skills/` 目录（8 个文件）
+- 重命名 `core/skills.py` → `core/skills_legacy.py`（参考备份）
+
+---
+
+### v4.0.0 - 全息 HUD + 自主执行模式 Holographic HUD & Auto-Execute (2025-07-16) 🖥️🤖
+
+> **背景**：Day 49 升级——用全息 HUD 替换旧的字幕气泡，支持 Markdown/代码高亮渲染；
+> 同时新增"自主执行模式"，AI 可自主运行代码无需人工确认。
+
+**新增功能：**
+- **[特性]** 🖥️ **全息 HUD**：全新 `HolographicHUD` 替换旧 `SubtitleBubble`，赛博朋克风格浮动面板。
+  - Markdown 渲染：支持代码块（Pygments Monokai 高亮）、表格、列表、行内代码。
+  - 赛博 CSS 主题：青色边框、半透明黑底、等宽字体、圆角毛玻璃效果。
+  - 智能定位：优先显示在悬浮球左侧，空间不足自动翻转到右侧。
+  - 右键点击 HUD 可手动清除内容。
+  - 短消息（字幕）8 秒自动消失，长回复（Markdown）持久显示。
+- **[特性]** 🤖 **自主执行模式**：`toggle_auto_execute` 注册为 AI Function Calling 工具。
+  - 双重触发机制：本地关键词快速匹配 + AI 语义理解（任意措辞如"全交给你了"均可识别）。
+  - 开启后 AI 执行代码/Shell 命令跳过人工确认，系统提示词注入"自主执行模式已开启"。
+  - 支持随时关闭："我要自己来"、"关闭自动执行"等。
+
+**架构改进：**
+- **[重构]** 🔗 **ball_moved 信号**：`ball.py` 新增 `ball_moved` 信号，拖拽时实时通知 HUD 跟随移动。
+- **[重构]** 🧹 **SubtitleBubble 移除**：`app.py` 清除旧字幕气泡代码（~50 行），HUD 接管所有显示。
+- **[依赖]** 📦 `markdown>=3.4.0`、`Pygments>=2.16.0` 加入 requirements.txt。
+
+**测试：**
+- ✅ 25/25 测试全部通过（修复类名映射：`MemoryBank`/`KnowledgeEater`/`CyberGhost`/`HolographicHUD`）。
+- ✅ 修复 Windows GBK 终端 Unicode 编码崩溃（UTF-8 wrapper）。
+
+**文件变更：**
+- 新增 `gui/hud.py`（~310 行）
+- 修改 `gui/app.py`、`gui/ball.py`、`gui/__init__.py`
+- 修改 `core/skills.py`、`core/nervous_system.py`
+- 修改 `tests/test_all.py`、`requirements.txt`
+
+### v3.4.0 - 深度代码审计修复 Deep Audit Fix (2025-07-15) 🔒🛡️
+
+> **背景**：对全代码库进行深度审计，发现 29 个问题（5 Critical, 9 High, 9 Medium, 6 Low）。
+> 本次更新修复了所有 Critical 和大部分 High 级别问题。
+
+**Critical（致命）修复：**
+- **[C-1]** 🔥 **演示模式崩溃**：`FuguangWorker._run_demo_cycle()` 引用不存在的 `self.is_awake`，大脑初始化失败时 `AttributeError` 崩溃。
+- **[C-2]** 🔥 **工具调用崩溃**：`brain.py` 中 `json.loads(tool_call.function.arguments)` 无异常捕获，API 返回畸形 JSON 导致整个对话崩溃。
+- **[C-3]** 🔥 **记忆系统崩溃**：`memory.py` 缺失 `import logging` 和 `logger` 定义，记忆文件损坏时 `NameError`。
+- **[C-4]** 🔥 **注视追踪竞态**：`GazeTracker` 的 `has_face`/`face_enter_time`/`last_face_seen_time` 同时被后台线程和主循环读写，添加 `threading.Lock` + property 访问器。
+- **[C-5]** 🔥 **键盘钩子竞态**：`_on_key_event` 运行在独立线程，修改 `IS_PTT_PRESSED`/`LAST_ACTIVE_TIME`/`TEXT_INPUT_REQUESTED` 无锁保护，添加 `_input_state_lock`。
+
+**High（高危）修复：**
+- **[H-1]** ⚠️ **暴力退出**：`brain.py` 中 `os._exit(0)` 改为 `sys.exit(0)`，允许 finally/atexit 清理资源。
+- **[H-2]** ⚠️ **Socket 泄漏**：`Mouth` 类新增 `close()` 方法释放 UDP socket。
+- **[H-4]** ⚠️ **事件循环线程安全**：`voice.py` 全局事件循环改为线程局部创建（`_run_async()` 每次 new_event_loop + close）。
+- **[H-6]** ⚠️ **拖拽 Monkey-Patch**：`app.py` 不再直接覆盖 `ball.dragEnterEvent`，改为 `ball.py` 中正式重载 + handler 委托。
+- **[H-7]** ⚠️ **唤醒词位置错误**：`ears.py` `check_wake_word_pinyin` 使用拼音匹配位 `i` 定位唤醒词，而非固定 `text[len(word):]`。
+- **[H-8]** ⚠️ **死代码**：`skills.py` `_click_with_ocr` 中 `return None` 之后的 ~20 行重复死代码已删除。
+- **[H-9]** ⚠️ **GUI 模式阻塞**：F1 打字模式检测 `sys.stdin.isatty()`，GUI 模式下跳过 `input()` 避免死锁。
+
+**Medium/Low 修复：**
+- **[M-6]** PowerShell 注入：`_show_toast` 参数转义单引号和反引号。
+- **[L-5]** `trim_history` 范围防负索引：`max(0, ...)` 保护。
+
+### v3.3.0 - 灵魂注入修复 Soul Injection Fix (2026-02-09) 🔧🧬
+
+> **背景**：v3.0 建立了 GUI 多线程架构，但"灵魂"和"身体"之间的通信管道是断开的。
+> 本次更新修复了这个核心问题，使悬浮球的交互真正能指挥 AI 大脑。
+
+- **[修复]** 🔗 **GUI↔AI 通信断路**：`NervousSystem.run()` 是阻塞式 while 循环，导致 QThread 事件循环永远无法处理信号。
+  - 新增 `queue.Queue` 线程安全操作队列，GUI 操作通过队列传递给主循环。
+  - 主循环每轮迭代开头调用 `_process_gui_actions()`，确保及时响应 GUI 事件。
+- **[修复]** 🖱️ **单击唤醒/双击截图**：之前信号发出后无人接收，现在通过操作队列正确路由到 NervousSystem。
+- **[修复]** 📁 **拖拽投喂**：之前文件路径仅存入无人读取的变量，现在通过操作队列触发 `ingest_knowledge_file`。
+- **[修复]** 🔘 **右键菜单切换**：修复唤醒/休眠按钮逻辑错误（旧代码用 lambda hack 导致状态混乱）。
+- **[改进]** 👁️ **状态通知补全**：语音唤醒成功时也会通知 GUI 变为红色（之前漏了）。
+- **[环境]** 🐍 **补充遗漏依赖**：requirements.txt 新增 `pypinyin`、`jieba`、`alibabacloud_nls_python_sdk`。
+- **[环境]** 放宽 `numpy` 限制：Conda 环境下 numpy 2.x 与所有依赖兼容，移除 `<2.0.0` 上限。
+- **[环境]** 🛡️ **移除 DLL 补丁**：移除 `app.py` 中 `KMP_DUPLICATE_LIB_OK=TRUE`，Conda 已彻底解决 OpenMP 冲突。
+- **[文件]** 修改 `nervous_system.py`、`app.py`、`ball.py`、`requirements.txt`。
+
+### v3.2.0 - Conda 环境迁移 Environment Migration (2026-02-09) 🐍
+- **[环境]** 🐍 **迁移至 Conda**：从 .venv 迁移到 Conda 环境管理，彻底解决 DLL 冲突问题。
+- **[环境]** 🔥 **PyTorch CUDA 12.4**：通过 Conda 安装 PyTorch 2.5.1 + CUDA 12.4，支持 RTX 4070 GPU 加速。
+- **[文档]** 📚 **环境搭建指南**：README 新增完整的 Conda 环境搭建教程、常见问题解答。
+- **[文档]** 说明 Conda 安装位置（`D:\conda`）、为什么 VS Code 找不到、如何配置。
+- **[文档]** 说明 PyTorch 是什么、为什么需要、显存占用情况。
+- **[改进]** 常用命令章节更新为 Conda 激活方式，替换旧的 .venv 激活命令。
+- **[配置]** Conda 环境名：`fuguang`，路径：`D:\conda\envs\fuguang`。
+
+### v3.1.2 - 架构优化与资源管理 Architecture Enhancement (2026-02-09) 🏗️
+- **[优化]** 🔊 **音频资源管理**：改进 pygame 混音器资源释放逻辑，添加 finally 块确保资源清理。
+- **[优化]** 📂 **路径计算方法**：使用标记文件搜索法（搜索 README.md/.git），不再依赖固定层级 parent^4。
+- **[新增]** ✅ **路径验证机制**：启动时自动检测关键文件是否存在，提前发现配置问题。
+- **[新增]** 🧪 **配置验证脚本**：`verify_config.py` 用于测试路径计算和配置加载。
+- **[文档]** 📚 **DLL 冲突分析**：新增 `docs/DLL_CONFLICT_SOLUTION.md` 详细分析冲突原因和解决方案。
+- **[改进]** 临时音频文件清理机制：超过 10 个文件时自动清理旧文件，防止磁盘占用。
+- **[改进]** 更详细的错误日志：音频资源释放失败时记录具体错误信息。
+- **[文件]** 修改 `voice.py`、`config.py`、`core/config.py`，新增 `verify_config.py`、`docs/DLL_CONFLICT_SOLUTION.md`。
+
+### v3.1.1 - 代码质量优化 Code Quality Enhancement (2026-02-09) 🛠️
+- **[新增]** 📦 **requirements.txt**：完整依赖清单，支持一键安装所有依赖包。
+- **[修复]** ⚠️ **裸 except: 语句**：修复 5 处裸异常捕获，改为 `except Exception as e:` 避免吞掉 KeyboardInterrupt。
+- **[安全]** 🔐 **移除硬编码 API Key**：智谱 API Key 不再硬编码，强制从 `.env` 读取。
+- **[完善]** 📝 **.env.example**：添加 ZHIPU_API_KEY 配置项说明。
+- **[改进]** 增强异常捕获的可读性，添加注释说明为何忽略特定异常。
+- **[文件]** 修改 `voice.py`、`memory.py`、`skills.py`、`ali_ear.py`、`config.py`、`.env.example`。
+
+### v3.1.0 - 完整灵魂融合 Full Soul Integration (2026-02-09) 🧬
+- **[重构]** 🧬 **GUI 完整复用 NervousSystem.run()**：不再是简化版循环！
+- **[架构]** 添加回调钩子机制：`on_state_change`、`on_subtitle`、`on_speech_start/end`。
+- **[修复]** DLL 冲突问题：Torch 优先加载 ~~+ `KMP_DUPLICATE_LIB_OK=TRUE`~~（v3.3.0 已移除，Conda 彻底解决）。
+- **[改进]** 动画效果：所有状态改为平滑脉动，频率从 50ms → 100ms。
+- **[改进]** 字幕持久化：TTS 期间字幕不自动消失，说完后再显示 3 秒。
+- **[功能]** GUI 模式现拥有 run.py 的全部功能：
+  - ✅ PTT 录音 (右Ctrl)
+  - ✅ 语音唤醒 ("扶光"/"阿光")
+  - ✅ 安保模式
+  - ✅ 晨间问候
+  - ✅ 唤醒超时 (30秒自动休眠)
+- **[文件]** 修改 `nervous_system.py`、`mouth.py`、`app.py`。
+
+### v3.0.0 - 灵魂附体 Soul Injection (2026-02-09) 🔮✨
+- **[架构]** 🧠 **FuguangWorker**：QThread 工作线程，AI 逻辑与 GUI 分离。
+- **[特性]** 状态实时反馈：听(红)、想(绿)、说(紫)。
+- **[特性]** 📝 **字幕气泡**：实时显示 AI 说话内容。
+- **[交互]** 单击唤醒/休眠、双击截图分析。
+- **[交互]** 📁 **拖拽投喂**：直接拖拽文件到悬浮球吞噬知识。
+- **[文件]** 新增 `gui/app.py`：FuguangApp 主入口。
+- **[启动]** GUI 模式：`python src/fuguang/gui/app.py`
+
+### v2.9.0 - 赛博战甲 悬浮球界面 (2026-02-09) 🔮
+- **[新增]** 🔮 **FloatingBall**：基于 PyQt6 的悬浮球 GUI。
+- **[特性]** 状态可视化：静默(蓝)、聆听(红)、思考(绿)、说话(紫)。
+- **[特性]** 呼吸灯效果：静默时光晕有节奏地呼吸。
+- **[交互]** 单击唤醒/休眠、双击截图分析、右键菜单、拖拽移动。
+- **[架构]** Signal/Slot 机制：为与大脑逻辑连接做好准备。
+- **[依赖]** 安装 `PyQt6`。
+- **[文件]** 新增 `gui/ball.py`：FloatingBall 类。
+
+### v2.8.0 - 赛博幽灵 深度浏览系统 (2026-02-09) 🌐
+- **[新增]** 🌐 **CyberGhost**：基于 Playwright 的浏览器自动化模块。
+- **[特性]** 支持 JavaScript 动态加载网页（B站、知乎等单页应用）。
+- **[特性]** 网页截图功能（可配合 GLM-4V 视觉分析）。
+- **[工具]** `browse_website`：深度浏览，比 `read_web_page` 更强大。
+- **[依赖]** 安装 `playwright` + Chromium 浏览器内核。
+- **[文件]** 新增 `browser.py`：CyberGhost 类。
+
+### v2.7.1 - 记忆双集合分离 (2026-02-09) 🗂️
+- **[架构]** 🗂️ **双集合系统**：对话记忆 vs 知识库独立存储。
+- **[特性]** 可单独清空知识库而不影响对话记忆。
+- **[特性]** RAG 检索时同时搜索两个集合，结果按相似度排序。
+- **[工具]** `manage_memory.py` 新增 `list-knowledge`、`clear-memories`、`clear-knowledge` 命令。
+
+### v2.7.0 - 知识吞噬系统 (2026-02-09) 📚
+
+- **[新增]** 📚 **Knowledge Eater**：将本地文件（PDF/Word/TXT/代码）导入向量数据库。
+- **[特性]** 🔪 **智能分块**：按段落/句子边界切分，保持上下文完整。
+- **[格式]** 支持 PDF, DOCX, TXT, MD, PY, JS, JSON, CSV, HTML, XML 等。
+- **[工具]** `ingest_knowledge_file`：AI 可主动吞噬用户指定的文件。
+- **[依赖]** 安装 `pypdf` + `python-docx`。
+- **[文件]** 新增 `ingest.py`：KnowledgeEater 类。
+
+### v2.6.0 - 生物钟 定时任务系统 (2026-02-08) ⏰
+
+- **[新增]** ⏰ **BioClock v3.0**：基于 `schedule` 库的定时任务系统。
+- **[特性]** 💧 **喝水提醒**：每 45 分钟温馨提醒喝水（可配置）。
+- **[特性]** 🧘 **久坐提醒**：每 60 分钟提醒起身活动（可配置）。
+- **[特性]** 🖥️ **系统健康监控**：每 10 分钟检查 CPU/内存，超阈值自动报警。
+- **[配置]** `config.py` 新增 BioClock 开关和时间间隔参数。
+- **[依赖]** 安装 `schedule` 库。
+- **[升级]** `heartbeat.py` v2.0 → v3.0，集成定时任务调度。
+
+### v2.5.0 - 海马体 向量记忆系统 (2026-02-08) 🧠
+
+- **[新增]** 🧠 **ChromaDB 长期记忆**：基于向量数据库的语义搜索记忆系统，重启后也能记住！
+- **[特性]** 🔍 **RAG 检索增强**：对话前自动检索相关记忆，注入 Prompt 辅助回答。
+- **[特性]** 🌐 **多语言嵌入**：使用 `paraphrase-multilingual-MiniLM-L12-v2`，中文语义理解更精准。
+- **[工具]** `save_to_long_term_memory`：AI 主动判断何时保存重要信息（名字/偏好/任务）。
+- **[工具]** `manage_memory.py`：命令行管理工具（list/delete/clear）。
+- **[文件]** `memory.py`：MemoryBank 类，封装 ChromaDB 操作。
+- **[协议]** System Prompt 新增【🧠 记忆协议】，指导 AI 何时存取记忆。
+
+### v2.4.0 - 上帝模式 Shell 执行 (2026-02-08) ⚡
+- **[新增]** ⚡ **Shell 命令执行**：AI 可直接执行系统命令（pip, dir, ipconfig, netstat 等）。
+- **[安全]** 🛡️ **黑名单熔断**：自动拦截 `rm -rf`, `format`, `shutdown` 等危险命令。
+- **[安全]** ⏰ **超时保护**：防止命令卡死（默认 60 秒超时）。
+- **[特性]** 🔄 **自我修复回路**：遇到 Shell 报错时自动分析原因、修正命令并重试。
+- **[升级]** 📜 **决策协议**：System Prompt 内置"读取→分析→修正→重试"规则。
+- **[特性]** 🎯 **混合双打**：Shell 启动软件 + GUI 操作界面的智能切换。
+
+### v2.3.0 - 顺风耳 系统内录 (2026-02-08) 👂
+- **[新增]** 🔊 **系统内录 (WASAPI Loopback)**：直接从扬声器输出流捕获音频，无需"立体声混音"。
+- **[新增]** `listen_to_system_audio` 工具：录制系统音频并用 Whisper 转写。
+- **[兼容]** **Senary Audio 支持**：绕过驱动层屏蔽，适用于华硕/联想高端笔记本。
+- **[依赖]** 安装 `soundcard`、`soundfile` 库。
+- **[修复]** **numpy 兼容性**：需使用 numpy < 2.0（soundcard 0.4.5 不兼容 numpy 2.x）。
+- **[修复]** **API 调用**：使用 `sc.get_microphone(id=speaker.id, include_loopback=True)` 而非 `speaker.recorder()`。
+- **[测试]** `test_loopback_final.py`：验证 WASAPI 录制 + Whisper 转写。
+
+**故障排除**：
+| 问题 | 解决方案 |
+|:---|:---|
+| `No module named 'soundcard'` | `.venv\Scripts\pip install soundcard soundfile` |
+| `fromstring is removed` | `.venv\Scripts\pip install "numpy<2.0"` |
+| `'_Speaker' has no attribute 'recorder'` | 使用 `sc.get_microphone(include_loopback=True)` |
+| 没有"立体声混音" | 无需担心，WASAPI Loopback 不需要它 |
+
+### v2.2.0 - 听觉觉醒 Whisper 集成 (2026-02-08) 🎧
+- **[新增]** 👂 **Whisper 语音转写**：集成 OpenAI Whisper 模型，可将本地音视频文件转写为文字。
+- **[新增]** `transcribe_media_file` 工具：支持 mp4, mp3, wav, m4a 等常见格式。
+- **[升级]** **CUDA 加速**：使用 PyTorch CUDA 2.6.0+cu124，在 RTX 4070 上实现 GPU 加速。
+- **[升级]** **Small 模型**：从 `base` 升级到 `small` (~460MB)，中文识别精度大幅提升。
+- **[特性]** **懒加载**：Whisper 模型首次使用时才加载，节省内存。
+- **[特性]** **语言检测**：自动检测音频语言（中文、英文等）。
+- **[依赖]** 安装 FFmpeg、openai-whisper、PyTorch CUDA。
+- **[测试]** `test_whisper_cuda.py`：验证 GPU 加速和中英文转写。
+
+### v2.1.0 - 视觉三剑客 & 超级终端 (2026-02-07) 🚀
+- **[新增]** 👁️ **视觉三剑客 (Vision Trinity)**：集成了 EasyOCR (认字)、YOLO-World (识物)、GLM-4V (理解) 三大视觉引擎。
+- **[新增]** 🐚 **超级终端 (Super Shell)**：AI 可直接执行 PowerShell 复杂指令，管理文件、进程、网络。
+- **[升级]** **大脑扩容**：单次对话思考上限从 3 轮提升至 6 轮，支持更复杂的长链路任务。
+- **[优化]** **去幻觉协议**：GLM-4V 提示词强制"去伪存真"，严禁编造屏幕上不存在的内容。
+- **[优化]** **Shell 路径修复**：强制使用 Windows 绝对路径，修复 `~` 路径解析问题。
+- **[测试]** `test_vision_trinity.py`：验证三引擎协同工作的综合测试脚本。
+
+### v2.0.0 - YOLO-World 零样本视觉升级 （2026-02-07）🔥
+
+**核心理念**：赋予扶光"真正的眼睛" - 无需训练，文字描述即可识别任意UI元素！
+
+**已实现功能**：
+- ✅ 集成 YOLO-World 模型（零样本目标检测）
+- ✅ 新增 `click_by_description` 工具（智能视觉点击）
+- ✅ 支持图标识别（Chrome、微信、VSCode 等）
+- ✅ 支持按钮识别（红色按钮、关闭按钮、播放按钮等）
+- ✅ 支持输入框识别（搜索框、输入框等）
+- ✅ 实时推理（~50ms/帧）
+- ✅ 零训练成本（无需收集数据）
+- ✅ 离线运行（不依赖云端 API）
+
+**技术特性**：
+- 模型：YOLOv8s-WorldV2（~200MB）
+- VRAM 需求：2-3GB（RTX 4070 轻松应对）
+- 推理速度：~50ms/帧（实时响应）
+- 置信度阈值：0.1（可调）
+
+**使用示例**：
+```python
+# 对话示例
+"点击 Chrome 图标"        → AI 自动识别并点击 Chrome 图标
+"点击红色按钮"            → AI 找到屏幕上的红色按钮并点击
+"点击搜索框"              → AI 定位搜索输入框并点击
+"点击关闭按钮"            → AI 识别窗口关闭按钮并点击
+"点击点赞按钮"            → AI 识别社交媒体点赞图标并点击
+
+# 技术原理
+用户: "点击 Chrome 图标"
+  ↓
+AI: 调用 click_by_description(description="chrome icon")
+  ↓
+YOLO-World: 全屏扫描 → 识别图标 → 返回坐标 (x, y)
+  ↓
+系统: 移动鼠标 → 点击 → 完成
+```
+
+**快速测试**：
+```bash
+# 自动测试套件
+python test_yolo_world.py
+
+# 交互式测试
+python test_yolo_world.py --mode interactive
+```
+
+**能力提升**：
+- UI 覆盖率：60% → **95%** (+35%)
+- 社交媒体：40% → 90% (+50%)
+- 视频平台：30% → 95% (+65%)
+- 游戏 UI：5% → 85% (+80%)
+- 设计软件：50% → 95% (+45%)
+
+**与 v1.9.0 对比**：
+| 功能 | v1.9.0 (EasyOCR) | v2.0.0 (YOLO-World) |
+|:---|:---|:---|
+| 识别类型 | 仅文字 | 文字 + 图标 + 颜色 |
+| 推理速度 | ~300ms | ~50ms ⬆️ |
+| GPU 需求 | 可选 | 推荐 |
+| VRAM | ~500MB | ~2-3GB |
+| 场景覆盖 | ~60% | ~95% |
+| 训练需求 | 无 | 无 |
+
+**重要说明**：
+- description 参数建议使用英文（AI 识别效果更好）
+- 首次运行会自动下载模型（~200MB）
+- 需要 GPU 支持（CPU 也能跑但较慢）
+
+**技术文档**：
+- [能力对比详细说明](docs/capability_comparison.md)
+- [实现方案对比](docs/implementation_comparison.md)
+- [完整技术路线图](docs/super_ai_upgrade_roadmap.md)
+
+---
+
+### v1.9.0 - GUI 智能控制系统 (2026-02-07)
+- **[新增]** 🖱️ GUI 控制核心能力：AI 可自动操作电脑（点击按钮、输入文字、打开应用）。
+- **[新增]** `open_application` 工具：自动启动常用应用（记事本、浏览器、计算器等10+应用）。
+- **[新增]** `click_screen_text` 工具：智能寻找屏幕上的文字并精确点击（支持按钮、菜单、链接等）。
+- **[新增]** `type_text` 工具：在当前焦点位置输入文字（支持中英文、剪贴板粘贴、自动回车）。
+- **[技术]** EasyOCR 引擎：深度学习 OCR 模型，中英文混合识别准确率 90%+，无需安装额外软件。
+- **[技术]** 窗口感知过滤：通过 PyGetWindow 获取窗口坐标，解决多窗口歧义问题（如同时打开 VSCode 和记事本）。
+- **[技术]** 智能匹配算法：精确匹配(100分) > 短串匹配(80分) > 长串匹配(30分)，优先选择最佳候选。
+- **[技术]** 精确坐标计算：当 OCR 识别到"文件编辑查看"时，自动定位到"文件"的中心位置，避免点击偏移。
+- **[优化]** 窗口最小化自动激活：检测 `win.isMinimized` 后自动调用 `restore()` 恢复窗口，无需手动操作。
+- **[优化]** 中英文窗口兼容：自动匹配"记事本"和"Notepad"，支持不同系统语言。
+- **[优化]** 人类行为模拟：鼠标平滑移动（可配置延迟）、到达后停顿 0.1 秒，更像真人操作。
+- **[配置]** `ENABLE_GUI_CONTROL`：GUI 控制总开关，默认 True。
+- **[配置]** `GUI_CLICK_DELAY`：鼠标移动延迟秒数，默认 0.5（越大越慢但越像人类）。
+- **[配置]** `GUI_USE_GLM_FALLBACK`：OCR 失败时是否启用 GLM-4V 辅助定位，默认 True。
+- **[依赖]** 新增 `easyocr`（OCR 引擎）、`pygetwindow`（窗口管理）、`pyautogui`（鼠标键盘控制）。
+- **[限制]** ⚠️ 当前版本**仅支持文字识别点击**，纯图标按钮（如点赞❤️、收藏⭐）暂不支持。
+- **[使用]** 示例对话："打开记事本并点击文件菜单" → AI 自动调用 `open_application('notepad')` + `click_screen_text('文件', window_title='记事本')`。
+- **[使用]** 复杂场景："打开B站视频发送弹幕666" → 自动打开浏览器 → 定位输入框 → 输入文字 → 点击发送。
+
+### v1.8.0 - 视觉神经升级 & 晨间协议 (2026-02-07)
+- **[新增]** GLM-4V 视觉识别模块：接入智谱 AI 的多模态大模型，替代传统 OCR。
+- **[新增]** `analyze_screen_content` 工具：截取屏幕并进行深度视觉分析（识别图片、代码、报错、网页内容）。
+- **[新增]** `analyze_image_file` 工具：支持分析本地图片文件（jpg/png/bmp/webp），可直接指定路径。
+- **[修复]** Base64 图片编码格式：添加标准 `data:image/jpeg;base64,` 前缀，符合 API 规范。
+- **[优化]** 视觉分析提示词：让 GLM-4V 的回答更简洁口语化，符合扶光的人设（100字以内）。
+- **[优化]** 智能缓存机制：通过 MD5 哈希判断画面是否变化，避免重复分析同一画面，节省 API 调用。
+- **[优化]** 自动重试机制：网络波动时自动重试 2 次，提高成功率。
+- **[优化]** 错误分类提示：区分超时、API错误、其他错误，给出友好的错误提示。
+- **[配置]** 新增 `VISION_USE_FLASH`：支持极速模式（glm-4v-flash, 2秒）和标准模式（glm-4v, 4秒）切换。
+- **[配置]** 新增 `VISION_QUALITY`：图片压缩质量可调（60-95），平衡速度与清晰度。
+- **[配置]** 新增 `VISION_MAX_SIZE`：图片最大尺寸可调（768-2048），支持高清分析。
+- **[新增]** 晨间协议 (The Morning Protocol)：检测到指挥官上线时，自动搜集天气、新闻并主动播报。
+- **[优化]** 陌生人识别逻辑：每次启动只警告一次，避免重复骚扰，锁定期间静默刷新表情。
+- **[测试]** `test_vision.py`：完整的视觉功能测试脚本，演示本地图片、屏幕截图、B站封面分析。
+
+### v1.7.0 - 代码解释器 & 全知之眼 (2026-02-06)
+- **[新增]** `write_code` 工具：AI 可生成 Python 脚本保存到 `generated/` 目录。
+- **[新增]** `run_code` 工具：运行生成的脚本，带 **Human-in-the-loop 安全锁**（代码预览 + 确认执行）。
+- **[新增]** `read_web_page` 工具：深度阅读网页内容，提取正文（最多 3000 字）。
+- **[升级]** 代码解释器闭环：AI 可自主"搜索 → 阅读 → 写代码 → 运行"完成复杂任务。
+- **[安全]** 代码执行必须经用户确认，60秒超时自动终止，沙盒在 `generated/` 目录。
+
+### v1.6.0 - 架构重构与记忆系统升级 (2026-02-06)
+- **[重构]** 对话逻辑从 `nervous_system.py` 移至 `brain.py`，新增 `Brain.chat()` 方法封装工具调用循环。
+- **[新增]** 潜意识记忆系统：对话结束后自动分析并归档重要信息到 `long_term_memory.json`。
+- **[升级]** 记忆检索算法：支持子串匹配 + 重要度权重，提高召回率。
+- **[优化]** `nervous_system.py` 减少 ~70 行代码，职责更清晰（仅负责信号协调）。
+
+### v1.5.0 - 身份识别与安保系统 (2026-02-04)
+- **[新增]** 人脸注册脚本（`src/scripts/register_face.py`）：录入指挥官人脸，保存到 `data/face_db/`。
+- **[升级]** 摄像头模块 v4.5：双引擎分离模式（OpenCV 每帧追踪 + face_recognition 每2秒识别）。
+- **[新增]** 安保协议：陌生人触发警报 + 系统锁定，拒绝一切语音指令，指挥官回归后自动解锁。
+- **[新增]** 周期性警告：锁定期间每10秒刷新愤怒表情。
+- **[修复]** `CAMERA_ENABLED = False` 现在正确禁用所有摄像头功能。
+- **[优化]** API 密钥从硬编码迁移到 `.env` 文件，提高安全性。
+- **[新增]** 配置项 `IDENTITY_CHECK_INTERVAL`：可调整身份识别频率。
+- **[新增]** 坐标平滑：防止注视追踪微小抖动。
+
+### v1.4.0 - 注视追踪 & 情感交互 & 数字感知 (2026-02-02)
+- **[新增]** 数字感知模块（`core/eyes.py`）：获取当前窗口标题和剪贴板内容，注入 AI 上下文。
+- **[新增]** 注视追踪功能（`gaze_tracker.py`）：角色眼神实时跟随用户，通过 `look:x,y` 发送坐标给 Unity。
+- **[新增]** 回头杀机制：离开超过 5 分钟后回来，扶光会惊喜迎接。
+- **[新增]** 害羞机制：盯着看超过 10 秒，扶光会撒娇吐槽。
+- **[升级]** 摄像头模块 v2.0：单例模式、线程安全、坐标计算、缓存机制。
+- **[配置]** 新增 `GAZE_TRACKING_ENABLED` 和 `GAZE_TRACKING_FPS` 开关。
+
+### v1.3.1 - 路径修复 & 心跳升级 & 摄像头 (2026-01-31)
+- **[修复]** 修复 `core/config.py` 中 `PROJECT_ROOT` 路径计算错误（`parent^3` → `parent^4`）。
+- **[升级]** 心跳系统 v2.0：用 AI 动态生成主动对话内容。
+- **[新增]** 摄像头人脸检测：主动对话前检测用户是否在座。
+- **[优化]** 添加 System Prompt 加载日志。
+
+### v1.3.0 - 语音打断 & 代码生成优化 (2026-01-28)
+- **[新增]** 语音打断功能：按住 **右Ctrl键** 可立即停止扶光说话，方便用户插话。
+- **[修复]** 修复复杂代码生成失败问题（如贪吃蛇游戏）。`max_tokens` 从 800 提升至 4096。
+- **[优化]** 改进异常提示，区分超时/token超限/其他错误，不再统一显示"连接受到干扰"。
+
+### v1.2.0 - 智能提醒升级 (2026-01-28)
+- **[修复]** 修复了 `set_reminder` 时间计算错误问题。将工具定义改为动态生成，每次调用时注入当前时间，避免 AI 使用错误时间。
+- **[升级]** `set_reminder` 新增 **行动触发模式**。支持 `auto_action` 参数，可在提醒触发时自动执行操作（如"3分钟后打开B站"）。
+- **[优化]** 优化了 `content` 参数描述，避免 AI 填写占位符。
+
+### v1.1.0 - OOP 架构重构 (2026-01-28)
+- **[重构]** 完成了从单体脚本到 OOP 架构的物理拆分，核心代码迁移至 `src/fuguang/core/`。
+- **[优化]** 统一了 `ide.py` 的入口逻辑，仅保留启动代码。
+
+### v1.0.0 - 初始版本
+- **[功能]** 实现了基础的 PTT 语音对话、唤醒词检测、Unity 联动。
+- **[功能]** 集成了 DeepSeek API 和 阿里云 ASR/TTS。
