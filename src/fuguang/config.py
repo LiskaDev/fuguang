@@ -112,6 +112,9 @@ class ConfigManager:
     VTS_ENABLED = os.getenv("VTS_ENABLED", "false").lower() == "true"
     VTS_PORT = int(os.getenv("VTS_PORT", "8001"))
 
+    # === 🗣️ SiliconFlow TTS (CosyVoice2) ===
+    SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "")
+
     # === 🎮 Unity MCP (AI Game Developer) ===
     UNITY_MCP_PROJECT_PATH = os.getenv("UNITY_MCP_PROJECT_PATH", "")  # Unity 项目根目录
     UNITY_MCP_PORT = int(os.getenv("UNITY_MCP_PORT", "8090"))         # Unity MCP 插件端口

@@ -18,14 +18,20 @@
 - **[新增]** ⚙️ **7 个自定义参数**：认证后自动创建 AIFaceAngle/AIEye* 参数（ParameterCreationRequest）
 - **[新增]** 🛡️ **静默降级**：VTS 未运行时所有方法直接 return，不影响扶光正常运行
 
+**🗣️ CosyVoice2 TTS（SiliconFlow API）：**
+- **[新增]** 🗣️ `voice.py` 重写：优先使用 SiliconFlow CosyVoice2 API 流式合成，失败自动降级 edge-tts
+- **[新增]** ⚡ **流式下载**：`requests.post(stream=True)` 接收音频 chunks，打断时立即停止下载
+- **[新增]** ⚙️ **配置**：`.env` 新增 `SILICONFLOW_API_KEY`，`config.py` 同步
+
 **文件变更：**
+- 重写 `voice.py`（CosyVoice2 流式 + edge-tts 降级，~270 行）
 - 新增 `core/vtube_bridge.py`（VTubeBridge + NaturalMotion，~600 行）
 - 修改 `core/nervous_system.py`（VTS 初始化 + 状态热键 + 表情触发）
 - 修改 `core/mouth.py`（speak 前后调用 start/stop_speaking）
-- 修改 `config.py` + `core/config.py`（VTS_ENABLED / VTS_PORT）
-- 修改 `.env`（新增 VTS 配置块）
+- 修改 `config.py` + `core/config.py`（VTS_ENABLED / VTS_PORT / SILICONFLOW_API_KEY）
+- 修改 `.env`（新增 VTS + SiliconFlow 配置）
 - 修改 `config/system_prompt.txt`（多表情分句回复示例）
-- 修改 `README.md`（新增 VTS 集成章节）
+- 修改 `README.md`（新增 VTS 集成章节 + CosyVoice2 说明）
 
 ---
 

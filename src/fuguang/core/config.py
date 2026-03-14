@@ -116,6 +116,9 @@ class ConfigManager:
         self.VTS_ENABLED = GlobalConfig.VTS_ENABLED
         self.VTS_PORT = GlobalConfig.VTS_PORT
         
+        # 🗣️ SiliconFlow TTS (CosyVoice2)
+        self.SILICONFLOW_API_KEY = GlobalConfig.SILICONFLOW_API_KEY
+        
         # 🔍 验证关键文件是否存在
         self._validate_paths()
     
