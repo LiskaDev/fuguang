@@ -19,12 +19,124 @@
 import asyncio
 import json
 import logging
+import random
 import threading
 import time
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger("Fuguang.VTS")
+
+
+# ================================================================
+# 自然运动控制器 (基于 VTS-AI-Plugin/vtuber_movement.py)
+# 纯数学逻辑，随机头部晃动 + 眼球转动 + 眨眼
+# ================================================================
+
+# 需要在 VTS 中创建的自定义参数
+CUSTOM_PARAMS = [
+    {"parameterName": "AIFaceAngleX",  "explanation": "AI head X",   "min": -30, "max": 30,  "defaultValue": 0},
+    {"parameterName": "AIFaceAngleY",  "explanation": "AI head Y",   "min": -30, "max": 30,  "defaultValue": 0},
+    {"parameterName": "AIFaceAngleZ",  "explanation": "AI head Z",   "min": -90, "max": 90,  "defaultValue": 0},
+    {"parameterName": "AIEyeLeftX",    "explanation": "AI eye X",    "min": -1,  "max": 1,   "defaultValue": 0},
+    {"parameterName": "AIEyeLeftY",    "explanation": "AI eye Y",    "min": -1,  "max": 1,   "defaultValue": 0},
+    {"parameterName": "AIEyeOpenLeft",  "explanation": "AI eyelid L", "min": 0,   "max": 1,   "defaultValue": 1},
+    {"parameterName": "AIEyeOpenRight", "explanation": "AI eyelid R", "min": 0,   "max": 1,   "defaultValue": 1},
+]
+
+
+class NaturalMotion:
+    """自然运动生成器 - 让 Live2D 模型看起来活着
+
+    三个独立系统：
+    1. 头部随机微晃 (FaceAngleX/Y/Z)
+    2. 眼球随机转动 (EyeLeftX/Y)
+    3. 随机眨眼 (EyeOpenLeft/Right)
+
+    每帧调用 update(current_time) 更新状态，
+    通过 get_parameters() 获取当前参数值列表。
+    """
+
+    def __init__(self):
+        # --- 头部 ---
+        self.head = [0.0, 0.0, 0.0]          # 当前值 [X, Y, Z]
+        self._target_head = [0.0, 0.0, 0.0]  # 目标值
+        self._next_head_move = 0.0            # 下次换目标的时间
+        # 幅度范围 (度)
+        self._head_range = [
+            (-20, 20),   # X: 左右摇头
+            (-15, 15),   # Y: 上下点头
+            (-12, 12),   # Z: 歪头
+        ]
+        self._head_interval = (1.5, 3.5)     # 换目标间隔 (秒)
+
+        # --- 眼球 ---
+        self.eyes = [0.0, 0.0]               # 当前值 [X, Y]
+        self._target_eyes = [0.0, 0.0]
+        self._next_eye_move = 0.0
+        self._eye_range = [
+            (-0.8, 0.8),  # X: 左右看
+            (-0.5, 0.5),  # Y: 上下看
+        ]
+        self._eye_interval = (1.0, 3.0)
+
+        # --- 眨眼 ---
+        self.eye_lids = [1.0, 1.0]           # 1=睁眼, 0=闭眼
+        self._next_blink = 0.0
+        self._blink_end = 0.0
+        self._blink_interval = (2.0, 6.0)    # 眨眼间隔
+        self._blink_duration = 0.12          # 闭眼持续时间 (秒)
+        self._is_blinking = False
+
+    @staticmethod
+    def _lerp(a: float, b: float, t: float) -> float:
+        return a + (b - a) * t
+
+    def update(self, current_time: float):
+        """每帧调用，更新所有运动状态"""
+        self._update_head(current_time)
+        self._update_eyes(current_time)
+        self._update_blink(current_time)
+
+    def _update_head(self, t: float):
+        if t > self._next_head_move:
+            self._next_head_move = t + random.uniform(*self._head_interval)
+            for i in range(3):
+                self._target_head[i] = random.uniform(*self._head_range[i])
+        for i in range(3):
+            self.head[i] = self._lerp(self.head[i], self._target_head[i], 0.1)
+
+    def _update_eyes(self, t: float):
+        if t > self._next_eye_move:
+            self._next_eye_move = t + random.uniform(*self._eye_interval)
+            for i in range(2):
+                self._target_eyes[i] = random.uniform(*self._eye_range[i])
+        for i in range(2):
+            self.eyes[i] = self._lerp(self.eyes[i], self._target_eyes[i], 0.5)
+
+    def _update_blink(self, t: float):
+        if self._is_blinking:
+            if t > self._blink_end:
+                self.eye_lids = [1.0, 1.0]
+                self._is_blinking = False
+                self._next_blink = t + random.uniform(*self._blink_interval)
+        else:
+            if t > self._next_blink:
+                self.eye_lids = [0.0, 0.0]
+                self._is_blinking = True
+                self._blink_end = t + self._blink_duration
+
+    def get_parameters(self) -> list[dict]:
+        """返回当前帧的 VTS 参数列表"""
+        return [
+            {"id": "AIFaceAngleX",  "value": self.head[0]},
+            {"id": "AIFaceAngleY",  "value": self.head[1]},
+            {"id": "AIFaceAngleZ",  "value": self.head[2]},
+            {"id": "AIEyeLeftX",    "value": self.eyes[0]},
+            {"id": "AIEyeLeftY",    "value": self.eyes[1]},
+            {"id": "AIEyeOpenLeft",  "value": self.eye_lids[0]},
+            {"id": "AIEyeOpenRight", "value": self.eye_lids[1]},
+        ]
 
 # ================================================================
 # 扶光表情标签 → VTS 热键名 映射表
@@ -89,6 +201,9 @@ class VTubeBridge:
 
         # 当前激活的表情热键 (用于切换时先关闭上一个)
         self._last_expression: Optional[str] = None
+
+        # 自然运动控制器
+        self._motion = NaturalMotion()
 
         # Token 持久化路径
         data_dir = getattr(config, 'DATA_DIR', Path('.') / 'data')
@@ -171,10 +286,13 @@ class VTubeBridge:
                     self._authenticated = True
                     logger.info("🎭 [VTS] ✅ 认证成功！")
 
+                    # 创建自定义参数（自然运动用）
+                    await self._create_custom_parameters(ws)
+
                     # 查询可用热键
                     await self._fetch_hotkeys(ws)
 
-                    # 保持连接，处理嘴巴张合等持续任务
+                    # 保持连接，处理嘴巴张合 + 自然运动
                     await self._keep_alive(ws)
 
             except Exception as e:
@@ -342,18 +460,62 @@ class VTubeBridge:
             logger.warning(f"🎭 [VTS] 查询热键失败: {e}")
 
     # ==================================================
-    # 保持连接 + 嘴巴张合循环
+    # 自定义参数创建（自然运动用）
+    # ==================================================
+
+    async def _create_custom_parameters(self, ws):
+        """在 VTS 中创建 7 个自定义参数（幂等，重复创建不报错）"""
+        for param in CUSTOM_PARAMS:
+            request = {
+                "apiName": self.API_NAME,
+                "apiVersion": self.API_VERSION,
+                "requestID": f"fuguang_create_{param['parameterName']}",
+                "messageType": "ParameterCreationRequest",
+                "data": param
+            }
+            try:
+                await ws.send(json.dumps(request))
+                raw = await asyncio.wait_for(ws.recv(), timeout=5)
+                resp = json.loads(raw)
+                if resp.get("messageType") == "APIError":
+                    logger.warning(
+                        f"🎭 [VTS] 创建参数 {param['parameterName']} 失败: "
+                        f"{resp.get('data', {}).get('message', '')}"
+                    )
+            except Exception as e:
+                logger.warning(f"🎭 [VTS] 创建参数 {param['parameterName']} 异常: {e}")
+
+        logger.info(
+            "🎭 [VTS] ✅ 7 个自定义参数已创建：\n"
+            "  AIFaceAngleX/Y/Z (头部) + AIEyeLeftX/Y (眼球) + AIEyeOpenLeft/Right (眼皮)\n"
+            "  ⚠️ 请到 VTS 中将这些参数映射到模型的对应参数上！\n"
+            "  操作：VTS → 参数设置 → 找到 AI* 开头的参数 → 映射到 FaceAngle/EyeBall/EyeOpen 等"
+        )
+
+    # ==================================================
+    # 保持连接 + 自然运动 + 嘴巴张合循环
     # ==================================================
 
     async def _keep_alive(self, ws):
-        """保持连接活跃，处理嘴巴张合等持续任务"""
-        interval = 1.0 / self.MOUTH_FPS  # 100ms
+        """保持连接活跃，每帧更新自然运动 + 嘴巴张合"""
+        interval = 1.0 / self.MOUTH_FPS  # 100ms = 10fps
 
         while self._running:
             try:
-                # 嘴巴张合：说话时持续发送参数
+                current_time = time.time()
+
+                # 更新自然运动状态
+                self._motion.update(current_time)
+
+                # 收集所有要注入的参数
+                params = self._motion.get_parameters()
+
+                # 嘴巴张合：说话时叠加
                 if self._speaking and self._mouth_value > 0:
-                    await self._inject_parameter(ws, "MouthOpen", self._mouth_value)
+                    params.append({"id": "MouthOpen", "value": self._mouth_value})
+
+                # 批量注入
+                await self._inject_parameters(ws, params)
 
                 await asyncio.sleep(interval)
 
@@ -362,31 +524,29 @@ class VTubeBridge:
                 self.connected = False
                 break
 
-    async def _inject_parameter(self, ws, param_id: str, value: float):
-        """注入单个参数值到 VTS"""
+    async def _inject_parameters(self, ws, params: list[dict]):
+        """批量注入多个参数到 VTS（一次 WebSocket 请求）"""
         request = {
             "apiName": self.API_NAME,
             "apiVersion": self.API_VERSION,
-            "requestID": f"fuguang_param_{param_id}",
+            "requestID": "fuguang_motion",
             "messageType": "InjectParameterDataRequest",
             "data": {
                 "faceFound": True,
                 "mode": "set",
-                "parameterValues": [
-                    {
-                        "id": param_id,
-                        "value": value,
-                    }
-                ]
+                "parameterValues": params
             }
         }
         await ws.send(json.dumps(request))
-        # 不等待响应，避免阻塞（fire-and-forget）
         # 消费响应以防堆积
         try:
             await asyncio.wait_for(ws.recv(), timeout=0.05)
         except (asyncio.TimeoutError, Exception):
             pass
+
+    async def _inject_parameter(self, ws, param_id: str, value: float):
+        """注入单个参数值到 VTS"""
+        await self._inject_parameters(ws, [{"id": param_id, "value": value}])
 
     async def _trigger_hotkey_async(self, ws, hotkey_name: str):
         """异步触发热键"""
