@@ -5,7 +5,31 @@
 
 ---
 
-## 🎉 最新功能亮点 (v6.6)
+## 🎉 最新功能亮点 (v6.7)
+
+### v6.7.0 - 🎭 VTube Studio 集成 — Live2D 外观上线 (2026-03-14)
+
+**🎭 VTube Studio WebSocket 桥接：**
+- **[新增]** 🔌 `vtube_bridge.py`：WebSocket 连接 VTS API，daemon 线程 + asyncio 事件循环
+- **[新增]** 🔐 **自动认证**：首次连接 VTS 弹窗授权 → Token 持久化到 `data/vts_token.txt`
+- **[新增]** 🎭 **表情联动**：AI 表情标签 (Joy/Angry/Shy...) → VTS 热键，自动 toggle off 上一个表情
+- **[新增]** 👄 **嘴巴张合**：TTS 说话时持续发送 MouthOpen=0.8，结束后主动发 0.0
+- **[新增]** 🤖 **自然运动**：随机摇头/眼球转动/眨眼（NaturalMotion 类，10fps 参数注入）
+- **[新增]** ⚙️ **7 个自定义参数**：认证后自动创建 AIFaceAngle/AIEye* 参数（ParameterCreationRequest）
+- **[新增]** 🛡️ **静默降级**：VTS 未运行时所有方法直接 return，不影响扶光正常运行
+
+**文件变更：**
+- 新增 `core/vtube_bridge.py`（VTubeBridge + NaturalMotion，~600 行）
+- 修改 `core/nervous_system.py`（VTS 初始化 + 状态热键 + 表情触发）
+- 修改 `core/mouth.py`（speak 前后调用 start/stop_speaking）
+- 修改 `config.py` + `core/config.py`（VTS_ENABLED / VTS_PORT）
+- 修改 `.env`（新增 VTS 配置块）
+- 修改 `config/system_prompt.txt`（多表情分句回复示例）
+- 修改 `README.md`（新增 VTS 集成章节）
+
+---
+
+## 📋 历史更新 (v6.6)
 
 ### v6.6.0~v6.6.4 - 🎭 表情大扩展 + IDLE 轮播 + HUD 自动隐藏 + Soul 文件 (2026-03-12~13)
 

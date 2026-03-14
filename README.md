@@ -3,7 +3,7 @@
 
 AI 桌面宠物助手 — 悬浮球形态，Lottie 矢量表情，语音对话，接入多种 MCP 工具。
 
-> **当前版本**：v6.6 | **详细更新记录**：[CHANGELOG.md](CHANGELOG.md)
+> **当前版本**：v6.7 | **详细更新记录**：[CHANGELOG.md](CHANGELOG.md)
 
 ---
 

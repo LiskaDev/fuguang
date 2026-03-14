@@ -64,19 +64,19 @@ class NaturalMotion:
         self._next_head_move = 0.0            # 下次换目标的时间
         # 幅度范围 (度)
         self._head_range = [
-            (-20, 20),   # X: 左右摇头
-            (-15, 15),   # Y: 上下点头
-            (-12, 12),   # Z: 歪头
+            (-10, 10),   # X: 左右摇头
+            (-8, 8),     # Y: 上下点头
+            (-5, 5),     # Z: 歪头
         ]
-        self._head_interval = (1.5, 3.5)     # 换目标间隔 (秒)
+        self._head_interval = (2.0, 5.0)     # 换目标间隔 (秒)
 
         # --- 眼球 ---
         self.eyes = [0.0, 0.0]               # 当前值 [X, Y]
         self._target_eyes = [0.0, 0.0]
         self._next_eye_move = 0.0
         self._eye_range = [
-            (-0.8, 0.8),  # X: 左右看
-            (-0.5, 0.5),  # Y: 上下看
+            (-0.5, 0.5),  # X: 左右看
+            (-0.3, 0.3),  # Y: 上下看
         ]
         self._eye_interval = (1.0, 3.0)
 
