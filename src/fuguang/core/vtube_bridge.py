@@ -87,6 +87,9 @@ class VTubeBridge:
         # 可用热键缓存 (连接后填充)
         self._available_hotkeys: list[dict] = []
 
+        # 当前激活的表情热键 (用于切换时先关闭上一个)
+        self._last_expression: Optional[str] = None
+
         # Token 持久化路径
         data_dir = getattr(config, 'DATA_DIR', Path('.') / 'data')
         self._token_file = Path(data_dir) / "vts_token.txt"
@@ -438,14 +441,28 @@ class VTubeBridge:
     def trigger_expression(self, emotion: str):
         """根据扶光表情标签触发 VTS 表情热键
 
+        VTS 的 ToggleExpression 是叠加模式，触发新表情不会自动清除旧的。
+        所以切换时需要：先再触发一次上一个表情（关闭它）→ 再触发新表情（打开它）。
+
         Args:
             emotion: 扶光表情标签，如 "Joy", "Angry", "Thinking" 等
         """
         hotkey_name = EMOTION_HOTKEY_MAP.get(emotion)
-        if hotkey_name:
-            self.trigger_hotkey(hotkey_name)
-            logger.debug(f"🎭 [VTS] 表情映射: {emotion} → {hotkey_name}")
-        # 未映射的表情（如 Neutral, Wave, Working）静默跳过
+        if not hotkey_name:
+            return  # 未映射的表情（如 Neutral, Wave, Working）静默跳过
+
+        # 同一个表情不重复触发（避免关掉又开）
+        if hotkey_name == self._last_expression:
+            return
+
+        # 关掉上一个表情（再触发一次 = Toggle Off）
+        if self._last_expression:
+            self.trigger_hotkey(self._last_expression)
+
+        # 触发新表情（Toggle On）
+        self.trigger_hotkey(hotkey_name)
+        self._last_expression = hotkey_name
+        logger.debug(f"🎭 [VTS] 表情切换: {emotion} → {hotkey_name}")
 
     def start_speaking(self, mouth_value: float = 0.8):
         """开始说话 - 启动嘴巴张合参数持续发送
