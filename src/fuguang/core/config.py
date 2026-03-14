@@ -112,6 +112,10 @@ class ConfigManager:
         self.WEB_UI_PASSWORD = GlobalConfig.WEB_UI_PASSWORD
         self.WEB_UI_JWT_SECRET = GlobalConfig.WEB_UI_JWT_SECRET
         
+        # 🎭 VTube Studio (Live2D 外观)
+        self.VTS_ENABLED = GlobalConfig.VTS_ENABLED
+        self.VTS_PORT = GlobalConfig.VTS_PORT
+        
         # 🔍 验证关键文件是否存在
         self._validate_paths()
     

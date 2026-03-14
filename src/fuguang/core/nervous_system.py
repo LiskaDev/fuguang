@@ -113,6 +113,20 @@ class NervousSystem:
             self._gui_conv_id = None
 
         # ========================================
+        # [新增] VTube Studio 桥接（Live2D 外观）
+        # ========================================
+        self.vtube_bridge = None
+        if getattr(self.config, 'VTS_ENABLED', False):
+            try:
+                from .vtube_bridge import VTubeBridge
+                self.vtube_bridge = VTubeBridge(self.config)
+                self.vtube_bridge.start()
+                self.mouth.vtube_bridge = self.vtube_bridge  # 注入到 mouth
+                logger.info("🎭 [VTS] VTube Studio 桥接已启动")
+            except Exception as e:
+                logger.error(f"🎭 [VTS] VTS 桥接启动失败（不影响其他功能）: {e}")
+
+        # ========================================
         # [新增] QQ 消息桥接（NapCat OneBot）
         # ========================================
         self.qq_bridge = None
@@ -189,6 +203,16 @@ class NervousSystem:
                 self.on_state_change(state)
             except Exception as e:
                 logger.warning(f"GUI 回调异常: {e}")
+        
+        # [VTS] 状态切换时触发对应热键
+        if self.vtube_bridge:
+            try:
+                if state == "THINKING":
+                    self.vtube_bridge.trigger_hotkey("thinking")
+                elif state == "LISTENING":
+                    self.vtube_bridge.trigger_hotkey("listening")
+            except Exception as e:
+                logger.warning(f"VTS 状态热键异常: {e}")
     
     def _emit_subtitle(self, text: str, persistent: bool = False):
         """触发字幕显示回调"""
@@ -450,6 +474,13 @@ class NervousSystem:
                 self.on_expression_change(cmd_expression)
             except Exception as e:
                 logger.warning(f"GUI 表情回调异常: {e}")
+        
+        # [VTS] 触发 Live2D 模型表情
+        if self.vtube_bridge:
+            try:
+                self.vtube_bridge.trigger_expression(cmd_expression)
+            except Exception as e:
+                logger.warning(f"VTS 表情触发异常: {e}")
 
         if cmd_unity:
             if self.brain.IS_CREATION_MODE:

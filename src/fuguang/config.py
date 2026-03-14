@@ -108,6 +108,10 @@ class ConfigManager:
     # === 🔍 Everything 文件搜索 ===
     EVERYTHING_PORT = int(os.getenv("EVERYTHING_PORT", "80"))
 
+    # === 🎭 VTube Studio (Live2D 外观) ===
+    VTS_ENABLED = os.getenv("VTS_ENABLED", "false").lower() == "true"
+    VTS_PORT = int(os.getenv("VTS_PORT", "8001"))
+
     # === 🎮 Unity MCP (AI Game Developer) ===
     UNITY_MCP_PROJECT_PATH = os.getenv("UNITY_MCP_PROJECT_PATH", "")  # Unity 项目根目录
     UNITY_MCP_PORT = int(os.getenv("UNITY_MCP_PORT", "8090"))         # Unity MCP 插件端口

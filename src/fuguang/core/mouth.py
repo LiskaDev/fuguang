@@ -22,6 +22,9 @@ class Mouth:
         # [新增] GUI 回调钩子 (由 NervousSystem 注入)
         self.on_speech_start = None   # (text: str) -> None
         self.on_speech_end = None     # () -> None
+        
+        # [新增] VTube Studio 桥接 (由 NervousSystem 注入)
+        self.vtube_bridge = None
 
     def close(self):
         """[修复H-2] 关闭 UDP socket 释放资源"""
@@ -51,6 +54,13 @@ class Mouth:
             except Exception as e:
                 logger.warning(f"GUI 语音开始回调异常: {e}")
 
+        # [VTS] 开始说话 - 嘴巴张开
+        if self.vtube_bridge:
+            try:
+                self.vtube_bridge.start_speaking(0.8)
+            except Exception as e:
+                logger.warning(f"VTS 嘴巴控制异常: {e}")
+
         try:
             self.send_to_unity("talk_start")
             fuguang_voice.speak(text)
@@ -59,6 +69,13 @@ class Mouth:
             logger.error(f"语音播放失败: {e}")
             self.send_to_unity("talk_end")
         finally:
+            # [VTS] 停止说话 - 嘴巴关闭
+            if self.vtube_bridge:
+                try:
+                    self.vtube_bridge.stop_speaking()
+                except Exception as e:
+                    logger.warning(f"VTS 嘴巴关闭异常: {e}")
+            
             # [GUI] 通知界面说话结束
             if self.on_speech_end:
                 try:
