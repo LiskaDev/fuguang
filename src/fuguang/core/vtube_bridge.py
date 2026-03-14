@@ -654,12 +654,10 @@ class VTubeBridge:
         logger.debug("🎭 [VTS] 嘴巴关闭")
 
     def set_mouth_open(self, value: float):
-        """设置嘴巴张开程度（兼容接口）
+        """设置嘴巴张开程度（音量驱动，每个音频 chunk 调用一次）
 
         Args:
-            value: 0.0（闭合）到 1.0（完全张开）
+            value: 0.0（闭合）到 1.0（完全张开），已经过 RMS+平滑处理
         """
-        if value > 0:
-            self.start_speaking(value)
-        else:
-            self.stop_speaking()
+        self._mouth_value = max(0.0, min(1.0, value))
+        self._speaking = self._mouth_value > 0.01
